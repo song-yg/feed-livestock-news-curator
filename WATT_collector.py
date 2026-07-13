@@ -170,7 +170,8 @@ EXCLUDED_PATH_PATTERNS = ("/brand-insights/",)
 
 
 def _fetch_listing_page(page, url: str) -> list[dict]:
-    page.goto(url, timeout=30000)
+    page.goto(url, timeout=30000, wait_until="networkidle")
+    print(f"[watt-debug] 이동 후 실제 URL: {page.url}")
 
     # TODO 확인 필요: 실제 목록 아이템을 감싸는 컨테이너 class를 몰라서
     # "제목 링크로 보이는 <h5><a>" 패턴으로 느슨하게 잡음. 오탐(광고/추천 위젯
