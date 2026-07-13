@@ -150,6 +150,11 @@ def _collect_site(page, source_name: str, base_url: str) -> list[dict]:
                 "body": detail["body"],  # 메모리에서만 사용 - repo 저장 시 제외 (저장 레이어 책임)
             })
 
+        print(f"[watt-debug] {source_name} {page_num}페이지: items={len(items)}건 파싱, "
+              f"이번 페이지 URL 목록={[it['url'] for it in items]}, "
+              f"현재까지 누적 results={len(results)}건, "
+              f"결과 published_at 최근5개={[r['published_at'][:10] for r in results[-5:]]}")
+
         if hit_cutoff:
             break
 
