@@ -62,3 +62,7 @@ jobs:
         # 여기서 403 Forbidden, "목록 로딩 실패 또는 타임아웃" 같은 로그가
         # 반복해서 뜨면 -> GitHub Actions IP가 차단당했다는 뜻
         # (로컬/개인 네트워크에서는 정상 작동했던 것과 비교해서 판단)
+      - name: 페이지네이션 진단 (임시)
+        run: python diagnose_pagination.py  
+
+        
