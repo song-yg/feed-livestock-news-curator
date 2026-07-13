@@ -64,5 +64,22 @@ jobs:
         # (로컬/개인 네트워크에서는 정상 작동했던 것과 비교해서 판단)
       - name: 페이지네이션 진단 (임시)
         run: python diagnose_pagination.py  
+      
+  test-gdelt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-        
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 의존성 설치
+        run: pip install requests gdeltdoc
+
+      - name: gdelt_collector 실행
+        run: python gdelt_collector.py
+        # GDELT는 공식 API라 IP 차단 개념은 거의 없음.
+        # 여기서 주로 볼 것: 429(rate limit)/ConnectTimeout 재시도 로그가
+        # 얼마나 뜨는지, 5개 키워드 전부 최종적으로 성공하는지
+        # (재시도 로직 있어서 429 걸려도 최대 몇 분 정도 기다릴 수 있음 — 참고)      
