@@ -37,7 +37,7 @@ SITES = {
 LIST_PATH = "/latest-news"  # 3사이트 공통 확인됨
 
 DAYS_BACK = 7
-MAX_PAGES = 30  # 안전장치 (naver/sunsirs와 동일한 취지) 이 숫자를 넘기면 뭔가 잘못된 거다...
+MAX_PAGES = 5  # 안전장치 (naver/sunsirs와 동일한 취지) feed and grain 테스트용
 
 # requests의 UA만 바꿔도 403이 계속 떠서(TLS 핑거프린팅 등 추정) Playwright로 전환.
 # 완전히 정체를 숨기지는 않기 위해 커스텀 헤더에 연락처는 남겨둠.
