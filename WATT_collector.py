@@ -149,11 +149,6 @@ def _collect_site(page, source_name: str, base_url: str) -> list[dict]:
                 "body": detail["body"],  # 메모리에서만 사용 - repo 저장 시 제외 (저장 레이어 책임)
             })
 
-        print(f"[watt-debug] {source_name} {page_num}페이지: items={len(items)}건 파싱, "
-              f"이번 페이지 URL 목록={[it['url'] for it in items]}, "
-              f"현재까지 누적 results={len(results)}건, "
-              f"결과 published_at 최근5개={[r['published_at'][:10] for r in results[-5:]]}")
-
         if hit_cutoff:
             break
 
@@ -170,7 +165,6 @@ EXCLUDED_PATH_PATTERNS = ("/brand-insights/",)
 
 def _fetch_listing_page(page, url: str) -> list[dict]:
     page.goto(url, timeout=30000, wait_until="networkidle")
-    print(f"[watt-debug] 이동 후 실제 URL: {page.url}")
 
     # TODO 확인 필요: 실제 목록 아이템을 감싸는 컨테이너 class를 몰라서
     # "제목 링크로 보이는 <h5><a>" 패턴으로 느슨하게 잡음. 오탐(광고/추천 위젯
