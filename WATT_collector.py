@@ -16,11 +16,14 @@ Playwright(실제 브라우저 엔진)를 사용한다.
 그건 아래 항목까지만을 뜻한다 - 전체가 다 검증된 게 아니라 항목별로 상태가 다름:
   - 검증 완료: 2사이트(WATTAgNet/Feed Strategy) 동일 구조 여부, 403/Cloudflare
     차단 여부(Feed & Grain만 걸리고 이 2사이트는 안 걸림), 본문(body) 추출
-    정확도(아래 _fetch_detail 내 "확인 완료 (2026-07-13)" 주석 참고)
-  - 아직 미검증: 목록 페이지 아이템 셀렉터(h5 a, h4 a), 카테고리 추출 로직,
-    발행일 포맷(ISO 8601 vs "Jul 1st, 2026" 서수 표기 중 실제로 어느 쪽인지) -
-    아래 각 함수의 "확인 필요" 주석 표시된 부분, 다음 단계에서 실제 사이트
-    데이터로 검증/좁히기 필요
+    정확도(아래 _fetch_detail 내 "확인 완료 (2026-07-13)" 주석 참고), 목록
+    페이지 아이템 셀렉터·카테고리 추출 로직·기간이탈(cutoff) 로직(2026-07-14,
+    WATTAgNet 실행 11건으로 확인), 발행일 포맷(2026-07-14, WATTAgNet만 확인 -
+    아래 _parse_published_time 주석 참고)
+  - 아직 미검증: 위 항목들 중 Feed Strategy 쪽은 별도로 직접 확인한 적 없음
+    (2사이트 동일 CMS/구조라는 전제로 같은 로직을 공유하는 것 - 구조 자체가
+    같다는 것과, 발행일 표기 형식까지 100% 같다는 것은 별개 확인이 필요할 수
+    있어 다음 단계에서 Feed Strategy도 한 번은 직접 찍어보는 걸 권장)
 
 중요: body(본문 전문)는 LLM 요약 생성까지만 메모리에서 쓰고, repo에 저장하는
 raw.json 등에는 절대 포함하지 않는다 (저장 레이어의 save_raw_json 쪽에서 제외 처리).
@@ -69,24 +72,43 @@ def _parse_published_time(raw: str) -> datetime:
     """
     article:published_time 메타 태그 값을 datetime으로 변환한다.
 
-    TODO 확인 필요: 실제 raw HTML의 meta 태그 content가 ISO 8601
-    ("2026-07-01T12:00:00Z")인지, 사람이 읽는 형식("Jul 1st, 2026")인지
-    직접 확인 안 된 상태. 그래서 두 형식 다 시도하도록 짜둠.
+    확인 완료 (2026-07-14, WATTAgNet 실제 기사로 검증):
+    실제 값은 "Jul 13th, 2026"처럼 시:분:초가 아예 없는 서수 표기 형식이었다
+    (check_date.py로 직접 확인 - 이전엔 ISO 8601일 가능성도 열어두고 두 형식
+    다 시도하도록 짜뒀었는데, 실측 결과 서수 표기 브랜치 쪽으로 정상 파싱됨을
+    확인). 사이트가 애초에 "일" 단위 정보만 주고 시각(hour/minute)은 아예
+    제공하지 않는다는 뜻이다.
+
+    이게 문제가 안 되는 이유: scorer.py의 recency_weight/일수계산은 전부
+    "경과일수(정수)" 단위로만 동작하고 시:분:초는 어디서도 쓰이지 않는다
+    (3번 섹션 계단형 가중치 표 자체가 일 단위). 따라서 시간 정보가 없는 채로
+    00:00:00에 고정되는 건 버그가 아니라 사이트 데이터 자체의 특성이고,
+    이 프로젝트 스코어링 정확도에 영향이 없다.
+
+    ISO 8601 분기(아래 1번)는 WATTAgNet 실측에서는 한 번도 안 탔지만,
+    Feed Strategy는 아직 개별 확인 전이라(위 모듈 docstring 참고) 혹시
+    모를 형식 차이에 대비해 안전망으로 남겨둔다 - 실제로 안 쓰이면 그냥
+    죽은 코드일 뿐 부작용은 없음.
     """
     raw = raw.strip()
 
     # 1) ISO 8601 형식 시도 (예: "2026-07-01T12:00:00Z" 또는 "+00:00")
+    #    WATTAgNet 실측에서는 안 쓰였음 (2026-07-14 확인) - Feed Strategy
+    #    대비 안전망으로만 유지
     try:
         iso = raw.replace("Z", "+00:00")
         return datetime.fromisoformat(iso)
     except ValueError:
         pass
 
-    # 2) "Jul 1st, 2026" 같은 서수 표기 형식 시도
+    # 2) "Jul 1st, 2026" 같은 서수 표기 형식 - 실제로 확인된 형식 (2026-07-14)
     cleaned = ORDINAL_PATTERN.sub(r"\1", raw)  # "1st" -> "1"
     try:
         dt = datetime.strptime(cleaned, "%b %d, %Y")
-        return dt.replace(tzinfo=timezone.utc)  # 시간대 정보가 없어 UTC로 가정 (확인 필요)
+        # 시각 정보 자체가 없는 형식이라 항상 00:00:00 - tzinfo는 UTC로 가정.
+        # 날짜 단위 계산만 쓰는 scorer.py 특성상 타임존 오차가 결과에 미치는
+        # 영향은 무시 가능한 수준 (경계 케이스라 해봐야 최대 하루 오차).
+        return dt.replace(tzinfo=timezone.utc)
     except ValueError:
         pass
 
@@ -174,9 +196,9 @@ EXCLUDED_PATH_PATTERNS = ("/brand-insights/",)
 def _fetch_listing_page(page, url: str) -> list[dict]:
     page.goto(url, timeout=30000, wait_until="networkidle")
 
-    # TODO 확인 필요: 실제 목록 아이템을 감싸는 컨테이너 class를 몰라서
-    # "제목 링크로 보이는 <h5><a>" 패턴으로 느슨하게 잡음. 오탐(광고/추천 위젯
-    # 포함) 가능성 있어 실행 결과 보고 좁혀야 함.
+    # 확인 완료 (2026-07-14, WATTAgNet 11건 정상 수집으로 검증):
+    # "제목 링크로 보이는 <h5><a>" 패턴이 실제 목록 아이템과 일치함을 확인.
+    # 오탐(광고/추천 위젯 포함) 없이 정상 동작.
     try:
         page.wait_for_selector("h5 a, h4 a", timeout=15000)
     except Exception:
@@ -191,7 +213,8 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
         title = heading.get_text(strip=True)
         link = urljoin(url, heading["href"])
 
-        # 카테고리: 헤드라인 바로 앞에 오는 카테고리 링크로 추정 (확인 필요)
+        # 확인 완료 (2026-07-14): 헤드라인 바로 앞 카테고리 링크 방식으로
+        # 정상 추출됨 (WATTAgNet 11건 기준)
         category = None
         prev_link = heading.find_previous("a")
         if prev_link and prev_link.get_text(strip=True):
