@@ -15,8 +15,24 @@ naver_collector / watt_collector와 반환 형태가 다르다는 점이 핵심 
 
 *** 아직 검증 전 초안입니다 — "확인 필요" 표시된 부분(특히 seendate 파싱)은
     실제 실행 결과를 보고 나서 다음 단계에서 고쳐야 함 (watt_collector와 동일한 방식) ***
+
+--- 2026-07-14 실행 테스트 메모 ---
+5개 키워드 중 4개(avian influenza / foot and mouth disease / feed price /
+livestock market) 정상 수집 확인. "HPAI"만 GDELT API 자체 에러로 실패함
+(ValueError: "The specified phrase is too short.") - 코드 버그 아니라
+GDELT DOC API가 너무 짧은 검색어(약어 등)를 거부하는 것으로 추정.
+KEYWORDS_EN은 어차피 최종 확정 전 단계라 지금은 그대로 두고 메모만 남김 -
+추후 키워드 리스트 확정 작업 때 "HPAI" 같은 짧은 약어는 더 긴 표현으로
+바꾸거나 빼는 것을 함께 검토할 것.
+
+또한 실행 중 거의 매 호출마다 429(rate limit)가 발생해 재시도 백오프가
+누적되며 총 실행 시간이 약 1시간 가까이 걸림 - 아래 두 가지로 대응:
+  1. REQUEST_INTERVAL 8초 -> 15초 상향
+  2. _call_with_retry의 429 처리를 "호출별 개별 대기"에서 "전역 공유 쿨다운"
+     방식으로 변경 (자세한 이유는 _call_with_retry, _wait_for_cooldown 참고)
 """
 
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
@@ -27,6 +43,11 @@ from gdeltdoc.errors import RateLimitError
 
 # 예시 키워드. 최종 리스트는 아직 확정 전이라 임시로 넣어둠 (naver_collector와 동일 방침).
 # GDELT DOC API는 영문 검색이 기본이므로 영문 키워드로 구성 (스펙 "필요한 것" 항목 참조).
+#
+# 2026-07-14 확인 - "HPAI"는 GDELT API가 "너무 짧은 검색어"로 거부함
+# (ValueError: "The specified phrase is too short."). 키워드 리스트를
+# 본격적으로 확정할 때 더 긴 표현으로 교체하거나 제외할 것 - 지금은
+# 리스트 자체가 임시라 그대로 둠.
 KEYWORDS_EN = [
     "avian influenza",
     "HPAI",
@@ -47,10 +68,11 @@ TIMESPAN = f"{DAYS_BACK}d"
 MAX_RECORDS = 250
 
 # 키워드 사이 요청 간격.
-# GDELT는 공식적으로 "몇 초에 몇 건"인지 수치를 공개하지 않음. 다만 실제 사용기
-# (2026-04, HackerNoon 사례)에 "IP당 5초에 1건 제한"이라는 보고가 있어(공식 확정
-# 수치 아님, 참고치) 거기에 여유를 더해 8초로 설정.
-REQUEST_INTERVAL = 8.0
+# GDELT는 공식적으로 "몇 초에 몇 건"인지 수치를 공개하지 않음. 기존엔 8초로
+# 설정했었으나 (2026-07-14 확인) 실제 실행에서 거의 매 호출마다 429가 발생해
+# 재시도 백오프가 누적되는 문제가 있어 15초로 상향. 그래도 429가 잦으면
+# 추가 상향 검토 필요 (정확한 공식 수치는 여전히 비공개라 경험적으로 조정하는 값).
+REQUEST_INTERVAL = 15.0
 
 
 # RateLimitError(HTTP 429) 전용 재시도 횟수/대기시간.
@@ -74,11 +96,56 @@ NETWORK_ERROR_MAX_RETRIES = 2
 NETWORK_ERROR_WAIT_SECONDS = 10
 
 
+# --- 2026-07-14 추가: 전역(프로세스 공유) 쿨다운 ---
+#
+# 기존엔 _call_with_retry가 429를 만나면 "그 호출 안에서만" time.sleep으로
+# 대기했음. 문제는 이 프로젝트가 키워드 하나당 API를 3번(article_search,
+# timelinevol, timelinevolraw) 따로 호출하는데, 재시도 카운터가 호출마다
+# 완전히 독립이라 - 같은 차단 구간 안에서도 호출마다 처음부터(1/3) 다시
+# 60초부터 백오프를 시작하는 낭비가 발생함 (2026-07-14 실행에서 총 실행
+# 시간이 1시간 가까이 걸린 주된 원인으로 추정).
+#
+# 그래서 429를 한 번이라도 만나면 "지금부터 N초간은 전체 프로세스가 아예
+# 요청을 안 보낸다"는 정보를 전역으로 공유하도록 변경. 이후의 모든 호출은
+# 실행 전에 먼저 이 쿨다운이 끝났는지 확인하고, 안 끝났으면 그만큼 먼저
+# 기다린 뒤에 실제 요청을 시도함.
+_cooldown_until = 0.0
+_cooldown_lock = threading.Lock()
+
+
+def _wait_for_cooldown():
+    """쿨다운 중이면 그 시점까지 대기. 아니면 즉시 반환."""
+    with _cooldown_lock:
+        remaining = _cooldown_until - time.time()
+    if remaining > 0:
+        print(f"[gdelt] 전역 쿨다운 중 - {remaining:.0f}초 남음, 대기")
+        time.sleep(remaining)
+
+
+def _trigger_cooldown(seconds: float):
+    """
+    429를 만났을 때 전역 쿨다운을 세팅(또는 연장)한다.
+    이미 더 긴 쿨다운이 걸려있다면 그걸 덮어쓰지 않는다(연장만 함) -
+    여러 호출이 거의 동시에 429를 만나도 쿨다운이 짧아지는 방향으로
+    잘못 갱신되지 않도록.
+    """
+    global _cooldown_until
+    with _cooldown_lock:
+        new_until = time.time() + seconds
+        if new_until > _cooldown_until:
+            _cooldown_until = new_until
+
+
 def _call_with_retry(func, *args, label: str = "", **kwargs):
     """
     RateLimitError(429)와 일시적 네트워크 에러(ConnectTimeout 등)를 서로 다른
     정책으로 재시도한다 (429는 길게, 네트워크 에러는 짧게). 그 외 예외는 바로
     올려보내서 (9.1 방침대로) collect()의 try/except가 그 키워드만 건너뛰게 한다.
+
+    2026-07-14 변경: 429는 이 함수 호출 하나만 기다리고 마는 게 아니라,
+    전역 쿨다운(_trigger_cooldown)을 걸어서 이후에 오는 모든 호출(다른
+    키워드/다른 엔드포인트 포함)이 같은 차단 구간을 공유해서 기다리게 함.
+    호출 시작 시 _wait_for_cooldown()으로 남아있는 쿨다운을 먼저 소진한다.
 
     두 카운터(rate_limit_attempt, network_attempt)를 독립적으로 관리 - 하나의
     반복문에서 같이 세면 "429 한 번 + 네트워크에러 한 번"을 겪었을 때 429 쪽
@@ -93,6 +160,7 @@ def _call_with_retry(func, *args, label: str = "", **kwargs):
     network_attempt = 0
 
     while True:
+        _wait_for_cooldown()  # 다른 호출이 걸어둔 전역 쿨다운이 있으면 먼저 대기
         try:
             return func(*args, **kwargs)
         except RateLimitError:
@@ -100,9 +168,9 @@ def _call_with_retry(func, *args, label: str = "", **kwargs):
                 raise
             wait = BACKOFF_BASE_SECONDS * (2 ** rate_limit_attempt)
             rate_limit_attempt += 1
-            print(f"[gdelt] {label} - 429 rate limit - {wait}초 대기 후 재시도 "
+            print(f"[gdelt] {label} - 429 rate limit - {wait}초 전역 쿨다운 설정 "
                   f"({rate_limit_attempt}/{MAX_RETRIES})")
-            time.sleep(wait)
+            _trigger_cooldown(wait)
         except (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             if network_attempt >= NETWORK_ERROR_MAX_RETRIES:
                 raise
