@@ -1,8 +1,8 @@
 """
 watt_collector.py
-WATT Global Media 계열 3사이트(wattagnet.com / feedstrategy.com / feedandgrain.com)
-뉴스를 수집하는 모듈. 3사이트가 동일한 CMS/구조를 쓰는 것을 확인했으므로
-공통 로직 하나로 처리한다 (알고리즘 문서 "3사이트 공통 로직 시도" 조건 충족).
+WATT Global Media 계열 2사이트(wattagnet.com / feedstrategy.com )
+뉴스를 수집하는 모듈. 2사이트가 동일한 CMS/구조를 쓰는 것을 확인했으므로
+공통 로직 하나로 처리한다 (알고리즘 문서 "2사이트 공통 로직 시도" 조건 충족).
 
 (알고리즘 문서 "1. 수집 레이어" - watt_collector 스펙 참조)
 
@@ -28,16 +28,15 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-# 3사이트 다 같은 구조라고 확인됨 -> 도메인만 다르게 순회
+# 2사이트 다 같은 구조라고 확인됨 -> 도메인만 다르게 순회
 SITES = {
     "WATTAgNet": "https://www.wattagnet.com",
     "Feed Strategy": "https://www.feedstrategy.com",
-    "Feed & Grain": "https://www.feedandgrain.com",
 }
-LIST_PATH = "/latest-news"  # 3사이트 공통 확인됨
+LIST_PATH = "/latest-news"  # 2사이트 공통 확인됨
 
 DAYS_BACK = 7
-MAX_PAGES = 5  # 안전장치 (naver/sunsirs와 동일한 취지) feed and grain 테스트용
+MAX_PAGES = 30 #이 이상이면 문제가 있음...
 
 # requests의 UA만 바꿔도 403이 계속 떠서(TLS 핑거프린팅 등 추정) Playwright로 전환.
 # 완전히 정체를 숨기지는 않기 위해 커스텀 헤더에 연락처는 남겨둠.
@@ -93,7 +92,7 @@ def _is_recent(dt: datetime, days: int) -> bool:
 
 def collect() -> list[dict]:
     """
-    3사이트를 순서대로 돌면서 최근 기사를 수집한다.
+    2사이트를 순서대로 돌면서 최근 기사를 수집한다.
     """
     all_results = []
 
