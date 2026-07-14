@@ -11,7 +11,7 @@ naver_collector / watt_collector와 반환 형태가 다르다는 점이 핵심 
   - timeline: 키워드 단위 시계열(timelinevol/timelinevolraw) -> 기사 단위가 아니라서
     공통 스키마에 억지로 끼워넣지 않음. 3.1 규칙대로 스코어링에는 안 들어가고
     결과물에 참고 지표로만 별도 표시됨 (저장 레이어가 알아서 분리 저장)
-(2026-07-13 바람과 논의 후 확정 - "방식 A")
+(2026-07-13 논의 후 확정 - "방식 A")
 
 *** 아직 검증 전 초안입니다 — "확인 필요" 표시된 부분(특히 seendate 파싱)은
     실제 실행 결과를 보고 나서 다음 단계에서 고쳐야 함 (watt_collector와 동일한 방식) ***
@@ -56,6 +56,23 @@ KEYWORDS_EN = [
     "livestock market",
 ]
 
+# --- 2026-07-14(2차) 추가: 이미 실패가 확인된 키워드 사전 스킵 ---
+#
+# "HPAI"는 2026-07-14 실행에서 GDELT API가 매번 ValueError("The specified
+# phrase is too short.")로 거부하는 게 확인됨. 문제는 이 에러가 429 재시도
+# 루프를 다 태우고 나서야(최대 4단계 백오프, 아래 MAX_RETRIES 참고) 도달하는
+# 진짜 에러라서, 매 실행마다 어차피 실패할 키워드에 수 분~십수 분을 낭비하고
+# 있었음 (실측: 약 7분/키워드).
+#
+# "몇 글자부터 너무 짧다고 판단하는지"는 GDELT가 공식적으로 공개한 기준이
+# 아니라서(추정으로 길이 임계값을 정하면 다른 정상 키워드까지 잘못 걸러낼
+# 위험이 있음), 길이 기반 자동 필터 대신 "실제로 실패가 확인된 키워드"만
+# 명시적으로 등록하는 스킵 리스트로 처리한다. 새 키워드를 추가했는데 계속
+# 같은 ValueError로 실패하는 게 확인되면 여기 추가할 것.
+SKIP_KEYWORDS = {
+    "HPAI": "GDELT API가 'phrase too short'로 거부함 (2026-07-14 확인, 재현됨)",
+}
+
 # 이 프로젝트는 주 1회 실행이므로, 최근 7일 이내 기사만 남긴다 (naver/watt와 동일 방침).
 DAYS_BACK = 7
 
@@ -79,12 +96,16 @@ REQUEST_INTERVAL = 15.0
 # 2026-07-13 확인됨: GDELT는 실제로 서버 사이드 요청 제한이 있음(공식 블로그에
 # ElasticSearch 클러스터 보호 목적이라고 명시). 정확한 윈도우 수치는 비공개지만,
 # 실사용 보고(HackerNoon, 2026-04, 공식 확정 아님·참고치)에 따르면 짧은 시간에
-# 요청이 몰리면 15분가량 지속되는 차단이 걸릴 수 있다고 함 - 그래서 15초 같은
-# 짧은 백오프 대신 60초 단위로 크게 잡음. 그래도 첫 시도부터 계속 429가 뜬다면
-# 백오프 문제가 아니라 이미 지속 차단에 걸려있는 상태일 수 있음 - 그럴 땐 재시도
-# 루프를 도는 것보다 최소 15~20분 정도 아예 요청을 멈추는 게 맞음.
-MAX_RETRIES = 3
-BACKOFF_BASE_SECONDS = 60  # 60 -> 120 -> 240초로 증가
+# 요청이 몰리면 15분가량 지속되는 차단이 걸릴 수 있다고 함.
+#
+# 2026-07-14(2차) 변경: 기존 3단계(60→120→240초, 누적 7분)로는 실측 429 로그를
+# 보면 여전히 거의 매 키워드마다 재시도가 소진되는 걸 확인함 - 위에서 언급한
+# "15분가량 지속 차단" 참고치보다 누적 대기시간이 짧아서, 실제 차단이 안 풀린
+# 시점에 재시도를 반복하고 있었을 가능성이 있음. 4단계(60→120→240→480초, 누적
+# 900초=15분)로 늘려서 참고치와 누적 대기시간을 맞춤. 그래도 계속 429가 뜬다면
+# 이건 백오프 튜닝으로 해결할 문제가 아니라 실행 자체를 미루는 게 맞다는 신호.
+MAX_RETRIES = 4
+BACKOFF_BASE_SECONDS = 60  # 60 -> 120 -> 240 -> 480초로 증가 (누적 900초)
 
 
 # 일시적 네트워크 에러(ConnectTimeout 등) 재시도 횟수/대기시간.
@@ -241,16 +262,32 @@ def collect() -> tuple[list[dict], dict]:
     timeline_by_keyword = {}
 
     for keyword in KEYWORDS_EN:
-        try:
-            f = Filters(
-                keyword=keyword,
-                timespan=TIMESPAN,
-                num_records=MAX_RECORDS,
-            )
+        if keyword in SKIP_KEYWORDS:
+            print(f"[gdelt] '{keyword}' 스킵 - {SKIP_KEYWORDS[keyword]}")
+            continue
 
-            # 1) 기사 메타데이터 수집
+        f = Filters(
+            keyword=keyword,
+            timespan=TIMESPAN,
+            num_records=MAX_RECORDS,
+        )
+
+        # --- 2026-07-14(2차) 변경: 1)기사 수집과 2)시계열 수집을 별도 try/except로
+        # 분리함. 기존엔 하나의 try 블록으로 묶여있어서, 기사 수집(article_search)이
+        # 이미 성공해 all_articles에 들어간 뒤에 시계열(timeline_search)만 실패해도
+        # 바깥 except가 "'키워드' 수집 실패"라는 한 줄만 찍고 넘어가 버렸음. 실제
+        # 데이터는 이미 들어갔는데 로그·에러리포트(9.2)에는 "완전 실패"로 남는
+        # 불일치가 있었음 (2026-07-14 실행에서 avian influenza가 이 케이스였고,
+        # 로그에 안 찍힌 채로 50건이 조용히 섞여 들어갔던 게 확인됨).
+        #
+        # 이제는 기사 수집 성공 시점에 바로 건수를 로그로 남기고, 시계열 수집은
+        # 실패해도 이미 확보한 기사에는 영향이 없다는 걸 로그에서 바로 알 수 있게 함.
+
+        # 1) 기사 메타데이터 수집
+        keyword_articles = []
+        articles_ok = False
+        try:
             articles_df = _call_with_retry(gd.article_search, f, label=f"{keyword} / article_search")
-            keyword_articles = []
             if articles_df is not None and not articles_df.empty:
                 for _, row in articles_df.iterrows():
                     try:
@@ -271,13 +308,33 @@ def collect() -> tuple[list[dict], dict]:
                         "category": None,   # 정제 단계에서 채움 (naver_collector와 동일 방침)
                         "body": None,        # GDELT는 본문 미제공 (스펙에 명시된 그대로)
                         "press": _extract_domain(row["url"]),  # naver의 press 필드와 동일 목적
+                        # 2026-07-14 추가: 언어/국가 분포 진단용. gdeltdoc이 원래
+                        # 반환하는 필드인데 지금까지 받아만 놓고 안 쓰고 있었음.
+                        # GDELT 공식 문서 확인 - JSON/article_search 모드에서는
+                        # title이 번역 없이 원문 그대로 옴 (TRANS 옵션은 HTML 모드
+                        # 전용 위젯이라 여기 안 해당). 즉 이 title 값은 중국어/독일어
+                        # 등 원문 스크립트 그대로일 수 있음 - 12번 언어처리방침에서
+                        # 다뤄야 할 지점.
+                        "language": row.get("language", ""),
+                        "sourcecountry": row.get("sourcecountry", ""),
                     })
 
             all_articles.extend(keyword_articles)
+            articles_ok = True
+            print(f"[gdelt] '{keyword}' article_search -> 최근 {DAYS_BACK}일 이내 "
+                  f"{len(keyword_articles)}건 수집 완료")
 
-            time.sleep(REQUEST_INTERVAL)
+        except Exception as e:
+            # 기사 수집 자체가 실패한 경우만 이 키워드는 기사 0건 (9.1 방침대로
+            # 이 키워드만 건너뛰고 다음 키워드로 진행)
+            print(f"[gdelt] '{keyword}' article_search 실패: {type(e).__name__} - {e!r}")
 
-            # 2) 언급 시계열 수집 (timelinevol, timelinevolraw 둘 다 - 스펙 62번 줄 기준)
+        time.sleep(REQUEST_INTERVAL)
+
+        # 2) 언급 시계열 수집 (timelinevol, timelinevolraw 둘 다 - 스펙 62번 줄 기준)
+        # 기사 수집 성공 여부와 무관하게 독립적으로 시도 - 시계열만 실패해도
+        # 위에서 이미 확보한 keyword_articles(articles_ok=True인 경우)는 그대로 유지됨
+        try:
             vol_df = _call_with_retry(gd.timeline_search, "timelinevol", f,
                                        label=f"{keyword} / timelinevol")
             time.sleep(REQUEST_INTERVAL)
@@ -293,19 +350,55 @@ def collect() -> tuple[list[dict], dict]:
                 "vol": vol_df.to_dict("records") if vol_df is not None else [],
                 "volraw": volraw_df.to_dict("records") if volraw_df is not None else [],
             }
-
-            print(f"[gdelt] '{keyword}' -> 최근 {DAYS_BACK}일 이내 기사 {len(keyword_articles)}건 "
-                  f"+ 시계열 수집 완료")
+            print(f"[gdelt] '{keyword}' 시계열 수집 완료")
 
         except Exception as e:
-            # 키워드 하나 실패했다고 전체를 멈추지 않는다 (naver/watt와 동일한 9.1 방침)
-            # 2026-07-13: 에러 메시지가 빈 문자열로 나오는 경우가 있어 예외 타입도 같이 로그
-            print(f"[gdelt] '{keyword}' 수집 실패: {type(e).__name__} - {e!r}")
-            continue
+            # 시계열만 실패한 경우 - 기사는 이미 all_articles에 들어가 있으므로
+            # (articles_ok=True였다면) 데이터 손실 없음. timeline_by_keyword에는
+            # 이 키워드가 아예 안 들어가고, 결과물에서는 참고 지표(3.1)가 빠지는 것뿐.
+            print(f"[gdelt] '{keyword}' 시계열 수집 실패: {type(e).__name__} - {e!r} "
+                  f"(기사 수집 결과 {'유지됨' if articles_ok else '없음'}, "
+                  f"{len(keyword_articles)}건)")
 
         time.sleep(REQUEST_INTERVAL)
 
     return all_articles, timeline_by_keyword
+
+
+def _print_distribution(articles: list[dict]) -> None:
+    """
+    2026-07-14 추가 - 진단용 전용 함수.
+
+    목적: "영어 키워드만으로 중국/유럽 기사가 실제로 얼마나 잡히는지"를 확인하기
+    위한 1회성 진단. 이슈 그룹핑이나 스코어링에는 안 들어가고, 사람이 눈으로
+    보고 "키워드 사전을 다국어로 확장할 필요가 있는지" 판단하는 데만 씀.
+
+    language/sourcecountry 값이 비어있는 항목이 있을 수 있음(gdeltdoc이 항상
+    채워주는지 확인 안 된 상태) - 그런 경우 "(미상)"으로 묶어서 표시.
+    """
+    from collections import Counter
+
+    lang_counter = Counter(a["language"] or "(미상)" for a in articles)
+    country_counter = Counter(a["sourcecountry"] or "(미상)" for a in articles)
+
+    print(f"\n=== 언어 분포 (전체 {len(articles)}건) ===")
+    for lang, count in lang_counter.most_common():
+        pct = count / len(articles) * 100 if articles else 0
+        print(f"  {lang:20s} {count:4d}건 ({pct:.1f}%)")
+
+    print(f"\n=== 국가 분포 (전체 {len(articles)}건) ===")
+    for country, count in country_counter.most_common(15):
+        pct = count / len(articles) * 100 if articles else 0
+        print(f"  {country:20s} {count:4d}건 ({pct:.1f}%)")
+
+    # 중국/유럽 비중을 바로 눈에 띄게 별도 표시 (이번 진단의 핵심 질문)
+    china_related = sum(
+        1 for a in articles
+        if a["sourcecountry"] in ("China", "Hong Kong", "Taiwan")
+        or a["language"] in ("chi", "zh", "zh-cn", "zh-tw")
+    )
+    print(f"\n중국/홍콩/대만 관련: {china_related}건 "
+          f"({china_related / len(articles) * 100 if articles else 0:.1f}%)")
 
 
 if __name__ == "__main__":
@@ -319,3 +412,5 @@ if __name__ == "__main__":
         first_keyword = next(iter(timeline))
         print(f"\n'{first_keyword}' 시계열 샘플 (vol 앞 2건): {timeline[first_keyword]['vol'][:2]}")
         print(f"'{first_keyword}' 시계열 샘플 (volraw 앞 2건): {timeline[first_keyword]['volraw'][:2]}")
+
+    _print_distribution(articles)
