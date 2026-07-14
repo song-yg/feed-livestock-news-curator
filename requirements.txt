@@ -1,0 +1,12 @@
+# 사료축산뉴스 파이프라인 의존성
+# main.py 실행(수집 -> 정규화/태깅 -> 스코어링 -> 카테고리 집계)에 필요한
+# 패키지 + calibrate_issue_grouper.py(issue_grouper 재검증용)에 필요한
+# sentence-transformers. issue_grouper.py 자체는 아직 main.py에 연결
+# 안 됐지만, 재검증 스크립트가 BGE-M3를 직접 로드해서 써야 해서 포함함.
+
+requests
+python-dotenv
+beautifulsoup4
+playwright
+gdeltdoc
+sentence-transformers
