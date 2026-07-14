@@ -1,416 +1,57 @@
 """
-gdelt_collector.py
-GDELT DOC 2.0 API를 파이썬 클라이언트(gdeltdoc)로 호출해서
-키워드별 해외 언급 데이터를 수집하는 모듈.
-(알고리즘 문서 "1. 수집 레이어" - gdelt_collector 스펙 참조)
+test_gdelt_collector.py
+gdelt_collector.py의 language/sourcecountry 분포만 빠르게 확인하기 위한
+테스트 전용 스크립트. 정식 파이프라인(main.py)에서는 안 씀.
 
-naver_collector / watt_collector와 반환 형태가 다르다는 점이 핵심 차이:
-그 둘은 list[dict] 하나만 반환하지만, 이 모듈은 tuple(articles, timeline)을
-반환한다. 이유:
-  - articles: 기사 1건 = 레코드 1건 -> 공통 스키마 그대로, 정규화/이슈그룹핑으로 감
-  - timeline: 키워드 단위 시계열(timelinevol/timelinevolraw) -> 기사 단위가 아니라서
-    공통 스키마에 억지로 끼워넣지 않음. 3.1 규칙대로 스코어링에는 안 들어가고
-    결과물에 참고 지표로만 별도 표시됨 (저장 레이어가 알아서 분리 저장)
-(2026-07-13 논의 후 확정 - "방식 A")
+정식 collect()는 키워드 4개(HPAI 스킵 후) x 3번 호출(article_search +
+timelinevol + timelinevolraw) x REQUEST_INTERVAL(15초) + 429 재시도 대기까지
+겹치면 실행이 꽤 오래 걸린다. 지금 확인하려는 건 language/sourcecountry
+분포뿐이라 시계열(timeline_search)은 필요 없음 - 그래서:
 
-*** 아직 검증 전 초안입니다 — "확인 필요" 표시된 부분(특히 seendate 파싱)은
-    실제 실행 결과를 보고 나서 다음 단계에서 고쳐야 함 (watt_collector와 동일한 방식) ***
+  1. 키워드를 2개로 줄임 (하나는 결과가 많이 나왔던 것, 하나는 적게 나왔던 것 -
+     2026-07-14 실행 기준 "foot and mouth disease"=42건, "feed price"=7건)
+  2. skip_timeline=True로 timeline_search 호출 자체를 생략 (키워드당 API 호출
+     3번 -> 1번)
 
---- 2026-07-14 실행 테스트 메모 ---
-5개 키워드 중 4개(avian influenza / foot and mouth disease / feed price /
-livestock market) 정상 수집 확인. "HPAI"만 GDELT API 자체 에러로 실패함
-(ValueError: "The specified phrase is too short.") - 코드 버그 아니라
-GDELT DOC API가 너무 짧은 검색어(약어 등)를 거부하는 것으로 추정.
-KEYWORDS_EN은 어차피 최종 확정 전 단계라 지금은 그대로 두고 메모만 남김 -
-추후 키워드 리스트 확정 작업 때 "HPAI" 같은 짧은 약어는 더 긴 표현으로
-바꾸거나 빼는 것을 함께 검토할 것.
+이 두 가지만으로 호출 수가 4x3=12번에서 2x1=2번으로 줄어서, 429가 없다고
+가정하면 몇 분 안에 끝난다. (429가 뜨면 여전히 최대 900초까지는 대기할 수
+있음 - 이건 API 쪽 제약이라 테스트 모드로도 완전히 피할 수는 없음)
 
-또한 실행 중 거의 매 호출마다 429(rate limit)가 발생해 재시도 백오프가
-누적되며 총 실행 시간이 약 1시간 가까이 걸림 - 아래 두 가지로 대응:
-  1. REQUEST_INTERVAL 8초 -> 15초 상향
-  2. _call_with_retry의 429 처리를 "호출별 개별 대기"에서 "전역 공유 쿨다운"
-     방식으로 변경 (자세한 이유는 _call_with_retry, _wait_for_cooldown 참고)
+사용법:
+    python test_gdelt_collector.py
+
+    # 다른 키워드로 확인하고 싶으면:
+    python test_gdelt_collector.py "avian influenza" "livestock market"
 """
 
-import threading
-import time
-from datetime import datetime, timedelta, timezone
-from urllib.parse import urlparse
+import sys
 
-import requests
-from gdeltdoc import GdeltDoc, Filters
-from gdeltdoc.errors import RateLimitError
+import gdelt_collector as gc
 
-# 예시 키워드. 최종 리스트는 아직 확정 전이라 임시로 넣어둠 (naver_collector와 동일 방침).
-# GDELT DOC API는 영문 검색이 기본이므로 영문 키워드로 구성 (스펙 "필요한 것" 항목 참조).
-#
-# 2026-07-14 확인 - "HPAI"는 GDELT API가 "너무 짧은 검색어"로 거부함
-# (ValueError: "The specified phrase is too short."). 키워드 리스트를
-# 본격적으로 확정할 때 더 긴 표현으로 교체하거나 제외할 것 - 지금은
-# 리스트 자체가 임시라 그대로 둠.
-KEYWORDS_EN = [
-    "avian influenza",
-    "HPAI",
-    "foot and mouth disease",
-    "feed price",
-    "livestock market",
-]
-
-# --- 2026-07-14(2차) 추가: 이미 실패가 확인된 키워드 사전 스킵 ---
-#
-# "HPAI"는 2026-07-14 실행에서 GDELT API가 매번 ValueError("The specified
-# phrase is too short.")로 거부하는 게 확인됨. 문제는 이 에러가 429 재시도
-# 루프를 다 태우고 나서야(최대 4단계 백오프, 아래 MAX_RETRIES 참고) 도달하는
-# 진짜 에러라서, 매 실행마다 어차피 실패할 키워드에 수 분~십수 분을 낭비하고
-# 있었음 (실측: 약 7분/키워드).
-#
-# "몇 글자부터 너무 짧다고 판단하는지"는 GDELT가 공식적으로 공개한 기준이
-# 아니라서(추정으로 길이 임계값을 정하면 다른 정상 키워드까지 잘못 걸러낼
-# 위험이 있음), 길이 기반 자동 필터 대신 "실제로 실패가 확인된 키워드"만
-# 명시적으로 등록하는 스킵 리스트로 처리한다. 새 키워드를 추가했는데 계속
-# 같은 ValueError로 실패하는 게 확인되면 여기 추가할 것.
-SKIP_KEYWORDS = {
-    "HPAI": "GDELT API가 'phrase too short'로 거부함 (2026-07-14 확인, 재현됨)",
-}
-
-# 이 프로젝트는 주 1회 실행이므로, 최근 7일 이내 기사만 남긴다 (naver/watt와 동일 방침).
-DAYS_BACK = 7
-
-# GDELT DOC API의 TIMESPAN 파라미터 포맷: 숫자+단위(min/h/d/w/m) 확인됨
-# (GDELT 공식 블로그 "GDELT DOC 2.0 API Debuts!" 기준 - 검색으로 검증함)
-TIMESPAN = f"{DAYS_BACK}d"
-
-# article_search는 GDELT DOC API 자체 한계로 한 번 호출에 최대 250건까지만 반환됨
-# (naver처럼 start 파라미터로 추가 페이지네이션하는 기능 자체가 없음 - API 레벨 한계)
-MAX_RECORDS = 250
-
-# 키워드 사이 요청 간격.
-# GDELT는 공식적으로 "몇 초에 몇 건"인지 수치를 공개하지 않음. 기존엔 8초로
-# 설정했었으나 (2026-07-14 확인) 실제 실행에서 거의 매 호출마다 429가 발생해
-# 재시도 백오프가 누적되는 문제가 있어 15초로 상향. 그래도 429가 잦으면
-# 추가 상향 검토 필요 (정확한 공식 수치는 여전히 비공개라 경험적으로 조정하는 값).
-REQUEST_INTERVAL = 15.0
+# 기본 테스트 키워드 - 2026-07-14 실행에서 결과 건수가 대비되는 2개를 선택
+# (많이 나온 것 / 적게 나온 것 둘 다 봐야 분포가 편중되는지 확인 가능)
+DEFAULT_TEST_KEYWORDS = ["foot and mouth disease", "feed price"]
 
 
-# RateLimitError(HTTP 429) 전용 재시도 횟수/대기시간.
-# 2026-07-13 확인됨: GDELT는 실제로 서버 사이드 요청 제한이 있음(공식 블로그에
-# ElasticSearch 클러스터 보호 목적이라고 명시). 정확한 윈도우 수치는 비공개지만,
-# 실사용 보고(HackerNoon, 2026-04, 공식 확정 아님·참고치)에 따르면 짧은 시간에
-# 요청이 몰리면 15분가량 지속되는 차단이 걸릴 수 있다고 함.
-#
-# 2026-07-14(2차) 변경: 기존 3단계(60→120→240초, 누적 7분)로는 실측 429 로그를
-# 보면 여전히 거의 매 키워드마다 재시도가 소진되는 걸 확인함 - 위에서 언급한
-# "15분가량 지속 차단" 참고치보다 누적 대기시간이 짧아서, 실제 차단이 안 풀린
-# 시점에 재시도를 반복하고 있었을 가능성이 있음. 4단계(60→120→240→480초, 누적
-# 900초=15분)로 늘려서 참고치와 누적 대기시간을 맞춤. 그래도 계속 429가 뜬다면
-# 이건 백오프 튜닝으로 해결할 문제가 아니라 실행 자체를 미루는 게 맞다는 신호.
-MAX_RETRIES = 4
-BACKOFF_BASE_SECONDS = 60  # 60 -> 120 -> 240 -> 480초로 증가 (누적 900초)
+def main():
+    keywords = sys.argv[1:] if len(sys.argv) > 1 else DEFAULT_TEST_KEYWORDS
 
+    print(f"[test] 테스트 키워드: {keywords}")
+    print(f"[test] skip_timeline=True (article_search만 수행)")
+    print(f"[test] 예상 API 호출 수: 키워드 {len(keywords)}개 x 1번 = {len(keywords)}번 "
+          f"(429 재시도 제외)\n")
 
-# 일시적 네트워크 에러(ConnectTimeout 등) 재시도 횟수/대기시간.
-# 2026-07-13 확인됨: 429(rate limit)와 ConnectTimeout이 같은 실행 안에서 섞여
-# 나오는 걸 확인함 - 이건 요청 제한과는 별개로, 순간적인 접속 실패일 가능성이
-# 높아(정황상 추정, GDELT 서버가 그 시점에 불안정했을 수 있음) 429보다는 훨씬
-# 짧게 재시도. 이것도 다 실패하면 429 때와 마찬가지로 그 키워드는 포기.
-NETWORK_ERROR_MAX_RETRIES = 2
-NETWORK_ERROR_WAIT_SECONDS = 10
+    articles, timeline = gc.collect(keywords=keywords, skip_timeline=True)
 
+    print(f"\n총 {len(articles)}건 기사 수집 완료")
+    print(f"시계열 데이터: {timeline} (skip_timeline=True이므로 항상 비어있음)")
 
-# --- 2026-07-14 추가: 전역(프로세스 공유) 쿨다운 ---
-#
-# 기존엔 _call_with_retry가 429를 만나면 "그 호출 안에서만" time.sleep으로
-# 대기했음. 문제는 이 프로젝트가 키워드 하나당 API를 3번(article_search,
-# timelinevol, timelinevolraw) 따로 호출하는데, 재시도 카운터가 호출마다
-# 완전히 독립이라 - 같은 차단 구간 안에서도 호출마다 처음부터(1/3) 다시
-# 60초부터 백오프를 시작하는 낭비가 발생함 (2026-07-14 실행에서 총 실행
-# 시간이 1시간 가까이 걸린 주된 원인으로 추정).
-#
-# 그래서 429를 한 번이라도 만나면 "지금부터 N초간은 전체 프로세스가 아예
-# 요청을 안 보낸다"는 정보를 전역으로 공유하도록 변경. 이후의 모든 호출은
-# 실행 전에 먼저 이 쿨다운이 끝났는지 확인하고, 안 끝났으면 그만큼 먼저
-# 기다린 뒤에 실제 요청을 시도함.
-_cooldown_until = 0.0
-_cooldown_lock = threading.Lock()
+    for a in articles[:3]:
+        print(a)
 
-
-def _wait_for_cooldown():
-    """쿨다운 중이면 그 시점까지 대기. 아니면 즉시 반환."""
-    with _cooldown_lock:
-        remaining = _cooldown_until - time.time()
-    if remaining > 0:
-        print(f"[gdelt] 전역 쿨다운 중 - {remaining:.0f}초 남음, 대기")
-        time.sleep(remaining)
-
-
-def _trigger_cooldown(seconds: float):
-    """
-    429를 만났을 때 전역 쿨다운을 세팅(또는 연장)한다.
-    이미 더 긴 쿨다운이 걸려있다면 그걸 덮어쓰지 않는다(연장만 함) -
-    여러 호출이 거의 동시에 429를 만나도 쿨다운이 짧아지는 방향으로
-    잘못 갱신되지 않도록.
-    """
-    global _cooldown_until
-    with _cooldown_lock:
-        new_until = time.time() + seconds
-        if new_until > _cooldown_until:
-            _cooldown_until = new_until
-
-
-def _call_with_retry(func, *args, label: str = "", **kwargs):
-    """
-    RateLimitError(429)와 일시적 네트워크 에러(ConnectTimeout 등)를 서로 다른
-    정책으로 재시도한다 (429는 길게, 네트워크 에러는 짧게). 그 외 예외는 바로
-    올려보내서 (9.1 방침대로) collect()의 try/except가 그 키워드만 건너뛰게 한다.
-
-    2026-07-14 변경: 429는 이 함수 호출 하나만 기다리고 마는 게 아니라,
-    전역 쿨다운(_trigger_cooldown)을 걸어서 이후에 오는 모든 호출(다른
-    키워드/다른 엔드포인트 포함)이 같은 차단 구간을 공유해서 기다리게 함.
-    호출 시작 시 _wait_for_cooldown()으로 남아있는 쿨다운을 먼저 소진한다.
-
-    두 카운터(rate_limit_attempt, network_attempt)를 독립적으로 관리 - 하나의
-    반복문에서 같이 세면 "429 한 번 + 네트워크에러 한 번"을 겪었을 때 429 쪽
-    백오프 계산이 실제 429 횟수와 안 맞아지는 문제가 있어서 분리함.
-
-    label: 로그에 찍을 식별자 (예: "avian influenza / article_search").
-    2026-07-13 확인됨 - 키워드 하나당 API를 3번(article_search, timelinevol,
-    timelinevolraw) 따로 호출하는데, 재시도 카운터가 호출마다 독립적으로 리셋되다
-    보니 로그만 보면 "(1/3)"이 반복되는 것처럼 헷갈릴 수 있어서 label을 붙임.
-    """
-    rate_limit_attempt = 0
-    network_attempt = 0
-
-    while True:
-        _wait_for_cooldown()  # 다른 호출이 걸어둔 전역 쿨다운이 있으면 먼저 대기
-        try:
-            return func(*args, **kwargs)
-        except RateLimitError:
-            if rate_limit_attempt >= MAX_RETRIES:
-                raise
-            wait = BACKOFF_BASE_SECONDS * (2 ** rate_limit_attempt)
-            rate_limit_attempt += 1
-            print(f"[gdelt] {label} - 429 rate limit - {wait}초 전역 쿨다운 설정 "
-                  f"({rate_limit_attempt}/{MAX_RETRIES})")
-            _trigger_cooldown(wait)
-        except (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
-            if network_attempt >= NETWORK_ERROR_MAX_RETRIES:
-                raise
-            network_attempt += 1
-            print(f"[gdelt] {label} - 접속 실패(ConnectTimeout 등) - "
-                  f"{NETWORK_ERROR_WAIT_SECONDS}초 대기 후 재시도 "
-                  f"({network_attempt}/{NETWORK_ERROR_MAX_RETRIES})")
-            time.sleep(NETWORK_ERROR_WAIT_SECONDS)
-
-
-def _parse_seendate(raw: str) -> datetime:
-    """
-    gdeltdoc article_search가 반환하는 seendate 필드를 datetime으로 변환한다.
-
-    TODO 확인 필요: 실제 seendate 값의 정확한 포맷을 직접 실행해서 확인 안 한 상태.
-    GDELT 원시 데이터에서 흔히 쓰이는 "YYYYMMDDHHMMSS" 형태(예: "20260713090000")
-    또는 뒤에 "Z"가 붙는 형태를 우선 시도하고, 안 되면 ISO 8601도 시도하도록 짜둠.
-    (watt_collector의 _parse_published_time과 같은 방어적 접근)
-    """
-    raw = raw.strip()
-
-    # 1) "20260713090000" 또는 "20260713T090000Z" 형태 시도
-    for fmt in ("%Y%m%d%H%M%S", "%Y%m%dT%H%M%SZ"):
-        try:
-            dt = datetime.strptime(raw, fmt)
-            return dt.replace(tzinfo=timezone.utc)
-        except ValueError:
-            continue
-
-    # 2) ISO 8601 형태 시도 (예: "2026-07-13T09:00:00Z")
-    try:
-        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
-    except ValueError:
-        pass
-
-    raise ValueError(f"seendate 파싱 실패, 형식 확인 필요: {raw!r}")
-
-
-def _is_recent(dt: datetime, days: int) -> bool:
-    cutoff = datetime.now(dt.tzinfo) - timedelta(days=days)
-    return dt >= cutoff
-
-
-def _extract_domain(url: str) -> str:
-    """
-    기사 원문 URL에서 도메인만 뽑아 press로 사용한다 (naver_collector의
-    _extract_press와 동일한 목적 - 3.2 언론사 dedup에 사용).
-    """
-    if not url:
-        return ""
-    domain = urlparse(url).netloc
-    return domain.replace("www.", "")
-
-
-def collect() -> tuple[list[dict], dict]:
-    """
-    KEYWORDS_EN을 순서대로 돌면서 GDELT에서 기사 메타데이터와 언급 시계열을
-    함께 수집한다. 이 함수가 gdelt_collector의 '진입점'.
-
-    반환값:
-      articles: 공통 스키마 리스트. 다음 단계(정규화/이슈그룹핑)로 그대로 전달됨
-      timeline: {키워드: {"vol": [...], "volraw": [...]}} 형태.
-                스코어링에는 안 들어가고 결과물에 참고 지표로만 별도 표시 (3.1 규칙)
-    """
-    gd = GdeltDoc()
-
-    all_articles = []
-    timeline_by_keyword = {}
-
-    for keyword in KEYWORDS_EN:
-        if keyword in SKIP_KEYWORDS:
-            print(f"[gdelt] '{keyword}' 스킵 - {SKIP_KEYWORDS[keyword]}")
-            continue
-
-        f = Filters(
-            keyword=keyword,
-            timespan=TIMESPAN,
-            num_records=MAX_RECORDS,
-        )
-
-        # --- 2026-07-14(2차) 변경: 1)기사 수집과 2)시계열 수집을 별도 try/except로
-        # 분리함. 기존엔 하나의 try 블록으로 묶여있어서, 기사 수집(article_search)이
-        # 이미 성공해 all_articles에 들어간 뒤에 시계열(timeline_search)만 실패해도
-        # 바깥 except가 "'키워드' 수집 실패"라는 한 줄만 찍고 넘어가 버렸음. 실제
-        # 데이터는 이미 들어갔는데 로그·에러리포트(9.2)에는 "완전 실패"로 남는
-        # 불일치가 있었음 (2026-07-14 실행에서 avian influenza가 이 케이스였고,
-        # 로그에 안 찍힌 채로 50건이 조용히 섞여 들어갔던 게 확인됨).
-        #
-        # 이제는 기사 수집 성공 시점에 바로 건수를 로그로 남기고, 시계열 수집은
-        # 실패해도 이미 확보한 기사에는 영향이 없다는 걸 로그에서 바로 알 수 있게 함.
-
-        # 1) 기사 메타데이터 수집
-        keyword_articles = []
-        articles_ok = False
-        try:
-            articles_df = _call_with_retry(gd.article_search, f, label=f"{keyword} / article_search")
-            if articles_df is not None and not articles_df.empty:
-                for _, row in articles_df.iterrows():
-                    try:
-                        published_at = _parse_seendate(str(row["seendate"]))
-                    except ValueError as e:
-                        # 날짜 파싱 실패한 기사 1건만 건너뜀 (전체 중단 아님, 9.1 방침)
-                        print(f"[gdelt] '{keyword}' 기사 스킵 - {e}")
-                        continue
-
-                    if not _is_recent(published_at, DAYS_BACK):
-                        continue
-
-                    keyword_articles.append({
-                        "source": "GDELT",
-                        "title": row["title"],
-                        "url": row["url"],
-                        "published_at": published_at.isoformat(),
-                        "category": None,   # 정제 단계에서 채움 (naver_collector와 동일 방침)
-                        "body": None,        # GDELT는 본문 미제공 (스펙에 명시된 그대로)
-                        "press": _extract_domain(row["url"]),  # naver의 press 필드와 동일 목적
-                        # 2026-07-14 추가: 언어/국가 분포 진단용. gdeltdoc이 원래
-                        # 반환하는 필드인데 지금까지 받아만 놓고 안 쓰고 있었음.
-                        # GDELT 공식 문서 확인 - JSON/article_search 모드에서는
-                        # title이 번역 없이 원문 그대로 옴 (TRANS 옵션은 HTML 모드
-                        # 전용 위젯이라 여기 안 해당). 즉 이 title 값은 중국어/독일어
-                        # 등 원문 스크립트 그대로일 수 있음 - 12번 언어처리방침에서
-                        # 다뤄야 할 지점.
-                        "language": row.get("language", ""),
-                        "sourcecountry": row.get("sourcecountry", ""),
-                    })
-
-            all_articles.extend(keyword_articles)
-            articles_ok = True
-            print(f"[gdelt] '{keyword}' article_search -> 최근 {DAYS_BACK}일 이내 "
-                  f"{len(keyword_articles)}건 수집 완료")
-
-        except Exception as e:
-            # 기사 수집 자체가 실패한 경우만 이 키워드는 기사 0건 (9.1 방침대로
-            # 이 키워드만 건너뛰고 다음 키워드로 진행)
-            print(f"[gdelt] '{keyword}' article_search 실패: {type(e).__name__} - {e!r}")
-
-        time.sleep(REQUEST_INTERVAL)
-
-        # 2) 언급 시계열 수집 (timelinevol, timelinevolraw 둘 다 - 스펙 62번 줄 기준)
-        # 기사 수집 성공 여부와 무관하게 독립적으로 시도 - 시계열만 실패해도
-        # 위에서 이미 확보한 keyword_articles(articles_ok=True인 경우)는 그대로 유지됨
-        try:
-            vol_df = _call_with_retry(gd.timeline_search, "timelinevol", f,
-                                       label=f"{keyword} / timelinevol")
-            time.sleep(REQUEST_INTERVAL)
-            volraw_df = _call_with_retry(gd.timeline_search, "timelinevolraw", f,
-                                          label=f"{keyword} / timelinevolraw")
-
-            timeline_by_keyword[keyword] = {
-                # 2026-07-13 확인됨(실행 결과로 검증) - 실제 컬럼 구조:
-                #   vol:    {"datetime": Timestamp, "Volume Intensity": float}
-                #   volraw: {"datetime": Timestamp, "Article Count": int, "All Articles": int}
-                # Timestamp 객체는 그대로 JSON 직렬화가 안 되므로, 저장 레이어(5번 섹션)
-                # 쪽 raw.json에 넣기 전 문자열로 변환하는 처리가 필요함 (다음 단계 작업)
-                "vol": vol_df.to_dict("records") if vol_df is not None else [],
-                "volraw": volraw_df.to_dict("records") if volraw_df is not None else [],
-            }
-            print(f"[gdelt] '{keyword}' 시계열 수집 완료")
-
-        except Exception as e:
-            # 시계열만 실패한 경우 - 기사는 이미 all_articles에 들어가 있으므로
-            # (articles_ok=True였다면) 데이터 손실 없음. timeline_by_keyword에는
-            # 이 키워드가 아예 안 들어가고, 결과물에서는 참고 지표(3.1)가 빠지는 것뿐.
-            print(f"[gdelt] '{keyword}' 시계열 수집 실패: {type(e).__name__} - {e!r} "
-                  f"(기사 수집 결과 {'유지됨' if articles_ok else '없음'}, "
-                  f"{len(keyword_articles)}건)")
-
-        time.sleep(REQUEST_INTERVAL)
-
-    return all_articles, timeline_by_keyword
-
-
-def _print_distribution(articles: list[dict]) -> None:
-    """
-    2026-07-14 추가 - 진단용 전용 함수.
-
-    목적: "영어 키워드만으로 중국/유럽 기사가 실제로 얼마나 잡히는지"를 확인하기
-    위한 1회성 진단. 이슈 그룹핑이나 스코어링에는 안 들어가고, 사람이 눈으로
-    보고 "키워드 사전을 다국어로 확장할 필요가 있는지" 판단하는 데만 씀.
-
-    language/sourcecountry 값이 비어있는 항목이 있을 수 있음(gdeltdoc이 항상
-    채워주는지 확인 안 된 상태) - 그런 경우 "(미상)"으로 묶어서 표시.
-    """
-    from collections import Counter
-
-    lang_counter = Counter(a["language"] or "(미상)" for a in articles)
-    country_counter = Counter(a["sourcecountry"] or "(미상)" for a in articles)
-
-    print(f"\n=== 언어 분포 (전체 {len(articles)}건) ===")
-    for lang, count in lang_counter.most_common():
-        pct = count / len(articles) * 100 if articles else 0
-        print(f"  {lang:20s} {count:4d}건 ({pct:.1f}%)")
-
-    print(f"\n=== 국가 분포 (전체 {len(articles)}건) ===")
-    for country, count in country_counter.most_common(15):
-        pct = count / len(articles) * 100 if articles else 0
-        print(f"  {country:20s} {count:4d}건 ({pct:.1f}%)")
-
-    # 중국/유럽 비중을 바로 눈에 띄게 별도 표시 (이번 진단의 핵심 질문)
-    china_related = sum(
-        1 for a in articles
-        if a["sourcecountry"] in ("China", "Hong Kong", "Taiwan")
-        or a["language"] in ("chi", "zh", "zh-cn", "zh-tw")
-    )
-    print(f"\n중국/홍콩/대만 관련: {china_related}건 "
-          f"({china_related / len(articles) * 100 if articles else 0:.1f}%)")
+    # 이번 테스트의 핵심 질문 - 언어/국가 분포
+    gc._print_distribution(articles)
 
 
 if __name__ == "__main__":
-    # 터미널에서 python gdelt_collector.py 로 직접 실행했을 때만 동작.
-    articles, timeline = collect()
-    print(f"\n총 {len(articles)}건 기사 수집 완료")
-    for a in articles[:3]:
-        print(a)
-    print(f"\n시계열 수집된 키워드: {list(timeline.keys())}")
-    if timeline:
-        first_keyword = next(iter(timeline))
-        print(f"\n'{first_keyword}' 시계열 샘플 (vol 앞 2건): {timeline[first_keyword]['vol'][:2]}")
-        print(f"'{first_keyword}' 시계열 샘플 (volraw 앞 2건): {timeline[first_keyword]['volraw'][:2]}")
-
-    _print_distribution(articles)
+    main()
