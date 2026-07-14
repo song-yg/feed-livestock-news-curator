@@ -11,6 +11,10 @@ main.py
                     (2.2 키워드 태깅은 이번에 구현 완료 - keyword_tagger.py)
   3) 스코어링    -> 구현 완료 (scorer.py) - 단, 2번의 임시 처리 때문에 지금은
                     사실상 "기사 단위 점수"와 동일하게 작동함 (그룹이 다 크기 1)
+                    + 카테고리 전체 집계(category_aggregator.py, 2026-07-14
+                    신규) 보조 지표 추가 - 2.1 이슈 그룹핑이 "동일 사건만"
+                    묶는 좁은 정의라 생기는 공백을 메우는 별개 지표 (순위와
+                    무관, 국내/해외 각각 카테고리별 단순 건수만 집계)
   4) LLM 요약    -> 미구현 (TODO)
   5) 저장        -> 미구현 (TODO) - 이번엔 확인용으로 scored 결과를 콘솔 출력만 함
   6) 배포        -> 미구현 (TODO)
@@ -26,6 +30,7 @@ import naver_collector
 import scorer
 from WATT_collector import collect as watt_collect  # noqa: N813 (파일명 규칙과 다르지만 기존 파일 그대로 사용)
 import keyword_tagger
+import category_aggregator
 
 
 # ---------------------------------------------------------------------------
@@ -155,10 +160,15 @@ def _step4_llm_summary_todo(top_issues: list[dict]) -> None:
 
 
 def _step5_storage_todo(domestic_ranked: list[dict], international_ranked: list[dict],
-                         gdelt_timeline: dict, failed_sources: list[str]) -> None:
+                         gdelt_timeline: dict, failed_sources: list[str],
+                         category_distribution: dict) -> None:
     """
     TODO (섹션 5): data/YYYY-WW/raw.json, scored.json, summary.md 저장.
     9.2 에러 리포트(failed_sources)도 이 단계 결과물에 자동으로 붙여야 함.
+    category_distribution(카테고리 전체 집계, 2026-07-14 신규)도 scored.json에
+    같이 저장해야 다음 주 "지난주 대비 증감"(category_aggregator.py 모듈
+    docstring의 "이번 범위 밖" 항목) 비교가 가능해진다 - 저장 레이어 구현 시
+    함께 반영할 것.
     지금은 저장 대신 콘솔 출력으로 대체 (아래 print_summary 참고).
     """
 
@@ -185,9 +195,18 @@ def run() -> None:
     scorer.print_top_n("국내", domestic_ranked, n=5)
     scorer.print_top_n("해외", international_ranked, n=5)
 
+    print("\n=== [3-보조] 카테고리 전체 집계 (국내/해외, 2026-07-14 신규) ===")
+    # 2.1 이슈 그룹핑이 "동일 사건만" 묶는 좁은 정의라 큰 트렌드가 개별
+    # 이슈로 흩어져 보이는 공백을 메우는 거친(coarse) 보조 지표 - 순위(Top N)와는
+    # 별개로, 카테고리 자체가 이번 주 몇 건 다뤄졌는지만 보여준다.
+    # (category_aggregator.py 모듈 docstring 참고)
+    category_distribution = category_aggregator.aggregate(articles)
+    category_aggregator.print_aggregate(category_distribution)
+
     # 4~6단계는 아직 자리만 (TODO)
     _step4_llm_summary_todo(domestic_ranked + international_ranked)
-    _step5_storage_todo(domestic_ranked, international_ranked, gdelt_timeline, failed_sources)
+    _step5_storage_todo(domestic_ranked, international_ranked, gdelt_timeline,
+                         failed_sources, category_distribution)
     _step6_deploy_todo()
 
     if failed_sources:
