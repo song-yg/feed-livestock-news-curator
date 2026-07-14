@@ -1,12 +1,64 @@
-# 사료축산뉴스 파이프라인 의존성
-# main.py 실행(수집 -> 정규화/태깅 -> 스코어링 -> 카테고리 집계)에 필요한
-# 패키지 + calibrate_issue_grouper.py(issue_grouper 재검증용)에 필요한
-# sentence-transformers. issue_grouper.py 자체는 아직 main.py에 연결
-# 안 됐지만, 재검증 스크립트가 BGE-M3를 직접 로드해서 써야 해서 포함함.
+name: 사료축산뉴스 파이프라인 실행
 
-requests
-python-dotenv
-beautifulsoup4
-playwright
-gdeltdoc
-sentence-transformers
+# 문서 "6. 실행/오케스트레이션 (Runner)" - "트리거는 GitHub Actions 스케줄
+# (예: 매주 월요일) 또는 수동 버튼 클릭 둘 다 지원" 원칙 그대로 구현.
+#
+# - workflow_dispatch: 지금처럼 "돌려놓고 퇴근" 할 때 Actions 탭에서 수동으로
+#   누르는 버튼. 오늘 원문 실행은 이걸로 트리거하면 됨.
+# - schedule: 매주 월요일 07:00 KST(=일요일 22:00 UTC) 예시값. 정확한 요일/
+#   시각은 문서 7번 섹션에 최종 확정 아님 - 필요하면 cron 값만 바꾸면 됨.
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 22 * * 0"
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    # 문서 "9.1 소스별 독립 실행 구조" 덕분에 collector 하나가 죽어도
+    # main.py 안에서 나머지는 계속 진행됨 (main.py의 run_collectors 참고).
+    # 다만 GDELT만으로도 실측 약 1시간 가까이 걸린 전례(문서 1번 섹션
+    # gdelt_collector 실행 테스트 메모)가 있어, WATT/naver까지 합치고도
+    # 여유 있게 넉넉히 잡음 - "시간 오래 걸려도 괜찮다"는 전제 반영.
+    timeout-minutes: 240
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          # scorer.py 등에서 `int | None` 같은 3.10+ 문법을 쓰고 있어 3.11로 고정
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+
+      - name: Playwright 브라우저 설치 (WATT_collector용)
+        # WATT_collector가 requests 대신 Playwright로 전환한 이유가 403
+        # (WAF 추정) 회피였음(문서 1번 섹션 watt_collector 행 참고) - 브라우저
+        # 바이너리 + OS 의존성까지 같이 설치해야 GitHub Actions 러너에서 작동함
+        run: playwright install --with-deps chromium
+
+      - name: 파이프라인 실행 (main.py, 원문 실행)
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+        # 저장 레이어(문서 5번 섹션)가 아직 미구현이라 main.py는 결과를
+        # 파일로 안 남기고 콘솔 출력만 함 - 그래서 출력을 로그 파일로도
+        # 남겨서 아래 업로드 스텝에서 아티팩트로 보존한다.
+        run: python main.py 2>&1 | tee run_log.txt
+
+      - name: 실행 로그 아티팩트 업로드
+        # 성공/실패와 무관하게 항상 업로드 (실패해도 어디까지 진행됐는지
+        # 로그로 확인 가능해야 함 - 9.2 "에러 리포트 자동화"와 같은 취지,
+        # 정식 에러 리포트 자동화는 저장 레이어 완성 후 별도 구현 예정)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: news-pipeline-run-log-${{ github.run_id }}
+          path: run_log.txt
+          retention-days: 30
