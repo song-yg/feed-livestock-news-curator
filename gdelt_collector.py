@@ -11,7 +11,7 @@ naver_collector / watt_collector와 반환 형태가 다르다는 점이 핵심 
   - timeline: 키워드 단위 시계열(timelinevol/timelinevolraw) -> 기사 단위가 아니라서
     공통 스키마에 억지로 끼워넣지 않음. 3.1 규칙대로 스코어링에는 안 들어가고
     결과물에 참고 지표로만 별도 표시됨 (저장 레이어가 알아서 분리 저장)
-(2026-07-13 논의 후 확정 - "방식 A")
+(2026-07-13 바람과 논의 후 확정 - "방식 A")
 
 *** 아직 검증 전 초안입니다 — "확인 필요" 표시된 부분(특히 seendate 파싱)은
     실제 실행 결과를 보고 나서 다음 단계에서 고쳐야 함 (watt_collector와 동일한 방식) ***
@@ -30,6 +30,16 @@ KEYWORDS_EN은 어차피 최종 확정 전 단계라 지금은 그대로 두고 
   1. REQUEST_INTERVAL 8초 -> 15초 상향
   2. _call_with_retry의 429 처리를 "호출별 개별 대기"에서 "전역 공유 쿨다운"
      방식으로 변경 (자세한 이유는 _call_with_retry, _wait_for_cooldown 참고)
+
+--- 2026-07-14(4차) 추가 메모 (GitHub Actions 실행 중 사용자 관찰) ---
+GDELT 접속량이 예상보다 훨씬 많아 보임(사용자 관찰) - MAX_RETRIES(4단계,
+최대 900초)를 다 소진하고도 실패하는 키워드가 나오면 그 키워드만 편중되게
+빠지는 결과물이 나올 위험이 있어, 키워드 단위 "외부 재시도"를 추가함:
+  1. article_search가 최종 실패한 키워드만 모아서, 한 라운드가 끝난 뒤 별도
+     라운드로 최대 OUTER_RETRY_PASSES(기본 2)번 더 재시도 (총 최대 3회 시도)
+  2. 429 발생 시각을 UTC로 기록해 실행 끝에 요약 출력 (_rate_limit_log,
+     _print_rate_limit_summary) - "429가 특정 시간대에 몰리는지" 실측을 위한
+     데이터 축적용. 아직 결론 아님 - 여러 실행분의 로그가 쌓여야 판단 가능
 """
 
 import threading
@@ -73,6 +83,38 @@ SKIP_KEYWORDS = {
     "HPAI": "GDELT API가 'phrase too short'로 거부함 (2026-07-14 확인, 재현됨)",
 }
 
+# --- 2026-07-14 추가: 키워드 오매칭(false positive) 필터 ---
+#
+# GDELT article_search는 키워드를 "부분 문자열 포함" 방식으로 매칭하기 때문에,
+# 의도한 키워드가 더 긴 무관한 구(phrase)의 일부로 들어있는 제목도 그대로
+# 매칭돼버리는 구조적 문제가 있다. 실제로 확인된 사례:
+#   "foot and mouth disease"(구제역) 검색 -> "hand, foot and mouth disease"
+#   (수족구병 - 어린이 질환, 전혀 다른 병)가 그대로 포함 매칭됨
+#   (test_gdelt_collector.py 진단 실행, 2026-07-14)
+#
+# 길이 기반이나 정규식 기반의 일반화된 해법 대신, "실제로 오매칭이 확인된
+# 키워드"에 한해 제외 패턴을 명시적으로 등록하는 방식을 쓴다 (SKIP_KEYWORDS와
+# 동일한 철학 - 추정으로 일반 규칙을 만들면 다른 정상 매칭까지 잘못 걸러낼
+# 위험이 있음). 새 오매칭 패턴이 확인되면 여기 추가할 것.
+#
+# 형태: {검색 키워드: [제목에 이 문자열(대소문자 무시)이 포함되면 제외, ...]}
+FALSE_POSITIVE_FILTERS = {
+    "foot and mouth disease": ["hand, foot and mouth", "hand foot and mouth"],
+}
+
+
+def _is_false_positive(keyword: str, title: str) -> bool:
+    """
+    해당 키워드의 등록된 제외 패턴이 제목에 포함돼 있으면 True.
+    (예: "foot and mouth disease" 검색 결과 중 제목에 "hand, foot and mouth"가
+    있으면 수족구병 오매칭으로 판단해 제외)
+    """
+    patterns = FALSE_POSITIVE_FILTERS.get(keyword, [])
+    if not patterns or not title:
+        return False
+    title_lower = title.lower()
+    return any(p.lower() in title_lower for p in patterns)
+
 # 이 프로젝트는 주 1회 실행이므로, 최근 7일 이내 기사만 남긴다 (naver/watt와 동일 방침).
 DAYS_BACK = 7
 
@@ -115,6 +157,58 @@ BACKOFF_BASE_SECONDS = 60  # 60 -> 120 -> 240 -> 480초로 증가 (누적 900초
 # 짧게 재시도. 이것도 다 실패하면 429 때와 마찬가지로 그 키워드는 포기.
 NETWORK_ERROR_MAX_RETRIES = 2
 NETWORK_ERROR_WAIT_SECONDS = 10
+
+
+# --- 2026-07-14(3차) 추가: 429 발생 시각 기록 (시간대별 패턴 실측용) ---
+#
+# "429가 특정 시간대에 몰리는지"는 아직 결론이 없는 상태 (지난 세션 메모 참고).
+# 이걸 실제로 확인하려면 여러 번의 실행(다른 시간대)에 걸쳐 429가 언제
+# 발생했는지 로그로 남아있어야 하는데, 기존 print에는 시각이 안 찍혀서
+# GitHub Actions 로그 자체 타임스탬프에 의존해야 했음 (뒤섞여서 눈으로
+# 패턴을 보기 번거로움). 그래서 429 발생 시각을 UTC로 명시적으로 찍고,
+# 실행 하나가 끝날 때 한 번에 모아서 요약도 출력한다.
+#
+# 주의: 이건 "패턴을 실측했다"는 뜻이 아니라, 실측이 가능하도록 데이터를
+# 남기는 장치일 뿐이다. 실제 패턴 판단은 최소 며칠~몇 주치 실행 로그가
+# 쌓인 뒤에야 가능함 (주 1회 실행이라 표본이 빨리 안 모임 - GitHub Actions
+# 수동 실행으로 다른 시간대에 추가로 돌려보는 것도 표본 확보에 도움이 됨).
+_rate_limit_log: list[str] = []
+
+
+def _print_rate_limit_summary() -> None:
+    """이번 실행에서 발생한 429 시각을 한 번에 모아 출력 (시간대 패턴 분석용 원자재)."""
+    if not _rate_limit_log:
+        print("\n[gdelt] 이번 실행 429 발생: 없음")
+        return
+    print(f"\n[gdelt] 이번 실행 429 발생 {len(_rate_limit_log)}건 (UTC 시각):")
+    for ts in _rate_limit_log:
+        print(f"  - {ts}")
+
+
+# --- 2026-07-14(4차) 추가: 키워드 단위 외부 재시도 (outer retry) ---
+#
+# 사용자 관찰(2026-07-14, GitHub Actions 실행 중): GDELT 자체 접속량이
+# 예상보다 많아 보임 - MAX_RETRIES=4(최대 900초 대기)를 다 소진하고도
+# article_search가 실패하는 키워드가 나올 수 있는데, 기존엔 이 경우 그
+# 키워드가 그대로 기사 0건으로 끝나버렸음. 9.1 "소스 실패 대응" 원칙상
+# 키워드 하나 실패가 전체 실행을 막진 않지만, 그 결과 "이번 주엔 유독
+# 어떤 키워드만 몰린" 편중된 결과물이 나올 위험이 있음 - 이건 실제 이슈
+# 분포가 아니라 순전히 그 시점 레이트리밋 운에 좌우되는 편중이라 문제.
+#
+# 대응: 한 라운드(전체 키워드 순회)가 끝난 뒤, article_search가 최종
+# 실패한 키워드만 모아서 별도 라운드로 재시도한다. 이미 성공한 키워드는
+# 다시 건드리지 않음(중복 수집 방지 + 불필요한 API 호출 절약).
+#
+# 라운드 사이엔 REQUEST_INTERVAL과 별개로 OUTER_RETRY_WAIT_SECONDS만큼
+# 추가 대기를 둔다 - MAX_RETRIES 소진이 항상 900초 대기 후에 일어나는 건
+# 아니라서(예: 네트워크 에러로 더 일찍 포기한 경우), 쿨다운이 실제로는
+# 덜 지난 채 다음 라운드가 시작될 수 있어 안전 마진으로 추가함.
+#
+# 총 시도 횟수 = 1(최초) + OUTER_RETRY_PASSES(추가 라운드) = 기본 3회.
+# 이 프로젝트는 주 1회 배치라 실행 시간이 늘어나는 것보다 "쏠린 결과물"을
+# 피하는 쪽을 우선함 (사용자 판단, 2026-07-14).
+OUTER_RETRY_PASSES = 2
+OUTER_RETRY_WAIT_SECONDS = 90
 
 
 # --- 2026-07-14 추가: 전역(프로세스 공유) 쿨다운 ---
@@ -189,7 +283,9 @@ def _call_with_retry(func, *args, label: str = "", **kwargs):
                 raise
             wait = BACKOFF_BASE_SECONDS * (2 ** rate_limit_attempt)
             rate_limit_attempt += 1
-            print(f"[gdelt] {label} - 429 rate limit - {wait}초 전역 쿨다운 설정 "
+            now_str = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            _rate_limit_log.append(now_str)
+            print(f"[gdelt] {now_str} - {label} - 429 rate limit - {wait}초 전역 쿨다운 설정 "
                   f"({rate_limit_attempt}/{MAX_RETRIES})")
             _trigger_cooldown(wait)
         except (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
@@ -246,121 +342,189 @@ def _extract_domain(url: str) -> str:
     return domain.replace("www.", "")
 
 
-def collect() -> tuple[list[dict], dict]:
+def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, list[dict]]:
+    """
+    한 키워드에 대해 article_search만 수행하고 (성공 여부, 기사 리스트)를 반환한다.
+    2026-07-14(4차) - 외부 재시도 라운드(OUTER_RETRY_PASSES)에서 실패한 키워드만
+    다시 돌릴 수 있도록 기존 collect() 안에 있던 로직을 분리함.
+
+    성공 여부는 article_search 호출 자체가 예외 없이 끝났는지 기준 (기사가
+    0건이어도 호출 자체가 정상이면 True - 그 키워드는 그냥 최근 기사가 없는
+    것이므로 재시도 대상이 아님).
+    """
+    f = Filters(keyword=keyword, timespan=TIMESPAN, num_records=MAX_RECORDS)
+    keyword_articles = []
+    false_positive_count = 0
+
+    try:
+        articles_df = _call_with_retry(gd.article_search, f, label=f"{keyword} / article_search")
+
+        if articles_df is not None and not articles_df.empty:
+            for _, row in articles_df.iterrows():
+                if _is_false_positive(keyword, str(row["title"])):
+                    # 예: "foot and mouth disease" 검색인데 제목이
+                    # "hand, foot and mouth disease"(수족구병)인 경우 -
+                    # 구조적 오매칭이라 이 기사만 조용히 제외 (9.1 방침대로
+                    # 기사 1건 스킵일 뿐 키워드 전체를 중단하지 않음)
+                    false_positive_count += 1
+                    continue
+
+                try:
+                    published_at = _parse_seendate(str(row["seendate"]))
+                except ValueError as e:
+                    # 날짜 파싱 실패한 기사 1건만 건너뜀 (전체 중단 아님, 9.1 방침)
+                    print(f"[gdelt] '{keyword}' 기사 스킵 - {e}")
+                    continue
+
+                if not _is_recent(published_at, DAYS_BACK):
+                    continue
+
+                keyword_articles.append({
+                    "source": "GDELT",
+                    "title": row["title"],
+                    "url": row["url"],
+                    "published_at": published_at.isoformat(),
+                    "category": None,   # 정제 단계에서 채움 (naver_collector와 동일 방침)
+                    "body": None,        # GDELT는 본문 미제공 (스펙에 명시된 그대로)
+                    "press": _extract_domain(row["url"]),  # naver의 press 필드와 동일 목적
+                    # 2026-07-14 추가: 언어/국가 분포 진단용. gdeltdoc이 원래
+                    # 반환하는 필드인데 지금까지 받아만 놓고 안 쓰고 있었음.
+                    # GDELT 공식 문서 확인 - JSON/article_search 모드에서는
+                    # title이 번역 없이 원문 그대로 옴 (TRANS 옵션은 HTML 모드
+                    # 전용 위젯이라 여기 안 해당). 즉 이 title 값은 중국어/독일어
+                    # 등 원문 스크립트 그대로일 수 있음 - 12번 언어처리방침에서
+                    # 다뤄야 할 지점.
+                    "language": row.get("language", ""),
+                    "sourcecountry": row.get("sourcecountry", ""),
+                })
+
+        fp_note = f" (오매칭 필터로 {false_positive_count}건 제외)" if false_positive_count else ""
+        print(f"[gdelt] '{keyword}' article_search -> 최근 {DAYS_BACK}일 이내 "
+              f"{len(keyword_articles)}건 수집 완료{fp_note}")
+        return True, keyword_articles
+
+    except Exception as e:
+        # 기사 수집 자체가 실패한 경우 - 호출부(collect())가 이 키워드를
+        # failed_keywords에 담아 외부 재시도 라운드로 넘긴다 (2026-07-14(4차))
+        print(f"[gdelt] '{keyword}' article_search 실패: {type(e).__name__} - {e!r}")
+        return False, []
+
+
+def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
+    """
+    한 키워드에 대해 timelinevol/timelinevolraw를 수집한다. 실패 시 None.
+    (2026-07-14(4차) - collect() 안에 있던 로직을 분리, 동작은 기존과 동일)
+    """
+    f = Filters(keyword=keyword, timespan=TIMESPAN, num_records=MAX_RECORDS)
+    try:
+        vol_df = _call_with_retry(gd.timeline_search, "timelinevol", f,
+                                   label=f"{keyword} / timelinevol")
+        time.sleep(REQUEST_INTERVAL)
+        volraw_df = _call_with_retry(gd.timeline_search, "timelinevolraw", f,
+                                      label=f"{keyword} / timelinevolraw")
+        print(f"[gdelt] '{keyword}' 시계열 수집 완료")
+        return {
+            # 2026-07-13 확인됨(실행 결과로 검증) - 실제 컬럼 구조:
+            #   vol:    {"datetime": Timestamp, "Volume Intensity": float}
+            #   volraw: {"datetime": Timestamp, "Article Count": int, "All Articles": int}
+            # Timestamp 객체는 그대로 JSON 직렬화가 안 되므로, 저장 레이어(5번 섹션)
+            # 쪽 raw.json에 넣기 전 문자열로 변환하는 처리가 필요함 (다음 단계 작업)
+            "vol": vol_df.to_dict("records") if vol_df is not None else [],
+            "volraw": volraw_df.to_dict("records") if volraw_df is not None else [],
+        }
+    except Exception as e:
+        # 시계열만 실패한 경우 - 기사는 이미 확보돼 있으므로(성공했다면) 데이터
+        # 손실 없음. 결과물에서는 참고 지표(3.1)가 빠지는 것뿐이라 외부 재시도
+        # 대상에는 넣지 않는다 (article_search만큼 치명적이지 않음, 2026-07-14(4차))
+        print(f"[gdelt] '{keyword}' 시계열 수집 실패: {type(e).__name__} - {e!r}")
+        return None
+
+
+def collect(keywords: list[str] | None = None, skip_timeline: bool = False) -> tuple[list[dict], dict]:
     """
     KEYWORDS_EN을 순서대로 돌면서 GDELT에서 기사 메타데이터와 언급 시계열을
     함께 수집한다. 이 함수가 gdelt_collector의 '진입점'.
 
+    keywords: 지정하면 모듈 기본값(KEYWORDS_EN) 대신 이 리스트로 순회한다.
+              (2026-07-14(3차) 추가 - 테스트 스크립트에서 키워드 수를 줄여
+              빠르게 확인해보기 위한 용도. main.py의 정식 실행은 인자 없이
+              collect()를 호출하므로 기존 동작과 완전히 동일함)
+    skip_timeline: True면 timeline_search(timelinevol/timelinevolraw) 호출을
+              건너뛰고 article_search만 수행한다. (2026-07-14(3차) 추가 -
+              language/sourcecountry 분포 확인이 목적일 땐 시계열 데이터가
+              필요 없고, 키워드당 API 호출이 3번→1번으로 줄어 훨씬 빠름.
+              정식 운영에서는 시계열이 필요하므로 기본값 False 유지)
+
+    2026-07-14(4차) 변경 - article_search가 최종 실패한 키워드는 한 번에
+    포기하지 않고, 전체 라운드가 끝난 뒤 실패 키워드만 모아 최대
+    OUTER_RETRY_PASSES번 더 재시도한다 (편중된 결과물 방지, 위 "외부 재시도"
+    주석 참고). main.py의 정식 실행 흐름(인자 없이 collect() 호출)은
+    그대로 유지된다 - 재시도 로직은 이 함수 내부에 캡슐화돼 있어서 호출부는
+    바뀌지 않음.
+
     반환값:
       articles: 공통 스키마 리스트. 다음 단계(정규화/이슈그룹핑)로 그대로 전달됨
-      timeline: {키워드: {"vol": [...], "volraw": [...]}} 형태.
+      timeline: {키워드: {"vol": [...], "volraw": [...]}} 형태. skip_timeline=True면
+                항상 빈 딕셔너리.
                 스코어링에는 안 들어가고 결과물에 참고 지표로만 별도 표시 (3.1 규칙)
     """
     gd = GdeltDoc()
+    target_keywords = keywords if keywords is not None else KEYWORDS_EN
 
     all_articles = []
     timeline_by_keyword = {}
 
-    for keyword in KEYWORDS_EN:
+    round_keywords = []
+    for keyword in target_keywords:
         if keyword in SKIP_KEYWORDS:
             print(f"[gdelt] '{keyword}' 스킵 - {SKIP_KEYWORDS[keyword]}")
             continue
+        round_keywords.append(keyword)
 
-        f = Filters(
-            keyword=keyword,
-            timespan=TIMESPAN,
-            num_records=MAX_RECORDS,
-        )
+    failed_keywords = []
 
-        # --- 2026-07-14(2차) 변경: 1)기사 수집과 2)시계열 수집을 별도 try/except로
-        # 분리함. 기존엔 하나의 try 블록으로 묶여있어서, 기사 수집(article_search)이
-        # 이미 성공해 all_articles에 들어간 뒤에 시계열(timeline_search)만 실패해도
-        # 바깥 except가 "'키워드' 수집 실패"라는 한 줄만 찍고 넘어가 버렸음. 실제
-        # 데이터는 이미 들어갔는데 로그·에러리포트(9.2)에는 "완전 실패"로 남는
-        # 불일치가 있었음 (2026-07-14 실행에서 avian influenza가 이 케이스였고,
-        # 로그에 안 찍힌 채로 50건이 조용히 섞여 들어갔던 게 확인됨).
-        #
-        # 이제는 기사 수집 성공 시점에 바로 건수를 로그로 남기고, 시계열 수집은
-        # 실패해도 이미 확보한 기사에는 영향이 없다는 걸 로그에서 바로 알 수 있게 함.
+    for round_num in range(OUTER_RETRY_PASSES + 1):
+        if round_num > 0:
+            if not failed_keywords:
+                break  # 지난 라운드에서 실패한 키워드가 없으면 더 돌 필요 없음
+            print(f"[gdelt] --- 외부 재시도 라운드 {round_num}/{OUTER_RETRY_PASSES} - "
+                  f"이전 라운드 실패 키워드 {len(failed_keywords)}개: {failed_keywords} ---")
+            print(f"[gdelt] 라운드 간 안전 대기 {OUTER_RETRY_WAIT_SECONDS}초")
+            time.sleep(OUTER_RETRY_WAIT_SECONDS)
+            round_keywords = failed_keywords
 
-        # 1) 기사 메타데이터 수집
-        keyword_articles = []
-        articles_ok = False
-        try:
-            articles_df = _call_with_retry(gd.article_search, f, label=f"{keyword} / article_search")
-            if articles_df is not None and not articles_df.empty:
-                for _, row in articles_df.iterrows():
-                    try:
-                        published_at = _parse_seendate(str(row["seendate"]))
-                    except ValueError as e:
-                        # 날짜 파싱 실패한 기사 1건만 건너뜀 (전체 중단 아님, 9.1 방침)
-                        print(f"[gdelt] '{keyword}' 기사 스킵 - {e}")
-                        continue
+        failed_keywords = []
 
-                    if not _is_recent(published_at, DAYS_BACK):
-                        continue
+        for keyword in round_keywords:
+            # 1) 기사 메타데이터 수집
+            success, keyword_articles = _collect_articles_for_keyword(gd, keyword)
+            if success:
+                all_articles.extend(keyword_articles)
+            else:
+                failed_keywords.append(keyword)
 
-                    keyword_articles.append({
-                        "source": "GDELT",
-                        "title": row["title"],
-                        "url": row["url"],
-                        "published_at": published_at.isoformat(),
-                        "category": None,   # 정제 단계에서 채움 (naver_collector와 동일 방침)
-                        "body": None,        # GDELT는 본문 미제공 (스펙에 명시된 그대로)
-                        "press": _extract_domain(row["url"]),  # naver의 press 필드와 동일 목적
-                        # 2026-07-14 추가: 언어/국가 분포 진단용. gdeltdoc이 원래
-                        # 반환하는 필드인데 지금까지 받아만 놓고 안 쓰고 있었음.
-                        # GDELT 공식 문서 확인 - JSON/article_search 모드에서는
-                        # title이 번역 없이 원문 그대로 옴 (TRANS 옵션은 HTML 모드
-                        # 전용 위젯이라 여기 안 해당). 즉 이 title 값은 중국어/독일어
-                        # 등 원문 스크립트 그대로일 수 있음 - 12번 언어처리방침에서
-                        # 다뤄야 할 지점.
-                        "language": row.get("language", ""),
-                        "sourcecountry": row.get("sourcecountry", ""),
-                    })
+            if skip_timeline:
+                # 테스트 모드 - 시계열 호출 자체를 안 함 (키워드당 API 호출 3번->1번)
+                print(f"[gdelt] '{keyword}' 시계열 수집 스킵 (skip_timeline=True, 테스트 모드)")
+                time.sleep(REQUEST_INTERVAL)
+                continue
 
-            all_articles.extend(keyword_articles)
-            articles_ok = True
-            print(f"[gdelt] '{keyword}' article_search -> 최근 {DAYS_BACK}일 이내 "
-                  f"{len(keyword_articles)}건 수집 완료")
-
-        except Exception as e:
-            # 기사 수집 자체가 실패한 경우만 이 키워드는 기사 0건 (9.1 방침대로
-            # 이 키워드만 건너뛰고 다음 키워드로 진행)
-            print(f"[gdelt] '{keyword}' article_search 실패: {type(e).__name__} - {e!r}")
-
-        time.sleep(REQUEST_INTERVAL)
-
-        # 2) 언급 시계열 수집 (timelinevol, timelinevolraw 둘 다 - 스펙 62번 줄 기준)
-        # 기사 수집 성공 여부와 무관하게 독립적으로 시도 - 시계열만 실패해도
-        # 위에서 이미 확보한 keyword_articles(articles_ok=True인 경우)는 그대로 유지됨
-        try:
-            vol_df = _call_with_retry(gd.timeline_search, "timelinevol", f,
-                                       label=f"{keyword} / timelinevol")
             time.sleep(REQUEST_INTERVAL)
-            volraw_df = _call_with_retry(gd.timeline_search, "timelinevolraw", f,
-                                          label=f"{keyword} / timelinevolraw")
 
-            timeline_by_keyword[keyword] = {
-                # 2026-07-13 확인됨(실행 결과로 검증) - 실제 컬럼 구조:
-                #   vol:    {"datetime": Timestamp, "Volume Intensity": float}
-                #   volraw: {"datetime": Timestamp, "Article Count": int, "All Articles": int}
-                # Timestamp 객체는 그대로 JSON 직렬화가 안 되므로, 저장 레이어(5번 섹션)
-                # 쪽 raw.json에 넣기 전 문자열로 변환하는 처리가 필요함 (다음 단계 작업)
-                "vol": vol_df.to_dict("records") if vol_df is not None else [],
-                "volraw": volraw_df.to_dict("records") if volraw_df is not None else [],
-            }
-            print(f"[gdelt] '{keyword}' 시계열 수집 완료")
+            # 2) 언급 시계열 수집 (timelinevol, timelinevolraw 둘 다 - 스펙 참조)
+            # 기사 수집 성공 여부와 무관하게 독립적으로 시도 - 시계열만 실패해도
+            # 위에서 이미 확보한 기사(성공한 경우)는 그대로 유지됨
+            timeline_entry = _collect_timeline_for_keyword(gd, keyword)
+            if timeline_entry is not None:
+                timeline_by_keyword[keyword] = timeline_entry
 
-        except Exception as e:
-            # 시계열만 실패한 경우 - 기사는 이미 all_articles에 들어가 있으므로
-            # (articles_ok=True였다면) 데이터 손실 없음. timeline_by_keyword에는
-            # 이 키워드가 아예 안 들어가고, 결과물에서는 참고 지표(3.1)가 빠지는 것뿐.
-            print(f"[gdelt] '{keyword}' 시계열 수집 실패: {type(e).__name__} - {e!r} "
-                  f"(기사 수집 결과 {'유지됨' if articles_ok else '없음'}, "
-                  f"{len(keyword_articles)}건)")
+            time.sleep(REQUEST_INTERVAL)
 
-        time.sleep(REQUEST_INTERVAL)
+    if failed_keywords:
+        print(f"[gdelt] 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
+              f"기사 0건으로 처리됨): {failed_keywords}")
+
+    _print_rate_limit_summary()
 
     return all_articles, timeline_by_keyword
 
