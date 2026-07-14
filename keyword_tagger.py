@@ -160,9 +160,9 @@ def tag_articles(articles: list[dict]) -> list[dict]:
     안 맞아서다. 다만 정보 손실을 막기 위해 WATT의 원래 값은 "site_category"
     필드에 별도로 보존한다.
 
-    ** 이 부분(WATT 원본 category를 덮어쓸지 보존만 할지)은 알고리즘 문서에
-    명시적으로 정해진 바가 없어 이번 구현에서 내린 판단이다 - 문서화 필요
-    (7번 섹션에 추가 검토 권장). **
+    이 판단(WATT 원본 category를 덮어쓰고 site_category로만 보존)은 알고리즘
+    문서 "2.2 키워드 태깅" 섹션에 2026-07-14 반영 완료 (기존엔 문서에 명시 안
+    돼 있어 구현 중 임의로 내린 판단이었으나, 문서화되며 정식 확정됨).
     """
     other_count = 0
     for article in articles:
