@@ -1,0 +1,58 @@
+name: issue_grouper 재검증 (빠른 버전, 재수집 없음)
+
+# calibrate-issue-grouper.yml과 다르다: 이건 실제 수집(naver/WATT/GDELT)을
+# 다시 안 하고, 지난 재검증(2026-07-14)에서 이미 받은 진짜 원본 데이터
+# (calibration_raw_2026-W29.json)를 리포에 커밋해두고 그대로 재사용한다.
+# GDELT 429 문제가 이번 실행 시간의 대부분(3시간 18분 중 GDELT만 3시간
+# 가까이)을 차지했었는데, 재수집 자체를 안 하니 그 시간이 통째로 없어짐 -
+# pip 설치 + BGE-M3 모델 로딩 + 임베딩 계산만 남아서 몇 분 안에 끝나야 함.
+#
+# 전제조건: calibration_raw_2026-W29.json이 리포 루트에 있어야 함 (지난
+# calibrate-issue-grouper.yml 실행의 아티팩트에서 받은 파일을 커밋해둘 것).
+on:
+  workflow_dispatch: {}
+
+jobs:
+  retest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 원본 데이터 존재 확인
+        run: |
+          if [ ! -f calibration_raw_2026-W29.json ]; then
+            echo "::error::calibration_raw_2026-W29.json이 리포에 없음 - 지난 재검증 아티팩트에서 받아서 커밋해야 함"
+            exit 1
+          fi
+          echo "원본 데이터 확인됨: $(wc -c < calibration_raw_2026-W29.json) bytes"
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 의존성 설치 (sentence-transformers만)
+        run: pip install -r requirements-retest.txt
+
+      # 문서 "2.1 이슈 그룹핑" 섹션의 캐싱 예시 그대로 - 이전 실행에서 이미
+      # 한 번 받아뒀으면 캐시 히트로 즉시 로드됨
+      - name: BGE-M3 모델 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: bge-m3-model
+
+      - name: 재검증 실행 (retest_issue_grouper.py)
+        run: python retest_issue_grouper.py 2>&1 | tee retest_log.txt
+
+      - name: 로그 아티팩트 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-grouper-retest-${{ github.run_id }}
+          path: retest_log.txt
+          retention-days: 30
