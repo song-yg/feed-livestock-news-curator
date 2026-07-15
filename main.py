@@ -86,9 +86,27 @@ def run_collectors() -> tuple[list[dict], dict, list[str]]:
         failed_sources.append("네이버")
 
     try:
-        gdelt_articles, gdelt_timeline = gdelt_collector.collect()
+        # 2026-07-15 결정: 시계열(timelinevol/timelinevolraw) 수집을 이번
+        # 개발 단계에서는 한시적으로 생략한다 (skip_timeline=True).
+        # 근거(실측, 2026-07-15 실행 로그):
+        #   1) 시계열은 3.1 규칙상 스코어링(issue_score)에 전혀 반영되지 않는
+        #      참고 지표일 뿐이다.
+        #   2) 5번(저장)/6번(배포) 레이어가 아직 미구현(_step5_storage_todo가
+        #      빈 함수 스텁)이라, 지금 당장 시계열을 노출할 자리 자체가 없다.
+        #   3) 그런데도 timeline_search(timelinevol/timelinevolraw) 429
+        #      재시도가 GDELT 수집 전체 실행시간(약 70분)의 약 62분을
+        #      차지했고, 결국 4개 키워드 전부 실패했다 - 얻는 것 없이
+        #      시간만 태우는 상태.
+        # article_search(기사 수집, 스코어링에 실제로 쓰이는 데이터)는 이
+        # 변경과 무관하게 그대로 재시도 정책(MAX_RETRIES=4)을 유지한다 -
+        # skip_timeline은 timeline_search 호출 자체를 건너뛸 뿐, 기사 수집
+        # 로직(_collect_articles_for_keyword)에는 영향 없음
+        # (gdelt_collector.py collect() 참고).
+        # 저장 레이어(5번 섹션) 구현 시 skip_timeline=False로 되돌려
+        # 재활성화할 것 - 되돌리는 걸 잊지 않도록 여기 명시해둔다.
+        gdelt_articles, gdelt_timeline = gdelt_collector.collect(skip_timeline=True)
         all_articles.extend(gdelt_articles)
-        print(f"[main] GDELT 수집 완료 - {len(gdelt_articles)}건")
+        print(f"[main] GDELT 수집 완료 - {len(gdelt_articles)}건 (시계열 수집은 이번 단계 생략)")
     except Exception as e:
         print(f"[main] GDELT 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
         failed_sources.append("GDELT")
