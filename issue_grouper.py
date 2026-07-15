@@ -3,8 +3,9 @@ issue_grouper.py
 "2.1 이슈 그룹핑" 담당 모듈 (알고리즘 문서 "2.1 이슈 그룹핑" 참조)
 
 문서에 정의된 하이브리드 파이프라인 중 지금 이 파일에서 구현하는 범위:
-  1차 - KR<->EN 키워드 사전 매칭         -> 구현
-  2차 - BGE-M3 임베딩 코사인 유사도       -> 구현 (아래 두 번째 스텝에서 추가 예정)
+  1차 - KR<->EN 키워드 사전 매칭         -> 구현은 됐으나 현재 사전을 비워둠
+                                          (2026-07-14, ISSUE_SYNONYM_GROUPS 주석 참조)
+  2차 - BGE-M3 임베딩 코사인 유사도       -> 구현
   3차 - LLM 그룹핑 보조 (임계값 애매 구간) -> 미구현 (TODO, LLM 연동 단계에서 추가)
 
 이번 스텝(1단계)에서는 "1차 사전 매칭"과 "그룹을 어떻게 합칠지"(Union-Find)
@@ -38,23 +39,29 @@ from keyword_tagger import EXCLUDED_TERMS
 # 예를 들어 keyword_tagger는 "조류독감"과 "구제역"을 둘 다 "질병명" 카테고리
 # 하나로 묶지만, 여기서는 서로 다른 이슈이므로 별개 그룹이어야 한다.
 #
-# 지금은 자주 나올 법한 이슈 몇 개만 예시로 채워뒀다. 문서에 명시된 대로
-# "사전에 없는 신규 표현·의역된 제목"은 2차 임베딩이 커버하는 몫이라, 이
-# 사전을 처음부터 완벽하게 채울 필요는 없다 - 배포 전 테스트 기간에 점진적으로
-# 보강하면 된다 (2.2 키워드 태깅 섹션의 "배포 전 테스트 기간에 사전을 직접
-# 보강" 원칙과 같은 방식).
-ISSUE_SYNONYM_GROUPS: list[set[str]] = [
-    {"조류독감", "고병원성 조류독감", "AI", "avian influenza", "avian flu", "bird flu", "HPAI", "LPAI"},
-    {"구제역", "foot-and-mouth disease", "FMD"},
-    {"아프리카돼지열병", "ASF", "African swine fever"},
-    {"럼피스킨병", "lumpy skin disease", "LSD"},
-]
-# 자체 테스트(2026-07-14) 중 실제로 재현된 문제: "AI"는 "grain"("gr-AI-n")
-# 처럼 전혀 무관한 단어 안에 부분 문자열로 우연히 들어있는 경우가 많아
-# 오매칭을 일으킨다 - keyword_tagger.py가 카테고리 태깅에서 이미 같은 이유로
-# "AI"를 제외했던 것과 동일한 문제. 사전 자체(위 목록)는 사람이 읽을 때
-# 이해하기 쉽도록 "AI"를 그대로 남겨두고, 실제 매칭 시점(_stage1_match_keys)
-# 에서만 keyword_tagger.EXCLUDED_TERMS 기준으로 걸러낸다.
+# ** 2026-07-14 세션 결정: 이슈 그룹핑의 정의를 "동일 사건만"으로 확정 **
+# (예: 한국 조류독감 발생과 미국 조류독감 발생은 같은 질병이어도 별도 이슈)
+# 이유: 세계적으로 큰 이슈면 각 발생건이 각자 랭킹에 자연스럽게 올라올 테니
+# 억지로 합칠 필요 없음.
+#
+# 이 정의 확정으로 아래처럼 "질병명" 단위로 묶던 기존 1차 사전 매칭은
+# 국가/사건을 구분 못해서 정의와 안 맞는다는 게 실제 재검증(2026-07-14,
+# calibrate_issue_grouper.py 실행)에서 확인됨 - 예를 들어 "조류독감" 묶음은
+# 국내 기사 1건과 필리핀/캄보디아/호주/미국 등 전혀 다른 나라의 bird flu
+# 기사들을 전부 한 그룹으로 묶어버렸고, "구제역" 묶음도 한국 예천 발생
+# 기사들과 South Africa의 FMD 백신 관련 기사가 섞여버렸다 (실측 로그
+# calibration_log.txt 참조). 그래서 이 사전은 비워둔다 - "완전 동일 사건"
+# 매칭은 국가/장소/시점까지 구분해야 하는 훨씬 좁은 단위라 질병명 키워드
+# 매칭으로는 애초에 표현이 불가능함. 2차(BGE-M3 임베딩)에만 의존하는
+# 구조로 전환 - 임베딩은 제목 전체의 의미를 보므로 "어느 나라 사건인지"
+# 같은 맥락도 (완벽하진 않아도) 어느 정도 반영됨.
+#
+# 아래 함수(_stage1_match_keys, stage1_group)는 인프라 자체는 남겨둔다 -
+# 나중에 "완전 동일 사건"을 표현할 수 있는 더 구체적인 키(예: 특정 지명+
+# 특정 발생 시점 조합)로 다시 채울 가능성이 있을 때 재사용 가능. 지금은
+# 빈 리스트라 이 함수들이 항상 매칭 없음(빈 set)을 반환 - 즉 모든 기사가
+# 2차(임베딩)로 그대로 넘어감.
+ISSUE_SYNONYM_GROUPS: list[set[str]] = []
 
 
 def _stage1_match_keys(title: str) -> set[int]:
@@ -239,13 +246,36 @@ def stage2_group(
 
     n = len(articles)
     uf = UnionFind(n)
-    borderline_pairs = []
 
+    # ** 2026-07-14 버그 수정: 2-pass로 분리 **
+    # 기존엔 한 pass 안에서 "threshold 이상이면 union, 아니면 borderline"을
+    # 같이 처리했는데, 이러면 i-j가 서로 직접은 threshold 미만이라도 다른
+    # 기사 k를 거쳐 간접적으로(transitively) 이미 같은 그룹으로 묶인 경우까지
+    # borderline에 중복으로 기록되는 문제가 있었다. 실제 재검증(2026-07-14,
+    # calibrate_issue_grouper.py)에서 확인된 사례: "농협 2200억" 기사 54건이
+    # 이미 다른 엣지들로 전부 한 그룹에 묶였는데도, 그 54건 내부의 쌍들이
+    # threshold 바로 아래(0.70~0.75)라는 이유만으로 446개 borderline 쌍 중
+    # 342개(77%)를 차지함 - 이미 그룹핑 결과가 확정된 쌍인데도 LLM 보조
+    # 대상으로 잡혀서, 4번 섹션 "전수 호출 아님, 비용 고려" 설계 의도가
+    # 실제 스케일에서 깨지는 원인이 됐다.
+    #
+    # 그래서 1st pass에서 union만 먼저 전부 끝내고(간접 연결까지 확정), 2nd
+    # pass에서 borderline 후보를 검사할 때 "두 기사가 이미 같은 그룹인가"를
+    # 같이 확인해서, 이미 그룹이 확정된 쌍은 건너뛴다. 오직 "이 쌍의 판정에
+    # 따라 최종 그룹핑 결과가 실제로 달라지는" 쌍만 LLM 보조 대상으로 남는다.
     for i, j in combinations(range(n), 2):
         sim = float(sim_matrix[i][j])
         if sim >= threshold:
             uf.union(i, j)
-        elif sim >= threshold - borderline_margin:
+
+    borderline_pairs = []
+    for i, j in combinations(range(n), 2):
+        if uf.find(i) == uf.find(j):
+            # 이미 같은 그룹으로 확정됨 (직접이든 다른 기사를 거친 간접
+            # 연결이든) - 이 쌍의 판정은 최종 결과에 영향이 없으므로 스킵
+            continue
+        sim = float(sim_matrix[i][j])
+        if threshold - borderline_margin <= sim < threshold:
             borderline_pairs.append((articles[i], articles[j], sim))
 
     grouped = []
