@@ -5,12 +5,16 @@ main.py
 
 문서의 6단계 파이프라인 중 이번 작업에서 실제로 구현한 범위:
   1) 수집        -> 구현 완료 (watt/naver/gdelt collector, 기존 모듈 그대로 호출)
-  2) 정규화      -> 절반만 구현: 공통 스키마 통합 + 완전 동일 기사(URL) 제거는 됨.
-                    2.1 이슈 그룹핑(BGE-M3 임베딩)은 아직 미구현 - 대신
-                    scorer.to_singleton_groups()로 "기사 1건 = 그룹 1개" 임시 처리
-                    (2.2 키워드 태깅은 이번에 구현 완료 - keyword_tagger.py)
-  3) 스코어링    -> 구현 완료 (scorer.py) - 단, 2번의 임시 처리 때문에 지금은
-                    사실상 "기사 단위 점수"와 동일하게 작동함 (그룹이 다 크기 1)
+  2) 정규화      -> 구현 완료: 공통 스키마 통합 + 완전 동일 기사(URL) 제거
+                    + 2.2 키워드 태깅(keyword_tagger.py)
+                    + 2.1 이슈 그룹핑(issue_grouper.py, 2026-07-15 연결 완료 -
+                    아래 score() 함수 참고. 1차 사전 매칭 + 2차 BGE-M3 임베딩
+                    까지 연결됨. 3차 LLM 보조는 issue_grouper.py 안에서도
+                    아직 미구현이라 이 레이어의 최종 완성은 아님)
+  3) 스코어링    -> 구현 완료 (scorer.py) - 2.1이 실제로 연결되면서 이제
+                    "이슈(여러 기사 묶음) 단위 점수"로 정상 작동함 (기존엔
+                    to_singleton_groups 임시 처리로 사실상 기사 단위 점수와
+                    동일했음)
                     + 카테고리 전체 집계(category_aggregator.py, 2026-07-14
                     신규) 보조 지표 추가 - 2.1 이슈 그룹핑이 "동일 사건만"
                     묶는 좁은 정의라 생기는 공백을 메우는 별개 지표 (순위와
@@ -19,7 +23,6 @@ main.py
   5) 저장        -> 미구현 (TODO) - 이번엔 확인용으로 scored 결과를 콘솔 출력만 함
   6) 배포        -> 미구현 (TODO)
 
-이번 세션 스코프(사용자 지정, 2026-07-14): "2.2 키워드 태깅과 스코어링부터".
 main.py를 6단계 전부 완성형으로 만들지 않고, 위 범위까지만 실제로 동작하는
 파이프라인으로 잇는다. 4/5/6은 다음 세션에서 채울 자리를 함수 스텁으로만
 남겨둔다 (아래 _step4_todo 등).
@@ -28,6 +31,7 @@ main.py를 6단계 전부 완성형으로 만들지 않고, 위 범위까지만 
 import gdelt_collector
 import naver_collector
 import scorer
+import issue_grouper
 from WATT_collector import collect as watt_collect  # noqa: N813 (파일명 규칙과 다르지만 기존 파일 그대로 사용)
 import keyword_tagger
 import category_aggregator
@@ -123,27 +127,91 @@ def normalize(articles: list[dict]) -> list[dict]:
 # 3) 스코어링 (섹션 3) - scorer.py 그대로 사용
 # ---------------------------------------------------------------------------
 
-def score(articles: list[dict], top_n: int = 5) -> tuple[list[dict], list[dict]]:
+def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list[dict]]:
     """
-    3.1 국내/해외 개별 집계 + 3.2 개별 랭킹(Top N)까지 수행.
+    2.1 이슈 그룹핑(issue_grouper.group_issues) + 3.1/3.2 국내/해외 개별
+    랭킹(Top N)까지 수행. (2026-07-15, to_singleton_groups 임시 처리를
+    실제 그룹핑으로 교체 - 배경 문서 "진행할 것 — 최우선" 참조)
 
-    ** 2.1 이슈 그룹핑 미구현 상태의 한계 **: 원래는 같은 이슈를 다루는 여러
-    기사가 하나의 그룹으로 묶여서 issue_score가 "그 이슈에 대한 언급 총량"을
-    반영해야 하는데(3번 섹션 수식), 지금은 to_singleton_groups로 기사 1건=
-    그룹 1건이라 사실상 "그 기사 자체의 최신성 점수"만 나온다 - 여러 매체가
-    같은 사건을 다뤄도 따로따로 집계되어 순위에 제대로 안 뭉쳐 나타남.
-    2.1이 구현되면 이 함수의 to_singleton_groups 호출부만 실제 그룹 리스트로
-    바꾸면 되고, 그 아래(score_and_rank) 로직은 그대로 재사용된다.
+    ** 그룹핑을 먼저, 축 분리는 그 다음 (설계 결정) **
+    알고리즘 문서 2.1 "작동 방식" 3번은 매칭 범위를 "전체 기사 벡터 x 전체
+    기사 벡터"(국내-국내 / 해외-해외 / 국내-해외 전부 포함)로 명시하고 있다.
+    그런데 기존 임시 코드는 split_domestic_international()을 먼저 호출해
+    국내/해외를 나눈 뒤 각각 따로 to_singleton_groups()를 적용하고 있었다 -
+    이 순서 그대로 group_issues만 바꿔치기하면 국내/해외가 애초에 분리된
+    채로 그룹핑되어 버려서 국내-해외 교차 매칭이 구조적으로 아예 발생할 수
+    없게 된다 (문서 정의와 어긋남). 그래서 이번 연결 작업에서 순서를
+    뒤집었다: ① 전체 기사를 대상으로 group_issues()를 한 번 호출 -> ②
+    그 결과 그룹들을 국내/해외 축으로 "나눠서" scorer에 넘긴다.
+
+    ** 국내-해외 교차 매칭된 그룹의 처리 **
+    group_issues가 만든 그룹 하나가 국내(네이버)·해외(WATT/GDELT) 기사를
+    동시에 포함할 수 있다. 3.2 원칙("양쪽 리스트 모두에서 노출... 하나의
+    점수로 합치지는 않음, 정규화·환산 없이 각 축의 원본 신호를 그대로
+    보존")대로, 이런 그룹은 국내 축 스코어링엔 그 그룹 안의 네이버 기사만,
+    해외 축 스코어링엔 그 그룹 안의 WATT/GDELT 기사만 걸러서 넘긴다 - 각
+    축의 issue_score가 그 축 안에서의 원본 신호만 반영하게 하기 위함이다.
+    다만 "이 이슈가 다른 축에서도 다뤄졌다"를 화면에 🔗로 표시해주는 기능
+    자체는 scorer.py 상단 docstring에 이미 명시된 대로 여전히 미구현 -
+    이번 연결 작업 범위 밖(다음 세션에서 배포 포맷 확정 시 추가할 것).
+
+    model: sentence_transformers.SentenceTransformer 인스턴스, 또는 None.
+           None이면 issue_grouper.group_issues가 2차(임베딩) 없이 1차
+           결과만으로 안전하게 fallback한다 (아래 _load_embedding_model 참고).
     """
-    domestic, international = scorer.split_domestic_international(articles)
+    groups = issue_grouper.group_issues(articles, model=model)
 
-    domestic_groups = scorer.to_singleton_groups(domestic)
-    international_groups = scorer.to_singleton_groups(international)
+    domestic_groups = []
+    international_groups = []
+    for group in groups:
+        domestic_part = [a for a in group if a.get("source") == "네이버"]
+        international_part = [a for a in group if a.get("source") != "네이버"]
+        if domestic_part:
+            domestic_groups.append(domestic_part)
+        if international_part:
+            international_groups.append(international_part)
 
     domestic_ranked = scorer.score_and_rank(domestic_groups, top_n=top_n)
     international_ranked = scorer.score_and_rank(international_groups, top_n=top_n)
 
     return domestic_ranked, international_ranked
+
+
+# ---------------------------------------------------------------------------
+# 2.1 이슈 그룹핑용 임베딩 모델 로드 (2026-07-15 신규)
+# ---------------------------------------------------------------------------
+
+def _load_embedding_model():
+    """
+    BGE-M3 임베딩 모델을 실행당 한 번만 로드해서 score() 단계에 주입한다.
+
+    한 번만 로드하는 이유: issue_grouper.stage2_group의 docstring에 이미
+    명시돼 있음 - "모델 로드 자체가 무거운 작업이라, 기사 배치마다 매번 새로
+    로드하면 안 되기 때문... 호출하는 쪽(main.py)에서 한 번만 로드해서
+    넘겨주는 구조로 설계". main.py에서는 국내/해외 두 축을 스코어링하지만
+    그룹핑 자체는 score() 안에서 한 번만(전체 기사 대상) 일어나므로, 이
+    함수도 run() 전체를 통틀어 딱 한 번만 호출하면 된다.
+
+    모델 로드 실패(최초 실행 시 다운로드 실패, 패키지 미설치, 캐시 문제 등)
+    시에도 전체 파이프라인이 죽지 않도록 여기서 예외를 잡아 None을 반환한다.
+    issue_grouper.group_issues(articles, model=None)이 이미 "2차(임베딩)
+    생략, 1차 사전 매칭 결과만 사용"으로 안전하게 fallback하도록 설계돼
+    있으므로(issue_grouper.py group_issues 참고), 이 함수의 실패가 9.1
+    "소스별 독립 실행 구조"와 같은 철학으로 전체 중단 없이 흡수된다 - 다만
+    이 경우 2.1의 2차(임베딩) 매칭 없이 1차 사전 매칭(현재 빈 리스트라
+    사실상 매칭 없음)만 적용되므로 사실상 이번 실행은 to_singleton_groups와
+    같은 결과가 된다는 점은 감안해야 한다 (완전한 자동 복구는 아님 - 다음
+    실행에서 모델 로드가 다시 성공하길 기대하는 정도의 완화책).
+    """
+    try:
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer("BAAI/bge-m3")
+        print("[main] BGE-M3 임베딩 모델 로드 완료")
+        return model
+    except Exception as e:
+        print(f"[main] BGE-M3 모델 로드 실패 - 2차(임베딩) 매칭 없이 진행 "
+              f"(1차 사전 매칭만 적용됨): {type(e).__name__} - {e!r}")
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -190,8 +258,11 @@ def run() -> None:
     keyword_tagger.tag_articles(articles)
     keyword_tagger.print_category_distribution(articles)
 
-    print("\n=== [3] 스코어링 (국내/해외 개별 Top N) ===")
-    domestic_ranked, international_ranked = score(articles, top_n=5)
+    print("\n=== [2.1] 이슈 그룹핑 임베딩 모델 로드 (BGE-M3, 실행당 1회) ===")
+    embedding_model = _load_embedding_model()
+
+    print("\n=== [3] 스코어링 (2.1 이슈 그룹핑 + 국내/해외 개별 Top N) ===")
+    domestic_ranked, international_ranked = score(articles, embedding_model, top_n=5)
     scorer.print_top_n("국내", domestic_ranked, n=5)
     scorer.print_top_n("해외", international_ranked, n=5)
 
