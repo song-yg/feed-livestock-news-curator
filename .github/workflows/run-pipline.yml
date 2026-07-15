@@ -33,19 +33,53 @@ jobs:
       - name: 리포 체크아웃
         uses: actions/checkout@v4
 
+      - name: 실행 전 디스크 사용량 확인
+        run: df -h /
+
+      - name: 사용 안 하는 프리인스톨 툴 정리 (디스크 확보)
+        # 2026-07-15 추가 - "No space left on device" 실패 원인 대응.
+        # GitHub-hosted ubuntu-latest 러너는 실행마다 완전히 새 VM을 쓰므로
+        # "여러 번 실행해서 누적된 것"이 아니라, 이 파이프라인 한 번 실행에
+        # 필요한 용량(PyTorch+BGE-M3+Playwright) 자체가 러너의 보장 여유
+        # 공간(14GB)에 비해 크다는 게 진짜 원인. .NET/Android SDK/GHC 등
+        # 이 프로젝트(Python 전용)에 전혀 안 쓰는 프리인스톨 툴을 먼저
+        # 지워서 여유를 만든다 (안전하게 삭제 가능한 것으로 알려진 경로만
+        # 대상 - 삭제 실패해도 파이프라인이 안 죽도록 || true 처리)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup || true
+          sudo apt-get clean
+          echo "정리 후 디스크 사용량:"
+          df -h /
+
       - name: Python 3.11 설치
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"  # requirements.txt 해시 기준으로 pip 캐시 자동 관리
 
+      - name: PyTorch(CPU 전용) 우선 설치 - CUDA 휠 다운로드 방지
+        # 2026-07-15 추가. sentence-transformers가 아무 설정 없이 설치되면
+        # GPU(CUDA)용 PyTorch가 딸려오는데, 이 CUDA 라이브러리들이 수 GB로
+        # 커서 디스크 부족의 가장 큰 원인이었음. 이 프로젝트는 BGE-M3를
+        # CPU로만 돌리므로(2.1 섹션 "GPU 불필요" 명시) CPU 전용 휠을 먼저
+        # 깔아두면, 이어지는 requirements.txt 설치에서 sentence-transformers가
+        # 이미 설치된 torch를 그대로 쓰고 GPU 버전을 새로 안 받는다.
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+
       - name: 파이썬 의존성 설치
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt --no-cache-dir
 
       - name: Playwright 브라우저(Chromium) 설치
         # watt_collector가 Playwright로 페이지를 로드하므로 브라우저 바이너리 필요
         # (알고리즘 문서 "1. 수집 레이어" watt_collector 행 참조)
         run: playwright install --with-deps chromium
+
+      - name: apt 캐시 정리 + 설치 후 디스크 사용량 확인
+        run: |
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          echo "의존성 설치 후 디스크 사용량:"
+          df -h /
 
       - name: BGE-M3 임베딩 모델 캐시
         # 2.1 이슈 그룹핑 섹션에 명시된 캐싱 설정 그대로 - 최초 1회만
