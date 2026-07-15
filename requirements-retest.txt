@@ -1,5 +1,0 @@
-# retest_issue_grouper.py 전용 최소 의존성.
-# 재수집을 안 하므로(calibration_raw_2026-W29.json 재사용) requests/
-# playwright/gdeltdoc/python-dotenv/beautifulsoup4는 전혀 필요 없음 -
-# 그래서 설치 시간을 줄이려고 별도 파일로 분리함 (requirements.txt와 다름).
-sentence-transformers
