@@ -388,8 +388,16 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str) -> list[bool]
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "content-type": "application/json",
-                # OpenRouter 권장 헤더(선택) - 프로젝트 식별용, 없어도 동작함
-                "X-Title": "사료축산뉴스-이슈그룹핑-3차보조",
+                # OpenRouter 권장 헤더(선택) - 프로젝트 식별용, 없어도 동작함.
+                # 2026-07-15 버그 수정: 원래 여기 한글 값("사료축산뉴스-...")이
+                # 들어있었는데, HTTP 헤더 값은 requests/urllib3가 latin-1로
+                # 인코딩하기 때문에 한글이 들어가면 요청을 보내기도 전에
+                # UnicodeEncodeError로 매번 죽는 문제가 있었다 (실측 확인,
+                # 2026-07-15 실행 로그 - 63개 애매 구간 쌍이 전부 이 에러로
+                # "안 묶음" fallback 처리됨. LLM이 판단해서 안 묶은 게 아니라
+                # API 호출 자체가 한 번도 성공한 적이 없었던 것). ASCII만
+                # 쓰도록 영문 식별자로 교체.
+                "X-Title": "feed-livestock-news-issue-grouper-stage3",
             }
             body = {
                 "model": LLM_MODEL_OPENROUTER,
