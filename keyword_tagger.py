@@ -85,9 +85,18 @@ CATEGORY_KEYWORDS = {
 # 2.2 스펙상 카테고리 오분류는 기사를 탈락시키지 않고 라벨만 틀리게 붙는
 # 수준의 낮은 리스크이긴 하지만, "AI"는 다른 토큰과 비교해 충돌 빈도가
 # 자릿수부터 다를 것으로 예상돼 선제적으로 제외했다. 다른 짧은 약어(ND, LSD,
-# TMR 등)는 아직 실제 오매칭이 확인된 바 없어 그대로 둠 - SKIP_KEYWORDS와
-# 동일하게, 확인된 것만 대응한다는 원칙 유지.
-EXCLUDED_TERMS = {"AI"}
+# TMR 등)는 "아직 실제 오매칭이 확인된 바 없어 그대로 둠"이었으나, 그중 "ND"는
+# 2026-07-15 GDELT 실측 데이터(calibration_raw_2026-W29.json) 재검증 중 실제
+# 오매칭이 확인됨 - "nd"가 "underway"/"Uganda"/"Andy"/"neighbourhoods"처럼
+# 영어에서 아주 흔한 2글자 조합이라, 축산/사료와 전혀 무관한 기사 다수가
+# "질병명" 카테고리로 잘못 태깅됐다 (예: "National racing gets back underway
+# at the GR Legends Rally" -> ['ND'] 매칭). "AI"보다 오히려 충돌 빈도가 더
+# 넓을 수 있는 케이스라 판단해 제외 목록에 추가한다 (원칙은 동일 - 확인된
+# 것만 대응, 일반화된 규칙은 안 만듦). 참고: "Newcastle disease"(풀네임)는
+# CATEGORY_KEYWORDS에 별도로 이미 등록돼 있어, "ND"를 빼도 뉴캣슬병 자체에
+# 대한 매칭 능력은 유지된다 - 풀네임으로 언급되는 기사만 못 잡게 될 뿐.
+# LSD/TMR 등 나머지 약어는 여전히 실제 오매칭 미확인 상태라 그대로 둠.
+EXCLUDED_TERMS = {"AI", "ND"}
 
 
 def _build_flat_index():
