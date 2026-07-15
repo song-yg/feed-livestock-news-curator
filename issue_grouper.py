@@ -6,14 +6,20 @@ issue_grouper.py
   1차 - KR<->EN 키워드 사전 매칭         -> 구현은 됐으나 현재 사전을 비워둠
                                           (2026-07-14, ISSUE_SYNONYM_GROUPS 주석 참조)
   2차 - BGE-M3 임베딩 코사인 유사도       -> 구현
-  3차 - LLM 그룹핑 보조 (임계값 애매 구간) -> 미구현 (TODO, LLM 연동 단계에서 추가)
+  3차 - LLM 그룹핑 보조 (임계값 애매 구간) -> 구현 완료 (2026-07-15, 아래
+                                          "3차: LLM 그룹핑 보조" 섹션 참조).
+                                          Anthropic API(Haiku 4.5)를 호출해
+                                          borderline_pairs만 최종 판단한다.
 
-이번 스텝(1단계)에서는 "1차 사전 매칭"과 "그룹을 어떻게 합칠지"(Union-Find)
-로직만 먼저 만든다. 임베딩(무거운 설치가 필요한 부분)은 이 로직이 맞다는 걸
-확인한 다음에 그 위에 얹을 것이다.
+3차까지 전부 구현되면서 group_issues()가 1~3차를 순서대로 실행해 최종
+그룹 리스트를 만든다 (아래 group_issues 참조).
 """
 
+import json
+import os
 from itertools import combinations
+
+import requests
 
 # keyword_tagger.py가 이미 "AI"를 매칭에서 제외하기로 확정한 이유와 완전히
 # 똑같은 문제가 여기서도 재현됐다 (아래 ISSUE_SYNONYM_GROUPS 주석 및
@@ -290,41 +296,273 @@ def stage2_group(
 
 
 # ---------------------------------------------------------------------------
-# 최종 진입점: 1차 + 2차를 합쳐서 scorer.py에 바로 넘길 수 있는 형태로 반환
+# 3차: LLM 그룹핑 보조 (임계값 애매 구간)
+# ---------------------------------------------------------------------------
+#
+# 문서 4번 섹션 (B) 그대로: 2차(임베딩) 유사도가 threshold 근처 애매 구간에
+# 걸린 쌍만 LLM에 물어봐서 "같은 사건인지 아닌지" 최종 판단한다.
+# (전수 호출 아님 - stage2_group에서 이미 borderline_pairs로 걸러진 소수만
+# 대상이라, 2026-07-14 2-pass 버그 수정으로 446개 -> 70개까지 줄어든 규모.)
+#
+# 판정 기준은 2.1에서 확정한 이슈 그룹핑 정의(2026-07-14)를 그대로 따른다:
+# "같은 사건"이란 같은 질병/주제여도 국가·장소·시점이 다르면 별개 이슈다
+# (예: 한국 조류독감 발생과 미국 조류독감 발생은 별개). 이 기준을 LLM에게도
+# 시스템 프롬프트로 명시한다.
+#
+# ** 프로바이더 스위치 (2026-07-15 추가) **
+# 기본은 Anthropic(Haiku 4.5) - 9.5 섹션 결론대로 이 프로젝트 규모에서
+# 유료 API 비용은 무시 가능한 수준이고, 은퇴 공지 의무가 있어 장기 운영에
+# 안전하다. 다만 API 키 발급 결재가 아직 안 난 상태에서 로컬 개발/검증을
+# 막을 이유는 없으므로, 환경변수 LLM_PROVIDER로 임시 대체 경로(OpenRouter
+# 무료 모델)를 켤 수 있게 했다 - 9.5 섹션 "모델 이름은 설정 파일 한 곳에서만
+# 관리" 원칙대로, 프로바이더별 설정을 이 블록 하나에 모아둔다.
+#
+#   LLM_PROVIDER=anthropic (기본값, 아무것도 안 하면 이 경로) - ANTHROPIC_API_KEY 사용
+#   LLM_PROVIDER=openrouter                                  - OPENROUTER_API_KEY 사용
+#
+# ** 중요 - openrouter는 "로컬 검증 전용" 임시 경로다 **
+# 9.5 섹션이 무료 모델을 권장하지 않는 이유(예고 없는 정책 변경/모델 제거)가
+# 그대로 적용되므로, GitHub Actions 등 실제 운영 환경에는 LLM_PROVIDER를
+# 설정하지 말고 기본값(anthropic)을 그대로 둘 것 - 키 발급이 승인되면 이
+# 환경변수 자체를 지우기만 하면 원래 경로로 돌아간다.
+#
+# 무료 모델 하나를 못 박지 않고 OpenRouter의 자체 무료 라우터(openrouter/free)
+# 를 기본값으로 쓴 이유: 개별 :free 모델은 공급사가 예고 없이 무료 태그를
+# 뗄 수 있어(9.5 섹션과 같은 리스크) 코드가 조용히 깨질 수 있는데,
+# openrouter/free는 그 라우팅 자체를 OpenRouter가 대신 처리해준다. 특정
+# 모델을 고정하고 싶으면 OPENROUTER_MODEL 환경변수로 덮어쓸 수 있다.
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic")
+
+LLM_MODEL_ANTHROPIC = "claude-haiku-4-5-20251001"
+LLM_API_URL_ANTHROPIC = "https://api.anthropic.com/v1/messages"
+
+LLM_MODEL_OPENROUTER = os.environ.get("OPENROUTER_MODEL", "openrouter/free")
+LLM_API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
+
+LLM_BATCH_SIZE = 20  # 한 번의 API 호출에 몇 쌍까지 같이 물어볼지 (호출 수 절약,
+                      # OpenRouter 무료 티어 분당/일 요청 한도 감안해도 안전한 크기)
+
+_LLM_SYSTEM_PROMPT = (
+    "너는 뉴스 이슈 그룹핑을 보조하는 판정기다. 두 기사 제목이 주어지면, "
+    "두 기사가 \"완전히 동일한 사건\"을 다루는지 판단하라. "
+    "같은 질병/주제를 다뤄도 발생 국가·장소·시점이 다르면 별개 사건으로 "
+    "판단한다 (예: 한국의 조류독감 발생 기사와 미국의 조류독감 발생 기사는 "
+    "질병명이 같아도 별개 사건). "
+    "제목 언어가 서로 다를 수 있다(한국어/영어/기타 언어 혼재) - 언어가 "
+    "달라도 같은 사건을 가리키면 같은 사건으로 판단한다. "
+    "판단이 확실하지 않으면 반드시 false로 답한다(보수적 기본값 - 잘못 "
+    "묶는 것보다 안 묶는 게 안전하다). "
+    "다른 설명 없이 JSON 배열만 출력한다. 각 원소는 {\"same_event\": true|false} "
+    "형태이며, 입력받은 쌍의 순서와 개수를 정확히 맞춰야 한다."
+)
+
+
+def _build_llm_user_prompt(pairs: list[tuple[dict, dict, float]]) -> str:
+    lines = ["다음 기사 제목 쌍들이 각각 완전히 동일한 사건을 다루는지 판단해줘.\n"]
+    for idx, (a, b, _sim) in enumerate(pairs, start=1):
+        lines.append(f"{idx}. A: \"{a.get('title', '')}\" / B: \"{b.get('title', '')}\"")
+    lines.append(
+        f"\n총 {len(pairs)}개 쌍이다. 이 개수 그대로 JSON 배열로만 답하라 (예: "
+        f"[{{\"same_event\": true}}, {{\"same_event\": false}}, ...])."
+    )
+    return "\n".join(lines)
+
+
+def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str) -> list[bool] | None:
+    """
+    LLM API를 한 번 호출해서 pairs 각각에 대한 same_event 판정을 받아온다.
+    LLM_PROVIDER 값에 따라 Anthropic(claude-haiku-4-5-20251001) 또는
+    OpenRouter(무료 라우터/모델)로 분기한다 - 요청 형식은 프로바이더마다
+    다르지만(Anthropic: content 블록 리스트, OpenRouter: OpenAI 호환
+    choices[0].message.content), 이후 파싱/검증 로직은 공통이다.
+
+    입력/출력 개수 불일치, JSON 파싱 실패, API 에러, 항목 형식 이상 등
+    신뢰할 수 없는 응답이면 None을 반환한다 - 9.4 "출력 형식을 코드로 자동
+    검증... 어긋나면 fallback" 원칙을 여기서도 그대로 적용 (fallback은 이
+    함수를 부르는 stage3_llm_assist 쪽에서 "안 묶음"으로 처리).
+    """
+    user_prompt = _build_llm_user_prompt(pairs)
+
+    try:
+        if LLM_PROVIDER == "openrouter":
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "content-type": "application/json",
+                # OpenRouter 권장 헤더(선택) - 프로젝트 식별용, 없어도 동작함
+                "X-Title": "사료축산뉴스-이슈그룹핑-3차보조",
+            }
+            body = {
+                "model": LLM_MODEL_OPENROUTER,
+                "temperature": 0,
+                "messages": [
+                    {"role": "system", "content": _LLM_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+            }
+            resp = requests.post(LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["choices"][0]["message"]["content"].strip()
+        else:
+            headers = {
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            }
+            body = {
+                "model": LLM_MODEL_ANTHROPIC,
+                "max_tokens": 1024,
+                "temperature": 0,  # 9.4 "temperature 낮게" 원칙 그대로 - 판정 일관성 우선
+                "system": _LLM_SYSTEM_PROMPT,
+                "messages": [{"role": "user", "content": user_prompt}],
+            }
+            resp = requests.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            text = "".join(
+                block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
+            ).strip()
+
+        # 코드 펜스(```json ... ```)로 감싸서 올 때가 있어 방어적으로 벗겨낸다
+        # (무료 모델은 이런 포맷 이탈이 Haiku보다 잦을 수 있어 특히 중요)
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            text = text[4:] if text.startswith("json") else text
+        parsed = json.loads(text.strip())
+    except Exception as e:
+        print(f"[issue_grouper] 3차 LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치({len(pairs)}쌍)는 "
+              f"전부 '안 묶음' fallback: {type(e).__name__} - {e!r}")
+        return None
+
+    if not isinstance(parsed, list) or len(parsed) != len(pairs):
+        actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
+        print(f"[issue_grouper] 3차 LLM({LLM_PROVIDER}) 출력 개수/형식 불일치(기대 {len(pairs)}, "
+              f"실제 {actual}) - 이 배치는 전부 '안 묶음' fallback")
+        return None
+
+    results = []
+    for item in parsed:
+        if not isinstance(item, dict) or not isinstance(item.get("same_event"), bool):
+            print(f"[issue_grouper] 3차 LLM({LLM_PROVIDER}) 출력 항목 형식 이상 - "
+                  f"이 배치는 전부 '안 묶음' fallback")
+            return None
+        results.append(item["same_event"])
+    return results
+
+
+def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]]) -> list[tuple[dict, dict, float]]:
+    """
+    2차에서 애매 구간에 걸린 쌍들을 LLM에 물어봐서, "같은 사건"으로 확정된
+    쌍만 골라 반환한다 (문서 4번 섹션 (B) - 그룹을 지우는 게 아니라 묶을지
+    말지만 판단).
+
+    LLM_PROVIDER(기본 anthropic)에 따라 필요한 API 키 환경변수가 다르다:
+      anthropic  -> ANTHROPIC_API_KEY
+      openrouter -> OPENROUTER_API_KEY (임시 로컬 검증용 - 위 프로바이더
+                    스위치 주석 참조, 운영 환경에서는 쓰지 않을 것)
+
+    해당 키가 없거나 모든 배치 호출이 실패하면, 9.4/9.5 원칙대로 "안 묶음"
+    보수적 기본값으로 안전하게 fallback한다 - 이 경우 group_issues의 최종
+    결과는 3차가 아예 없던 이전 동작과 동일해지므로 전체 파이프라인이
+    죽지 않는다.
+    """
+    if not borderline_pairs:
+        return []
+
+    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    api_key = os.environ.get(key_env_var)
+    if not api_key:
+        print(f"[issue_grouper] {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - 3차 LLM 보조 생략, "
+              f"애매 구간 {len(borderline_pairs)}쌍 전부 '안 묶음' 기본값 유지")
+        return []
+
+    model_name = LLM_MODEL_OPENROUTER if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
+    print(f"[issue_grouper] 3차 LLM 보조 시작 - provider={LLM_PROVIDER}, model={model_name}, "
+          f"대상 {len(borderline_pairs)}쌍")
+
+    confirmed = []
+    for i in range(0, len(borderline_pairs), LLM_BATCH_SIZE):
+        batch = borderline_pairs[i:i + LLM_BATCH_SIZE]
+        results = _call_llm(batch, api_key)
+        if results is None:
+            continue  # 이 배치만 안 묶음 유지, 다음 배치는 계속 시도
+        for (a, b, sim), same_event in zip(batch, results):
+            if same_event:
+                confirmed.append((a, b, sim))
+
+    print(f"[issue_grouper] 3차 LLM 보조 완료 - 애매 구간 {len(borderline_pairs)}쌍 중 "
+          f"{len(confirmed)}쌍 '같은 사건'으로 최종 병합")
+    return confirmed
+
+
+# ---------------------------------------------------------------------------
+# 최종 진입점: 1차 + 2차 + 3차를 합쳐서 scorer.py에 바로 넘길 수 있는 형태로 반환
 # ---------------------------------------------------------------------------
 
 def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
     """
-    1차(사전) + 2차(임베딩)를 순서대로 실행해 최종 이슈 그룹 리스트를 만든다.
+    1차(사전) + 2차(임베딩) + 3차(LLM 보조)를 순서대로 실행해 최종 이슈 그룹
+    리스트를 만든다.
 
     이 함수의 반환값은 scorer.score_and_rank()가 받는 입력과 형태가 동일하다
     (list[list[dict]]) - main.py에서 scorer.to_singleton_groups(articles) 호출을
     이 함수 호출로 그대로 바꿔치기하면 된다 (scorer.py 상단 docstring에 이미
     이렇게 하라고 적혀 있음).
 
-    3차(LLM 보조)는 아직 미구현이라, 지금은 borderline_pairs를 출력만 하고
-    그룹핑에는 반영하지 않는다 (다음 세션에서 LLM 연동 시 여기 이어붙일 것).
+    ** 3차 병합 방식 **
+    stage2_group의 결과(stage2_grouped 각 그룹 + still_unmatched 각 기사)를
+    "구성요소(component)"로 보고, stage3_llm_assist가 "같은 사건"으로 확정한
+    쌍만 이 구성요소들끼리 추가로 union한다 (Union-Find를 구성요소 단위로
+    한 번 더 적용 - 그룹 안에 이미 묶인 기사와 아직 단독인 기사가 한 쌍으로
+    확정될 수도 있으므로, "기사 단위"가 아니라 "구성요소 단위"로 합쳐야
+    한다). article의 url을 구성요소 식별에 쓴다 - 이 시스템의 공통 스키마상
+    url은 항상 존재하고 고유하다 (2번 섹션 "완전 동일 기사 제거" 로직도
+    같은 전제로 URL을 키로 씀).
     """
     stage1_grouped, stage1_unmatched = stage1_group(articles)
 
     if model is None:
         # 모델이 안 주어졌으면(예: 아직 설치 전 단계 테스트) 2차 없이
         # 1차 결과 + 나머지를 단독 그룹으로 반환 - to_singleton_groups와
-        # 동일한 안전한 fallback
+        # 동일한 안전한 fallback (2차가 없으면 3차의 재료인 borderline_pairs
+        # 자체가 안 생기므로 3차도 자연히 생략됨)
         print("[issue_grouper] 임베딩 모델이 없어 2차(임베딩) 매칭 생략 - 1차 결과만 사용")
         singleton = [[a] for a in stage1_unmatched]
         return stage1_grouped + singleton
 
     stage2_grouped, still_unmatched, borderline_pairs = stage2_group(stage1_unmatched, model=model)
 
+    confirmed_pairs: list[tuple[dict, dict, float]] = []
     if borderline_pairs:
-        print(f"[issue_grouper] 임계값 애매 구간 {len(borderline_pairs)}쌍 발견 - "
-              f"3차 LLM 보조 미구현으로 지금은 그룹핑 안 함 (아래 목록 참고, 다음 세션 작업)")
+        print(f"[issue_grouper] 임계값 애매 구간 {len(borderline_pairs)}쌍 발견 - 3차 LLM 보조로 최종 판단")
         for a, b, sim in borderline_pairs:
             print(f"  - ({sim:.3f}) {a['title'][:40]} <-> {b['title'][:40]}")
+        confirmed_pairs = stage3_llm_assist(borderline_pairs)
 
-    singleton = [[a] for a in still_unmatched]
-    return stage1_grouped + stage2_grouped + singleton
+    components = stage2_grouped + [[a] for a in still_unmatched]
+
+    if confirmed_pairs:
+        url_to_component: dict[str, int] = {}
+        for idx, comp in enumerate(components):
+            for article in comp:
+                url_to_component[article.get("url")] = idx
+
+        comp_uf = UnionFind(len(components))
+        for a, b, _sim in confirmed_pairs:
+            idx_a = url_to_component.get(a.get("url"))
+            idx_b = url_to_component.get(b.get("url"))
+            if idx_a is not None and idx_b is not None:
+                comp_uf.union(idx_a, idx_b)
+
+        merged_components = []
+        for indices in comp_uf.groups():
+            merged_group = []
+            for idx in indices:
+                merged_group.extend(components[idx])
+            merged_components.append(merged_group)
+        components = merged_components
+
+    return stage1_grouped + components
 
 
 class _FakeEmbeddingModel:
@@ -334,7 +572,23 @@ class _FakeEmbeddingModel:
     진짜 BGE-M3(sentence-transformers)를 설치하지 않고도 stage2_group의
     "유사도 계산 -> threshold 판단 -> 그룹 병합" 로직 자체가 맞는지 확인하기
     위한 가짜 모델. 미리 정해둔 제목들에는 의도적으로 비슷한 벡터를,
-    나머지는 서로 먼 벡터를 부여한다.
+    나머지는 서로 확실히 먼 벡터를 부여한다.
+
+    ** 2026-07-15 수정 - 무관한 텍스트끼리 "우연히" 비슷해지는 문제 제거 **
+    기존엔 매칭 안 되는 텍스트에 그냥 rng.normal(size=4) (4차원 랜덤 벡터)를
+    부여했는데, 차원이 낮으면 랜덤 벡터끼리도 코사인 유사도가 threshold(0.75)
+    를 우연히 넘는 경우가 실제로 발생했다 - 실측: seed=42 기준 "조류독감"
+    기사와 "구제역" 기사에 우연히 0.967이 나와서 실제로는 안 묶여야 할 두
+    기사(질병명 자체가 다름)가 잘못 묶이는 게 확인됨. 이 자체 테스트에는 그걸
+    잡아낼 assert도 없었어서(merged_ok만 확인, 잘못된 병합은 검사 안 함)
+    조용히 통과해버리는 문제가 있었음.
+
+    수정 방식: 매칭 안 되는 텍스트마다 서로 직교(orthogonal)하는 전용 축을
+    하나씩 배정한다(원-핫 벡터 + 아주 작은 노이즈). 직교 벡터는 코사인
+    유사도가 정확히 0에 가깝게 나오도록 수학적으로 보장되므로, 랜덤 시드가
+    뭐가 됐든 "무관한 텍스트끼리 우연히 유사해지는" 일 자체가 구조적으로
+    발생할 수 없다. 곡물/사료 그룹은 기존처럼 0번 축에 다 같이 모아서
+    "의미가 비슷한 문장은 가까운 벡터" 라는 원래 취지는 그대로 유지.
 
     실제 모델(model.encode(texts, normalize_embeddings=True))과 같은
     인터페이스(encode 메서드, 텍스트 리스트 -> 벡터 리스트)만 흉내낸다.
@@ -343,19 +597,22 @@ class _FakeEmbeddingModel:
     def encode(self, texts: list[str], normalize_embeddings: bool = True):
         import numpy as np
 
-        # "옥수수/사료" 계열 문장은 벡터를 거의 같게, 나머지는 랜덤하게 떨어뜨림
-        # (real BGE-M3라면 의미가 비슷한 문장끼리 자연히 가까운 벡터가 나오는데,
-        # 그 결과를 시뮬레이션하는 것)
-        vectors = []
         rng = np.random.default_rng(seed=42)
+        # 차원 수: 0번 축(곡물/사료 그룹 전용) + 매칭 안 되는 텍스트 개수만큼
+        # 여유 있게 잡는다 - 텍스트 수보다 넉넉하면 축이 남아도 무해함.
+        dim = len(texts) + 1
+
+        vectors = []
+        next_free_axis = 1  # 0번은 곡물/사료 그룹 전용으로 예약
         for text in texts:
+            vec = np.zeros(dim)
             if "옥수수" in text or "grain" in text.lower() or "feed price" in text.lower():
-                base = np.array([1.0, 0.0, 0.0, 0.0])
-                noise = rng.normal(scale=0.02, size=4)  # 살짝만 흔들어서 완전 동일 벡터는 피함
+                vec[0] = 1.0
             else:
-                base = rng.normal(size=4)
-                noise = 0
-            vectors.append(base + noise)
+                vec[next_free_axis] = 1.0
+                next_free_axis += 1
+            vec += rng.normal(scale=0.02, size=dim)  # 완전 동일/완전 0인 벡터는 피하려는 소량 노이즈
+            vectors.append(vec)
         return np.array(vectors)
 
 
@@ -399,3 +656,69 @@ if __name__ == "__main__":
     )
     print(f"\n[검증] 2차 임베딩으로 사료가격 이슈 그룹핑 성공: {merged_ok}")
     assert merged_ok, "2차 임베딩 그룹핑 로직에 문제가 있음"
+
+    # ** 2026-07-15 추가 - 음성(negative) 검증 **
+    # "무관한 기사는 절대 안 묶여야 한다"를 명시적으로 확인. 이게 없으면
+    # _FakeEmbeddingModel이 우연히 이상한 벡터를 내놔도(과거 실제로 발생함 -
+    # 위 클래스 docstring 참고) 테스트가 조용히 통과해버린다.
+    def _same_group(title_a: str, title_b: str) -> bool:
+        return any({title_a, title_b} <= {a["title"] for a in g} for g in final_groups)
+
+    unrelated_pairs = [
+        ("전북서 고병원성 조류독감 추가 발생", "구제역 확산에 한우 수출 잠정 중단"),  # 질병명 자체가 다름
+        ("USDA reports new avian flu outbreak in Iowa", "구제역 확산에 한우 수출 잠정 중단"),
+        ("USDA reports new avian flu outbreak in Iowa", "옥수수 국제가격 상승, 배합사료 원가 부담 커져"),
+    ]
+    for title_a, title_b in unrelated_pairs:
+        wrongly_merged = _same_group(title_a, title_b)
+        print(f"[검증] '{title_a[:20]}...' <-> '{title_b[:20]}...' 안 묶임: {not wrongly_merged}")
+        assert not wrongly_merged, f"무관한 기사가 잘못 묶임: {title_a} <-> {title_b}"
+    print("\n[검증] 무관한 기사 오탐 없음 - 전부 통과")
+
+    # === 3차 LLM 보조가 실제로 배선(wiring)돼 있는지 mock으로 확인 ===
+    # (실제 API 키 없이도, borderline_pairs가 있으면 stage3_llm_assist가
+    # 정말 호출되고 응답을 파싱해 병합까지 이어지는지 구조만 검증한다.
+    # 앞선 세션에서 "지금 LLM이 작동 안 한 거 아니냐"는 질문이 나온 이유가
+    # 바로 이 실행에서는 borderline_pairs 자체가 한 번도 안 생겨서 stage3가
+    # 호출조차 안 됐기 때문 - 이 스모크 테스트는 stage3 배선 자체는 정상임을
+    # borderline_pairs를 강제로 만들어서 확인한다.)
+    print("\n\n=== 3차 LLM 보조 배선 확인 (mock API, 실제 네트워크 호출 없음) ===")
+    import os as _os
+    import requests as _requests
+
+    _mock_calls = []
+
+    def _mock_post(url, headers=None, json=None, timeout=None):
+        _mock_calls.append(url)
+        pairs_count = json["messages"][0]["content"].count('A: "')
+        results = [{"same_event": True}] * pairs_count  # 이 스모크 테스트는 전부 True로 응답
+        text = __import__("json").dumps(results)
+
+        class _MockResp:
+            status_code = 200
+            def raise_for_status(self): pass
+            def json(self):
+                return {"content": [{"type": "text", "text": text}]}
+        return _MockResp()
+
+    _original_post = _requests.post
+    _requests.post = _mock_post
+    _os.environ["ANTHROPIC_API_KEY"] = "sk-ant-smoke-test-dummy-key"
+    try:
+        fake_borderline = [
+            (
+                {"title": "전북 조류독감 추가 확진", "url": "https://smoke/1"},
+                {"title": "Jeonbuk confirms new avian flu case", "url": "https://smoke/2"},
+                0.72,
+            )
+        ]
+        confirmed = stage3_llm_assist(fake_borderline)
+        assert len(confirmed) == 1, "mock 응답이 전부 True인데 confirmed가 1개가 아님 - 배선 문제"
+        assert _mock_calls, "requests.post가 한 번도 호출 안 됨 - stage3가 실제로 API를 안 부름"
+        print(f"[검증] stage3_llm_assist 배선 정상 - mock 호출 {len(_mock_calls)}회, "
+              f"confirmed {len(confirmed)}쌍")
+    finally:
+        _requests.post = _original_post
+        del _os.environ["ANTHROPIC_API_KEY"]
+
+    print("\n[issue_grouper] 자체 점검 전체 통과 (1차/2차 그룹핑 + 음성 검증 + 3차 배선 확인)")
