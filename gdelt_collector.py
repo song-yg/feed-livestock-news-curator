@@ -102,18 +102,48 @@ FALSE_POSITIVE_FILTERS = {
     "foot and mouth disease": ["hand, foot and mouth", "hand foot and mouth"],
 }
 
+# --- 2026-07-15 버그 수정: 구두점 앞 공백 정규화 ---
+#
+# FALSE_POSITIVE_FILTERS를 처음 등록했을 때(2026-07-14)는 "hand, foot and
+# mouth"(쉼표 뒤에만 공백)와 "hand foot and mouth"(쉼표 없음) 두 형태만
+# 가정했다. 그런데 실제 GDELT article_search가 돌려주는 제목은 쉼표/마침표
+# "앞"에도 공백이 들어간 토크나이즈된 형식이었다 (실측 확인, 2026-07-15
+# 재검증 - calibration_raw_2026-W29.json):
+#   "Westmoreland sees increase in hand , foot and mouth disease"
+# 즉 실제 제목은 "hand SPACE , SPACE foot" 형태라, 등록해둔 두 패턴 중
+# 어느 것과도 안 맞아서 필터가 만들어진 이후 단 한 번도 실제로 걸러낸 적이
+# 없었다 (같은 재검증에서 "hand , foot and mouth disease" 오매칭 3건이
+# 필터를 그대로 통과해 원본 데이터에 남아있는 게 확인됨).
+#
+# 패턴을 계속 늘리는 대신(제목 형식이 또 달라지면 또 놓칠 위험), 비교 전에
+# "구두점 앞 공백"을 없애는 정규화를 한 번 거치는 쪽을 택함 - 이러면
+# "hand, foot and mouth"/"hand , foot and mouth"/"hand  , foot and mouth"
+# 등 공백 개수가 달라져도 전부 같은 문자열로 취급돼 안전하다.
+import re as _re
+
+_SPACE_BEFORE_PUNCT = _re.compile(r"\s+([,.;:!?])")
+
+
+def _normalize_spacing(text: str) -> str:
+    """구두점 앞의 공백을 제거해 비교용으로 정규화한다 (예: "hand , foot" -> "hand, foot")."""
+    return _SPACE_BEFORE_PUNCT.sub(r"\1", text)
+
 
 def _is_false_positive(keyword: str, title: str) -> bool:
     """
     해당 키워드의 등록된 제외 패턴이 제목에 포함돼 있으면 True.
     (예: "foot and mouth disease" 검색 결과 중 제목에 "hand, foot and mouth"가
     있으면 수족구병 오매칭으로 판단해 제외)
+
+    비교 전 제목과 패턴 양쪽 다 _normalize_spacing을 거쳐, GDELT 제목의
+    "구두점 앞 공백" 형식(위 2026-07-15 버그 수정 주석 참고) 때문에 매칭이
+    실패하는 일이 없도록 한다.
     """
     patterns = FALSE_POSITIVE_FILTERS.get(keyword, [])
     if not patterns or not title:
         return False
-    title_lower = title.lower()
-    return any(p.lower() in title_lower for p in patterns)
+    title_normalized = _normalize_spacing(title.lower())
+    return any(_normalize_spacing(p.lower()) in title_normalized for p in patterns)
 
 # 이 프로젝트는 주 1회 실행이므로, 최근 7일 이내 기사만 남긴다 (naver/watt와 동일 방침).
 DAYS_BACK = 7
