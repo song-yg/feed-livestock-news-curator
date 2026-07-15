@@ -1,0 +1,78 @@
+# 사료축산뉴스 큐레이션 파이프라인 - 수동 실행용 workflow
+#
+# (알고리즘 문서 "6. 실행/오케스트레이션" / "8. GitHub Actions 유의사항" 참조)
+#
+# 지금은 수동 버튼(workflow_dispatch)만 넣었습니다 - 문서 6번 섹션에
+# "트리거(스케줄/수동 버튼) 분리는 4~6단계가 실제로 구현된 뒤 함께 작업할
+# 예정 - 현재는 아직 손대지 않음"이라고 이미 정해져 있어서, 그 방침을
+# 그대로 따랐습니다. 나중에 4~6단계(LLM 요약/저장/배포)가 붙으면 아래
+# schedule 블록 주석만 풀면 매주 자동 실행도 바로 켤 수 있습니다.
+#
+# 실행 방법: GitHub 리포 > Actions 탭 > "사료축산뉴스 파이프라인 실행" 선택
+#           > "Run workflow" 버튼 클릭
+# 로그 확인: 같은 화면에서 실행 중인 job을 클릭하면 각 step의 로그가
+#           실시간으로 스트리밍됩니다 (main.py의 print 출력이 그대로 보임).
+
+name: 사료축산뉴스 파이프라인 실행
+
+on:
+  workflow_dispatch: {}
+  # schedule:
+  #   # 4~6단계(LLM 요약/저장/배포) 구현 완료 후 주석 해제 예정
+  #   # 매주 월요일 00:00 UTC(한국 시간 09:00) - cron은 UTC 기준
+  #   - cron: "0 0 * * 1"
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    # 로컬에서 체감 2시간 정도라 GDELT 429 재시도 등 변동을 감안해 여유 있게 설정
+    # (9번 섹션 실측 - GDELT 수집만 최대 78분 걸린 사례 있음)
+    timeout-minutes: 240
+
+    steps:
+      - name: 리포 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"  # requirements.txt 해시 기준으로 pip 캐시 자동 관리
+
+      - name: 파이썬 의존성 설치
+        run: pip install -r requirements.txt
+
+      - name: Playwright 브라우저(Chromium) 설치
+        # watt_collector가 Playwright로 페이지를 로드하므로 브라우저 바이너리 필요
+        # (알고리즘 문서 "1. 수집 레이어" watt_collector 행 참조)
+        run: playwright install --with-deps chromium
+
+      - name: BGE-M3 임베딩 모델 캐시
+        # 2.1 이슈 그룹핑 섹션에 명시된 캐싱 설정 그대로 - 최초 1회만
+        # 약 2.2GB를 받고, 이후 실행부터는 캐시에서 즉시 로드됨
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: bge-m3-model
+
+      - name: 파이프라인 실행 (main.py)
+        env:
+          # --- 필수: 네이버 뉴스 검색 API (naver_collector.py) ---
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+
+          # --- 선택: 3차 LLM 그룹핑 보조 (issue_grouper.py) ---
+          # 둘 다 비워두면 3차는 "안 묶음" 기본값으로 안전하게 생략되고
+          # 나머지 파이프라인(1~3단계)은 그대로 정상 동작합니다.
+          # Anthropic 키 승인이 아직이라면 이 줄은 비워둔 채로 실행해도 됩니다.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # --- 임시 대체 경로 (키 승인 전까지만) ---
+          # 아래 두 값을 채우면 LLM_PROVIDER=openrouter로 3차를 임시 실행할 수
+          # 있습니다. 다만 이건 로컬 검증용으로 설계된 임시 경로라(9.5 섹션 -
+          # 무료 모델은 예고 없이 정책이 바뀔 수 있음), Anthropic 키가 승인되면
+          # 이 두 값을 지우고 위 ANTHROPIC_API_KEY만 쓰는 걸 권장합니다.
+          # LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+          # OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          # OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+        run: python main.py
