@@ -11,19 +11,25 @@ requests + BeautifulSoup으로 시도했으나 403 Forbidden으로 막힘 (WAF�
 둘 다 자동 수집을 막지 않는 것으로 확인됐으므로, SunSirs 때와 동일한 논리로
 Playwright(실제 브라우저 엔진)를 사용한다.
 
-*** 검증 상태 (2026-07-14, 알고리즘 문서 "1. 수집 레이어" 표와 통일) ***
-알고리즘 문서에는 이 수집기가 "2026-07-14 실행 검증 완료"라고만 적혀 있는데,
-그건 아래 항목까지만을 뜻한다 - 전체가 다 검증된 게 아니라 항목별로 상태가 다름:
-  - 검증 완료: 2사이트(WATTAgNet/Feed Strategy) 동일 구조 여부, 403/Cloudflare
-    차단 여부(Feed & Grain만 걸리고 이 2사이트는 안 걸림), 본문(body) 추출
-    정확도(아래 _fetch_detail 내 "확인 완료 (2026-07-13)" 주석 참고), 목록
-    페이지 아이템 셀렉터·카테고리 추출 로직·기간이탈(cutoff) 로직(2026-07-14,
-    WATTAgNet 실행 11건으로 확인), 발행일 포맷(2026-07-14, WATTAgNet만 확인 -
-    아래 _parse_published_time 주석 참고)
-  - 아직 미검증: 위 항목들 중 Feed Strategy 쪽은 별도로 직접 확인한 적 없음
-    (2사이트 동일 CMS/구조라는 전제로 같은 로직을 공유하는 것 - 구조 자체가
-    같다는 것과, 발행일 표기 형식까지 100% 같다는 것은 별개 확인이 필요할 수
-    있어 다음 단계에서 Feed Strategy도 한 번은 직접 찍어보는 걸 권장)
+*** 검증 상태 (2026-07-14 최초 작성 / 2026-07-15 Feed Strategy 확인 후 갱신) ***
+알고리즘 문서에는 이 수집기가 "실행 검증 완료"라고 적혀 있는데, 항목별로
+검증 시점과 방법이 다르므로 아래에 정리한다:
+  - 검증 완료(WATTAgNet, 2026-07-14, 실제 Playwright 실행 11건 기준): 403/
+    Cloudflare 차단 여부(Feed & Grain만 걸리고 이 2사이트는 안 걸림), 본문
+    (body) 추출 정확도(아래 _fetch_detail 내 "확인 완료 (2026-07-13)" 주석
+    참고), 목록 페이지 아이템 셀렉터·카테고리 추출 로직·기간이탈(cutoff)
+    로직, 발행일 포맷(아래 _parse_published_time 주석 참고)
+  - 검증 완료(Feed Strategy, 2026-07-15, 실제 사이트 라이브 페이지 대조
+    기준 - 아래 주의사항 참고): 목록 페이지 구조("헤드라인 바로 앞 카테고리
+    링크" 패턴 포함), 발행일 포맷(서수 표기, 시:분:초 없음 - WATTAgNet과
+    동일), 페이지네이션 URL 패턴(`?page=2`), 본문 종료 마커("Recommended"/
+    "Related Stories") - 실제 목록 페이지 1개 + 상세 페이지 1개를 열어
+    대조한 결과이며, WATTAgNet 때처럼 이 collector 코드를 Playwright로
+    직접 실행해서 확인한 것은 아니다 (이 세션 환경 네트워크 정책상
+    feedstrategy.com에 직접 접근 불가 - 별도 웹 조회 도구로 대조함).
+    구조 자체가 같다는 신뢰도는 높아졌으나, 실제 코드 실행 기준의 완전한
+    검증(예: 전체 목록 페이지네이션, 예외적인 기사 포맷 등)은 아직 아니므로
+    최초 실제 운영 시 결과를 한 번 더 확인하는 걸 권장.
 
 중요: body(본문 전문)는 LLM 요약 생성까지만 메모리에서 쓰고, repo에 저장하는
 raw.json 등에는 절대 포함하지 않는다 (저장 레이어의 save_raw_json 쪽에서 제외 처리).
@@ -72,10 +78,13 @@ def _parse_published_time(raw: str) -> datetime:
     """
     article:published_time 메타 태그 값을 datetime으로 변환한다.
 
-    확인 완료 (2026-07-14, WATTAgNet 실제 기사로 검증):
-    실제 값은 "Jul 13th, 2026"처럼 시:분:초가 아예 없는 서수 표기 형식이었다
-    (check_date.py로 직접 확인 - 이전엔 ISO 8601일 가능성도 열어두고 두 형식
-    다 시도하도록 짜뒀었는데, 실측 결과 서수 표기 브랜치 쪽으로 정상 파싱됨을
+    확인 완료 (2026-07-14 WATTAgNet 실제 기사 / 2026-07-15 Feed Strategy
+    라이브 페이지 대조):
+    실제 값은 "Jul 13th, 2026"(WATTAgNet) / "Jul 10th, 2026"(Feed Strategy)
+    처럼 시:분:초가 아예 없는 서수 표기 형식이었다 (WATTAgNet은
+    check_date.py로 직접 확인, Feed Strategy는 2026-07-15 라이브 페이지
+    조회로 대조 - 이전엔 ISO 8601일 가능성도 열어두고 두 형식 다 시도하도록
+    짜뒀었는데, 실측 결과 두 사이트 다 서수 표기 브랜치 쪽으로 정상 파싱됨을
     확인). 사이트가 애초에 "일" 단위 정보만 주고 시각(hour/minute)은 아예
     제공하지 않는다는 뜻이다.
 
@@ -85,16 +94,16 @@ def _parse_published_time(raw: str) -> datetime:
     00:00:00에 고정되는 건 버그가 아니라 사이트 데이터 자체의 특성이고,
     이 프로젝트 스코어링 정확도에 영향이 없다.
 
-    ISO 8601 분기(아래 1번)는 WATTAgNet 실측에서는 한 번도 안 탔지만,
-    Feed Strategy는 아직 개별 확인 전이라(위 모듈 docstring 참고) 혹시
-    모를 형식 차이에 대비해 안전망으로 남겨둔다 - 실제로 안 쓰이면 그냥
-    죽은 코드일 뿐 부작용은 없음.
+    ISO 8601 분기(아래 1번)는 WATTAgNet/Feed Strategy 둘 다 실측에서 한 번도
+    안 탔지만, 혹시 모를 형식 차이(예: 특정 기사 유형만 다른 포맷을 쓰는
+    경우)에 대비해 안전망으로 계속 남겨둔다 - 실제로 안 쓰이면 그냥 죽은
+    코드일 뿐 부작용은 없음.
     """
     raw = raw.strip()
 
     # 1) ISO 8601 형식 시도 (예: "2026-07-01T12:00:00Z" 또는 "+00:00")
-    #    WATTAgNet 실측에서는 안 쓰였음 (2026-07-14 확인) - Feed Strategy
-    #    대비 안전망으로만 유지
+    #    WATTAgNet/Feed Strategy 실측 둘 다에서 안 쓰였음 (2026-07-14/07-15
+    #    확인) - 혹시 모를 형식 차이 대비 안전망으로만 유지
     try:
         iso = raw.replace("Z", "+00:00")
         return datetime.fromisoformat(iso)
@@ -196,9 +205,12 @@ EXCLUDED_PATH_PATTERNS = ("/brand-insights/",)
 def _fetch_listing_page(page, url: str) -> list[dict]:
     page.goto(url, timeout=30000, wait_until="networkidle")
 
-    # 확인 완료 (2026-07-14, WATTAgNet 11건 정상 수집으로 검증):
+    # 확인 완료 (2026-07-14 WATTAgNet 11건 Playwright 실행 / 2026-07-15
+    # Feed Strategy 라이브 페이지 대조):
     # "제목 링크로 보이는 <h5><a>" 패턴이 실제 목록 아이템과 일치함을 확인.
-    # 오탐(광고/추천 위젯 포함) 없이 정상 동작.
+    # 오탐(광고/추천 위젯 포함) 없이 정상 동작. (Feed Strategy는 실제 코드
+    # 실행이 아니라 라이브 페이지 조회로 구조만 대조한 것 - 위 모듈 docstring
+    # "검증 상태" 참고)
     try:
         page.wait_for_selector("h5 a, h4 a", timeout=15000)
     except Exception:
@@ -213,8 +225,9 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
         title = heading.get_text(strip=True)
         link = urljoin(url, heading["href"])
 
-        # 확인 완료 (2026-07-14): 헤드라인 바로 앞 카테고리 링크 방식으로
-        # 정상 추출됨 (WATTAgNet 11건 기준)
+        # 확인 완료: 헤드라인 바로 앞 카테고리 링크 방식으로 정상 추출됨
+        # (WATTAgNet 11건 실행 기준 2026-07-14 / Feed Strategy는 2026-07-15
+        # 라이브 페이지 대조로 같은 패턴 확인 - 위 모듈 docstring 참고)
         category = None
         prev_link = heading.find_previous("a")
         if prev_link and prev_link.get_text(strip=True):
