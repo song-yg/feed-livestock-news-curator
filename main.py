@@ -10,10 +10,19 @@ main.py
                     + 2.1 이슈 그룹핑(issue_grouper.py, 2026-07-15 연결 완료 -
                     아래 score() 함수 참고. 1차 사전 매칭 + 2차 BGE-M3 임베딩 +
                     3차 LLM 보조(2026-07-15, issue_grouper.stage3_llm_assist)
-                    까지 전부 연결됨. 3차는 ANTHROPIC_API_KEY 환경변수가 필요 -
-                    GitHub Actions에서 돌리려면 리포 Secrets에 추가 등록 필요
-                    (8번 섹션 체크리스트 참조). 키가 없으면 3차만 안전하게
-                    생략되고 나머지 파이프라인은 계속 동작함)
+                    까지 전부 연결됨. 3차는 기본적으로 ANTHROPIC_API_KEY 환경변수가
+                    필요하나, Anthropic 키 발급 승인 전까지는 LLM_PROVIDER=openrouter
+                    +OPENROUTER_API_KEY로 임시 대체 가능(issue_grouper.py 프로바이더
+                    스위치 참조). GitHub Actions에서 돌리려면 리포 Secrets/Variables에
+                    추가 등록 필요(8번 섹션 체크리스트 참조). 둘 다 없으면 3차만
+                    안전하게 생략되고 나머지 파이프라인은 계속 동작함. **GitHub
+                    Actions 실행 검증(2026-07-15)**: 최초 실행 시 "No space left on
+                    device"로 실패 → 원인은 sentence-transformers가 끌어오는 GPU용
+                    PyTorch + BGE-M3 + Playwright 용량이 러너 보장 여유공간(14GB)을
+                    초과한 것으로 확인 → workflow에 프리인스톨 툴 정리(dotnet/
+                    android/ghc) + PyTorch CPU 전용 선설치를 추가해 해결, 이후
+                    main.py 실행 진입까지 확인됨(.github/workflows/run-pipeline.yml
+                    참조)
   3) 스코어링    -> 구현 완료 (scorer.py) - 2.1이 실제로 연결되면서 이제
                     "이슈(여러 기사 묶음) 단위 점수"로 정상 작동함 (기존엔
                     to_singleton_groups 임시 처리로 사실상 기사 단위 점수와
