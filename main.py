@@ -8,9 +8,12 @@ main.py
   2) 정규화      -> 구현 완료: 공통 스키마 통합 + 완전 동일 기사(URL) 제거
                     + 2.2 키워드 태깅(keyword_tagger.py)
                     + 2.1 이슈 그룹핑(issue_grouper.py, 2026-07-15 연결 완료 -
-                    아래 score() 함수 참고. 1차 사전 매칭 + 2차 BGE-M3 임베딩
-                    까지 연결됨. 3차 LLM 보조는 issue_grouper.py 안에서도
-                    아직 미구현이라 이 레이어의 최종 완성은 아님)
+                    아래 score() 함수 참고. 1차 사전 매칭 + 2차 BGE-M3 임베딩 +
+                    3차 LLM 보조(2026-07-15, issue_grouper.stage3_llm_assist)
+                    까지 전부 연결됨. 3차는 ANTHROPIC_API_KEY 환경변수가 필요 -
+                    GitHub Actions에서 돌리려면 리포 Secrets에 추가 등록 필요
+                    (8번 섹션 체크리스트 참조). 키가 없으면 3차만 안전하게
+                    생략되고 나머지 파이프라인은 계속 동작함)
   3) 스코어링    -> 구현 완료 (scorer.py) - 2.1이 실제로 연결되면서 이제
                     "이슈(여러 기사 묶음) 단위 점수"로 정상 작동함 (기존엔
                     to_singleton_groups 임시 처리로 사실상 기사 단위 점수와
@@ -45,21 +48,13 @@ def run_collectors() -> tuple[list[dict], dict, list[str]]:
     """
     watt/naver/gdelt collector를 순서대로 실행한다.
 
-    9.1 "소스별 독립 실행 구조" - 각 collector 호출을 개별 try/except로 감싸서
-    하나가 완전히 죽어도(예: import 실패, 예상 밖 예외) 나머지 소스는 계속
-    진행한다. 각 collector 내부에도 이미 더 세밀한 단위(WATT는 사이트별,
-    naver/gdelt는 키워드별)의 방어가 있지만, 여기 main.py 레벨의 try/except는
-    "collector 모듈 자체가 통째로 실패하는 경우"에 대한 마지막 방어선이다.
+    9.1 "소스별 독립 실행 구조" - 각 collector 호출을 개별 try/except로 감싸서 하나가 완전히 죽어도(예: import 실패, 예상 밖 예외) 나머지 소스는 계속 진행한다.
+    각 collector 내부에도 이미 더 세밀한 단위(WATT는 사이트별, naver/gdelt는 키워드별)의 방어가 있지만, 여기 main.py 레벨의 try/except는 "collector 모듈 자체가 통째로 실패하는 경우"에 대한 마지막 방어선이다.
 
     반환값:
-      all_articles: watt+naver+gdelt 기사를 하나로 합친 리스트 (아직 정규화 전
-                    원본 스키마 - 이미 세 collector가 공통 스키마를 지키므로
-                    합치기만 하면 됨)
-      gdelt_timeline: GDELT 시계열 데이터 (3.1 규칙대로 스코어링에는 안 들어가고
-                    참고 지표 전용 - 지금은 그냥 들고만 있음, 저장 레이어(5번,
-                    아직 미구현) 완성 시 그쪽에서 사용)
-      failed_sources: 실패한 소스 이름 목록 (9.2 "에러 리포트 자동화"의 재료 -
-                    저장/배포 레이어가 아직 없어서 지금은 콘솔에만 출력)
+      all_articles: watt+naver+gdelt 기사를 하나로 합친 리스트 (아직 정규화 전 원본 스키마 - 이미 세 collector가 공통 스키마를 지키므로 합치기만 하면 됨)
+      gdelt_timeline: GDELT 시계열 데이터 (3.1 규칙대로 스코어링에는 안 들어가고 참고 지표 전용- 지금은 그냥 들고만 있음, 저장 레이어(5번, 아직 미구현) 완성 시 그쪽에서 사용)
+      failed_sources: 실패한 소스 이름 목록 (9.2 "에러 리포트 자동화"의 재료 - 저장/배포 레이어가 아직 없어서 지금은 콘솔에만 출력)
     """
     all_articles: list[dict] = []
     gdelt_timeline: dict = {}
@@ -99,12 +94,10 @@ def run_collectors() -> tuple[list[dict], dict, list[str]]:
 
 def normalize(articles: list[dict]) -> list[dict]:
     """
-    "완전 동일 기사 제거": 같은 URL이 중복 수집된 경우만 제거 (2번 섹션 명시 -
-    이슈 그룹핑과는 다른 개념. 여긴 정말 똑같은 기사가 두 번 들어온 경우만
-    거른다 - 예: 페이지네이션 겹침, 재실행 등).
+    "완전 동일 기사 제거": 같은 URL이 중복 수집된 경우만 제거.
+    (2번 섹션 명시 - 이슈 그룹핑과는 다른 개념. 여긴 정말 똑같은 기사가 두 번 들어온 경우만 거른다 - 예: 페이지네이션 겹침, 재실행 등).
 
-    첫 번째로 본 URL을 유지하고 이후 중복은 버린다 (순서 유지를 위해 dict를
-    순서 보존 집합처럼 사용).
+    첫 번째로 본 URL을 유지하고 이후 중복은 버린다 (순서 유지를 위해 dict를 순서 보존 집합처럼 사용).
     """
     seen_urls: set[str] = set()
     deduped = []
@@ -129,35 +122,25 @@ def normalize(articles: list[dict]) -> list[dict]:
 
 def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list[dict]]:
     """
-    2.1 이슈 그룹핑(issue_grouper.group_issues) + 3.1/3.2 국내/해외 개별
-    랭킹(Top N)까지 수행. (2026-07-15, to_singleton_groups 임시 처리를
-    실제 그룹핑으로 교체 - 배경 문서 "진행할 것 — 최우선" 참조)
+    2.1 이슈 그룹핑(issue_grouper.group_issues) + 3.1/3.2 국내/해외 개별 랭킹(Top N)까지 수행.
+    (2026-07-15, to_singleton_groups 임시 처리를 실제 그룹핑으로 교체 - 배경 문서 "진행할 것 — 최우선" 참조)
 
     ** 그룹핑을 먼저, 축 분리는 그 다음 (설계 결정) **
-    알고리즘 문서 2.1 "작동 방식" 3번은 매칭 범위를 "전체 기사 벡터 x 전체
-    기사 벡터"(국내-국내 / 해외-해외 / 국내-해외 전부 포함)로 명시하고 있다.
-    그런데 기존 임시 코드는 split_domestic_international()을 먼저 호출해
-    국내/해외를 나눈 뒤 각각 따로 to_singleton_groups()를 적용하고 있었다 -
-    이 순서 그대로 group_issues만 바꿔치기하면 국내/해외가 애초에 분리된
-    채로 그룹핑되어 버려서 국내-해외 교차 매칭이 구조적으로 아예 발생할 수
-    없게 된다 (문서 정의와 어긋남). 그래서 이번 연결 작업에서 순서를
-    뒤집었다: ① 전체 기사를 대상으로 group_issues()를 한 번 호출 -> ②
-    그 결과 그룹들을 국내/해외 축으로 "나눠서" scorer에 넘긴다.
+    알고리즘 문서 2.1 "작동 방식" 3번은 매칭 범위를 "전체 기사 벡터 x 전체 기사 벡터"(국내-국내 / 해외-해외 / 국내-해외 전부 포함)로 명시하고 있다.
+    그런데 기존 임시 코드는 split_domestic_international()을 먼저 호출해 국내/해외를 나눈 뒤 각각 따로 to_singleton_groups()를 적용하고 있었다.
+    이 순서 그대로 group_issues만 바꿔치기하면 국내/해외가 애초에 분리된 채로 그룹핑되어 버려서 국내-해외 교차 매칭이 구조적으로 아예 발생할 수 없게 된다 (문서 정의와 어긋남).
+    그래서 이번 연결 작업에서 순서를 뒤집었다:
+    ① 전체 기사를 대상으로 group_issues()를 한 번 호출 -> ② 그 결과 그룹들을 국내/해외 축으로 "나눠서" scorer에 넘긴다.
 
     ** 국내-해외 교차 매칭된 그룹의 처리 **
-    group_issues가 만든 그룹 하나가 국내(네이버)·해외(WATT/GDELT) 기사를
-    동시에 포함할 수 있다. 3.2 원칙("양쪽 리스트 모두에서 노출... 하나의
-    점수로 합치지는 않음, 정규화·환산 없이 각 축의 원본 신호를 그대로
-    보존")대로, 이런 그룹은 국내 축 스코어링엔 그 그룹 안의 네이버 기사만,
-    해외 축 스코어링엔 그 그룹 안의 WATT/GDELT 기사만 걸러서 넘긴다 - 각
-    축의 issue_score가 그 축 안에서의 원본 신호만 반영하게 하기 위함이다.
-    다만 "이 이슈가 다른 축에서도 다뤄졌다"를 화면에 🔗로 표시해주는 기능
-    자체는 scorer.py 상단 docstring에 이미 명시된 대로 여전히 미구현 -
+    group_issues가 만든 그룹 하나가 국내(네이버)·해외(WATT/GDELT) 기사를 동시에 포함할 수 있다.
+    3.2 원칙("양쪽 리스트 모두에서 노출... 하나의 점수로 합치지는 않음, 정규화·환산 없이 각 축의 원본 신호를 그대로 보존")대로,
+    이런 그룹은 국내 축 스코어링엔 그 그룹 안의 네이버 기사만, 해외 축 스코어링엔 그 그룹 안의 WATT/GDELT 기사만 걸러서 넘긴다 - 각 축의 issue_score가 그 축 안에서의 원본 신호만 반영하게 하기 위함이다.
+    다만 "이 이슈가 다른 축에서도 다뤄졌다"를 화면에 🔗로 표시해주는 기능 자체는 scorer.py 상단 docstring에 이미 명시된 대로 여전히 미구현.
     이번 연결 작업 범위 밖(다음 세션에서 배포 포맷 확정 시 추가할 것).
 
     model: sentence_transformers.SentenceTransformer 인스턴스, 또는 None.
-           None이면 issue_grouper.group_issues가 2차(임베딩) 없이 1차
-           결과만으로 안전하게 fallback한다 (아래 _load_embedding_model 참고).
+           None이면 issue_grouper.group_issues가 2차(임베딩) 없이 1차 결과만으로 안전하게 fallback한다 (아래 _load_embedding_model 참고).
     """
     groups = issue_grouper.group_issues(articles, model=model)
 
@@ -185,23 +168,15 @@ def _load_embedding_model():
     """
     BGE-M3 임베딩 모델을 실행당 한 번만 로드해서 score() 단계에 주입한다.
 
-    한 번만 로드하는 이유: issue_grouper.stage2_group의 docstring에 이미
-    명시돼 있음 - "모델 로드 자체가 무거운 작업이라, 기사 배치마다 매번 새로
-    로드하면 안 되기 때문... 호출하는 쪽(main.py)에서 한 번만 로드해서
-    넘겨주는 구조로 설계". main.py에서는 국내/해외 두 축을 스코어링하지만
-    그룹핑 자체는 score() 안에서 한 번만(전체 기사 대상) 일어나므로, 이
-    함수도 run() 전체를 통틀어 딱 한 번만 호출하면 된다.
+    한 번만 로드하는 이유: issue_grouper.stage2_group의 docstring에 이미 명시돼 있음 - "모델 로드 자체가 무거운 작업이라, 기사 배치마다 매번 새로 로드하면 안 되기 때문...
+    호출하는 쪽(main.py)에서 한 번만 로드해서 넘겨주는 구조로 설계".
+    main.py에서는 국내/해외 두 축을 스코어링하지만 그룹핑 자체는 score() 안에서 한 번만(전체 기사 대상) 일어나므로, 이 함수도 run() 전체를 통틀어 딱 한 번만 호출하면 된다.
 
-    모델 로드 실패(최초 실행 시 다운로드 실패, 패키지 미설치, 캐시 문제 등)
-    시에도 전체 파이프라인이 죽지 않도록 여기서 예외를 잡아 None을 반환한다.
-    issue_grouper.group_issues(articles, model=None)이 이미 "2차(임베딩)
-    생략, 1차 사전 매칭 결과만 사용"으로 안전하게 fallback하도록 설계돼
-    있으므로(issue_grouper.py group_issues 참고), 이 함수의 실패가 9.1
-    "소스별 독립 실행 구조"와 같은 철학으로 전체 중단 없이 흡수된다 - 다만
-    이 경우 2.1의 2차(임베딩) 매칭 없이 1차 사전 매칭(현재 빈 리스트라
-    사실상 매칭 없음)만 적용되므로 사실상 이번 실행은 to_singleton_groups와
-    같은 결과가 된다는 점은 감안해야 한다 (완전한 자동 복구는 아님 - 다음
-    실행에서 모델 로드가 다시 성공하길 기대하는 정도의 완화책).
+    모델 로드 실패(최초 실행 시 다운로드 실패, 패키지 미설치, 캐시 문제 등) 시에도 전체 파이프라인이 죽지 않도록 여기서 예외를 잡아 None을 반환한다.
+    issue_grouper.group_issues(articles, model=None)이 이미 "2차(임베딩) 생략, 1차 사전 매칭 결과만 사용"으로 안전하게 fallback하도록 설계돼 있으므로(issue_grouper.py group_issues 참고),
+    이 함수의 실패가 9.1 "소스별 독립 실행 구조"와 같은 철학으로 전체 중단 없이 흡수된다.
+    다만 이 경우 2.1의 2차(임베딩) 매칭 없이 1차 사전 매칭(현재 빈 리스트라 사실상 매칭 없음)만 적용되므로 사실상 이번 실행은 to_singleton_groups와 같은 결과가 된다는 점은 감안해야 한다.
+    (완전한 자동 복구는 아님 - 다음 실행에서 모델 로드가 다시 성공하길 기대하는 정도의 완화책).
     """
     try:
         from sentence_transformers import SentenceTransformer
@@ -220,10 +195,8 @@ def _load_embedding_model():
 
 def _step4_llm_summary_todo(top_issues: list[dict]) -> None:
     """
-    TODO (섹션 4): 상위 이슈들의 제목(+본문 핵심/description)을 LLM에 넘겨
-    2~3문장 자체 요약 생성. (A) 자체 요약, (A-1) 단독기사 fallback, (B) 그룹핑
-    보조 세 지점 중 (B)는 2.1이 있어야 의미가 생기므로 2.1과 같이 붙일 것.
-    지금은 아무 것도 하지 않음 - 다음 세션 작업.
+    TODO (섹션 4): 상위 이슈들의 제목(+본문 핵심/description)을 LLM에 넘겨 2~3문장 자체 요약 생성.
+    (A) 자체 요약, (A-1) 단독기사 fallback, (B) 그룹핑 보조 세 지점 중 (B)는 2.1이 있어야 의미가 생기므로 2.1과 같이 붙일 것.
     """
 
 
@@ -233,11 +206,8 @@ def _step5_storage_todo(domestic_ranked: list[dict], international_ranked: list[
     """
     TODO (섹션 5): data/YYYY-WW/raw.json, scored.json, summary.md 저장.
     9.2 에러 리포트(failed_sources)도 이 단계 결과물에 자동으로 붙여야 함.
-    category_distribution(카테고리 전체 집계, 2026-07-14 신규)도 scored.json에
-    같이 저장해야 다음 주 "지난주 대비 증감"(category_aggregator.py 모듈
-    docstring의 "이번 범위 밖" 항목) 비교가 가능해진다 - 저장 레이어 구현 시
-    함께 반영할 것.
-    지금은 저장 대신 콘솔 출력으로 대체 (아래 print_summary 참고).
+    category_distribution(카테고리 전체 집계, 2026-07-14 신규)도 scored.json에 같이 저장해야 다음 주 "지난주 대비 증감"(category_aggregator.py 모듈 docstring의 "이번 범위 밖" 항목) 비교가 가능해진다.
+    저장 레이어 구현 시 함께 반영할 것. 지금은 저장 대신 콘솔 출력으로 대체 (아래 print_summary 참고).
     """
 
 
