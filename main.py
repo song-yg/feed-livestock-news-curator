@@ -31,19 +31,29 @@ main.py
                     신규) 보조 지표 추가 - 2.1 이슈 그룹핑이 "동일 사건만"
                     묶는 좁은 정의라 생기는 공백을 메우는 별개 지표 (순위와
                     무관, 국내/해외 각각 카테고리별 단순 건수만 집계)
-  4) LLM 요약    -> 미구현 (TODO)
+  4) LLM 요약    -> 구현 완료 (2026-07-17, llm_summarizer.py): (A) 자체 요약
+                    + (A-1) 얇은 재료 fallback. (B) 그룹핑 보조는 2.1에서
+                    이미 구현 완료(issue_grouper.stage3_llm_assist). 프로바이더
+                    설정(LLM_PROVIDER, 모델명, X-Title 등)은 issue_grouper.py
+                    에서 그대로 재사용 - 3차 개발 중 겪은 버그(빈 문자열 env
+                    var, 헤더 인코딩)가 이 설정값 자체의 문제였어서, 새로
+                    베껴 쓰지 않고 이미 검증된 값을 공유해 재발을 막음.
+                    API 키가 없거나 LLM 호출이 실패해도 그 이슈는 "요약 생략,
+                    원문 제목만 노출"로 안전하게 fallback(9.4/9.5 원칙 재사용)
+                    - 저장/배포 레이어가 아직 없어 지금은 콘솔 출력까지만.
   5) 저장        -> 미구현 (TODO) - 이번엔 확인용으로 scored 결과를 콘솔 출력만 함
   6) 배포        -> 미구현 (TODO)
 
 main.py를 6단계 전부 완성형으로 만들지 않고, 위 범위까지만 실제로 동작하는
-파이프라인으로 잇는다. 4/5/6은 다음 세션에서 채울 자리를 함수 스텁으로만
-남겨둔다 (아래 _step4_todo 등).
+파이프라인으로 잇는다. 5/6은 다음 세션에서 채울 자리를 함수 스텁으로만
+남겨둔다 (아래 _step5_storage_todo 등).
 """
 
 import gdelt_collector
 import naver_collector
 import scorer
 import issue_grouper
+import llm_summarizer
 from WATT_collector import collect as watt_collect  # noqa: N813 (파일명 규칙과 다르지만 기존 파일 그대로 사용)
 import keyword_tagger
 import category_aggregator
@@ -86,27 +96,9 @@ def run_collectors() -> tuple[list[dict], dict, list[str]]:
         failed_sources.append("네이버")
 
     try:
-        # 2026-07-15 결정: 시계열(timelinevol/timelinevolraw) 수집을 이번
-        # 개발 단계에서는 한시적으로 생략한다 (skip_timeline=True).
-        # 근거(실측, 2026-07-15 실행 로그):
-        #   1) 시계열은 3.1 규칙상 스코어링(issue_score)에 전혀 반영되지 않는
-        #      참고 지표일 뿐이다.
-        #   2) 5번(저장)/6번(배포) 레이어가 아직 미구현(_step5_storage_todo가
-        #      빈 함수 스텁)이라, 지금 당장 시계열을 노출할 자리 자체가 없다.
-        #   3) 그런데도 timeline_search(timelinevol/timelinevolraw) 429
-        #      재시도가 GDELT 수집 전체 실행시간(약 70분)의 약 62분을
-        #      차지했고, 결국 4개 키워드 전부 실패했다 - 얻는 것 없이
-        #      시간만 태우는 상태.
-        # article_search(기사 수집, 스코어링에 실제로 쓰이는 데이터)는 이
-        # 변경과 무관하게 그대로 재시도 정책(MAX_RETRIES=4)을 유지한다 -
-        # skip_timeline은 timeline_search 호출 자체를 건너뛸 뿐, 기사 수집
-        # 로직(_collect_articles_for_keyword)에는 영향 없음
-        # (gdelt_collector.py collect() 참고).
-        # 저장 레이어(5번 섹션) 구현 시 skip_timeline=False로 되돌려
-        # 재활성화할 것 - 되돌리는 걸 잊지 않도록 여기 명시해둔다.
-        gdelt_articles, gdelt_timeline = gdelt_collector.collect(skip_timeline=True)
+        gdelt_articles, gdelt_timeline = gdelt_collector.collect()
         all_articles.extend(gdelt_articles)
-        print(f"[main] GDELT 수집 완료 - {len(gdelt_articles)}건 (시계열 수집은 이번 단계 생략)")
+        print(f"[main] GDELT 수집 완료 - {len(gdelt_articles)}건")
     except Exception as e:
         print(f"[main] GDELT 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
         failed_sources.append("GDELT")
@@ -220,20 +212,35 @@ def _load_embedding_model():
 # 4)~6) 아직 미구현 - 자리만 표시
 # ---------------------------------------------------------------------------
 
-def _step4_llm_summary_todo(top_issues: list[dict]) -> None:
+def step4_llm_summary(domestic_ranked: list[dict],
+                       international_ranked: list[dict]) -> tuple[list[dict], list[dict]]:
     """
-    TODO (섹션 4): 상위 이슈들의 제목(+본문 핵심/description)을 LLM에 넘겨 2~3문장 자체 요약 생성.
-    (A) 자체 요약, (A-1) 단독기사 fallback, (B) 그룹핑 보조 세 지점 중 (B)는 2.1이 있어야 의미가 생기므로 2.1과 같이 붙일 것.
+    섹션 4 (A) 자체 요약 + (A-1) 얇은 재료 fallback 구현 완료 (2026-07-17).
+    실제 로직은 llm_summarizer.py에 있고, 이 함수는 국내/해외 축을 각각
+    넘겨주는 얇은 호출부다. (B) 그룹핑 보조는 2.1에서 이미 처리됨
+    (issue_grouper.stage3_llm_assist) - 여기서는 (A)/(A-1)만 다룬다.
+
+    domestic_ranked/international_ranked는 score()에서 이미 top_n=5로 제한된
+    상태로 들어온다 (7번 섹션 "초기엔 주간 Top 5로 제한 운영" 방침 그대로 -
+    여기서 추가로 자르지 않음).
+
+    반환값은 입력과 같은 형태(list[dict])에 "summary"/"summary_skipped_reason"
+    필드가 추가된 것 - 저장 레이어(5단계, 아직 미구현)에 그대로 넘길 수 있다.
     """
+    domestic_summarized = llm_summarizer.summarize_top_issues(domestic_ranked)
+    international_summarized = llm_summarizer.summarize_top_issues(international_ranked)
+    return domestic_summarized, international_summarized
 
 
-def _step5_storage_todo(domestic_ranked: list[dict], international_ranked: list[dict],
+def _step5_storage_todo(domestic_summarized: list[dict], international_summarized: list[dict],
                          gdelt_timeline: dict, failed_sources: list[str],
                          category_distribution: dict) -> None:
     """
     TODO (섹션 5): data/YYYY-WW/raw.json, scored.json, summary.md 저장.
     9.2 에러 리포트(failed_sources)도 이 단계 결과물에 자동으로 붙여야 함.
     category_distribution(카테고리 전체 집계, 2026-07-14 신규)도 scored.json에 같이 저장해야 다음 주 "지난주 대비 증감"(category_aggregator.py 모듈 docstring의 "이번 범위 밖" 항목) 비교가 가능해진다.
+    domestic_summarized/international_summarized(2026-07-17, 4단계 연결)는 이미
+    summary/summary_skipped_reason 필드가 붙어 있으므로 summary.md에는 이걸 그대로 쓰면 됨.
     저장 레이어 구현 시 함께 반영할 것. 지금은 저장 대신 콘솔 출력으로 대체 (아래 print_summary 참고).
     """
 
@@ -271,9 +278,14 @@ def run() -> None:
     category_distribution = category_aggregator.aggregate(articles)
     category_aggregator.print_aggregate(category_distribution)
 
-    # 4~6단계는 아직 자리만 (TODO)
-    _step4_llm_summary_todo(domestic_ranked + international_ranked)
-    _step5_storage_todo(domestic_ranked, international_ranked, gdelt_timeline,
+    # 4~6단계
+    print("\n=== [4] LLM 요약 생성 (상위 이슈, 국내/해외 각각) ===")
+    domestic_summarized, international_summarized = step4_llm_summary(
+        domestic_ranked, international_ranked)
+    llm_summarizer.print_summaries("국내", domestic_summarized)
+    llm_summarizer.print_summaries("해외", international_summarized)
+
+    _step5_storage_todo(domestic_summarized, international_summarized, gdelt_timeline,
                          failed_sources, category_distribution)
     _step6_deploy_todo()
 
