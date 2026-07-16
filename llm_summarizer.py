@@ -185,12 +185,35 @@ def summarize_issue(item: dict) -> dict:
     return result
 
 
-def summarize_top_issues(ranked_items: list[dict]) -> list[dict]:
+def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict]:
     """
     scorer.score_and_rank()가 만든 상위 이슈 리스트 전체에 summarize_issue를
     적용한다. main.py의 4단계 호출부에서 국내/해외 각각 부른다.
+
+    ** 2026-07-17 진행상황 로그 추가 **: 원래는 전체가 끝난 뒤
+    print_summaries로 한꺼번에만 출력했는데, 이슈 하나당 LLM 호출이 몇 초~
+    몇십 초 걸릴 수 있어(특히 오픈라우터 무료 모델은 느리거나 대기열이 걸릴
+    수 있음) 그 사이 로그가 조용해서 "멈춘 건지 도는 건지 구분이 안 된다"는
+    문제가 실제로 있었음. GDELT/WATT collector처럼 항목 하나 처리할 때마다
+    바로바로 로그를 찍도록 수정 - 실행 상태를 실시간으로 볼 수 있게 함.
     """
-    return [summarize_issue(item) for item in ranked_items]
+    results = []
+    total = len(ranked_items)
+    for i, item in enumerate(ranked_items, start=1):
+        titles = item.get("titles", [])
+        rep_title = titles[0] if titles else "(제목 없음)"
+        prefix = f"[llm_summarizer] {label} " if label else "[llm_summarizer] "
+        print(f"{prefix}({i}/{total}) '{rep_title}' (그룹 {len(titles)}건) - 요약 요청 중...")
+
+        result = summarize_issue(item)
+
+        if result.get("summary"):
+            print(f"{prefix}({i}/{total}) 요약 완료")
+        else:
+            print(f"{prefix}({i}/{total}) 요약 생략 - {result.get('summary_skipped_reason', '사유 불명')}")
+
+        results.append(result)
+    return results
 
 
 def print_summaries(label: str, summarized: list[dict]) -> None:
