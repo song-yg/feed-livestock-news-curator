@@ -36,16 +36,93 @@ GDELT 접속량이 예상보다 훨씬 많아 보임(사용자 관찰) - MAX_RET
      어렵다는 판단으로 폐기 (아래 "429 시각 기록" 관련 코드 전체 삭제 -
      실행 도중 그 순간 콘솔에 시각을 찍어주는 즉시성 로그 한 줄만 유지,
      여러 실행에 걸쳐 모아서 요약하던 부분만 제거).
+
+--- 2026-07-16 추가: 429 대응 2건 (문서 "7. 아직 결정 안 된 것들" 항목 처리) ---
+실측(main.py 실행 로그)에서 GDELT 429가 여전히 심함(키워드마다 백오프
+4단계를 다 소진하는 경우가 반복, 외부 재시도로 겨우 복구)이 확인돼 아래
+두 가지로 대응함 - 서로 배타적이지 않아 같이 적용:
+  1. User-Agent 헤더 주입: gdeltdoc 라이브러리 자체 이슈 트래커(#22)에서
+     "User-Agent 없이 요청하면 rate limit, 추가하면 해결"이라는 보고를
+     확인 - requests 기본 헤더를 오버라이드하는 방식으로 적용(아래
+     "User-Agent 미기재 가설 대응" 주석 참고). 효과는 아직 실측 전.
+  2. 키워드를 하나의 OR 쿼리로 결합: gdeltdoc의 Filters(keyword=[...])가
+     리스트를 자동으로 OR로 묶어준다는 걸 확인(공식 README) - 기존엔
+     키워드 4개를 각각 호출해 요청이 4번 나갔는데, 하나로 합쳐서 요청
+     횟수 자체를 줄임(429에 걸릴 기회 감소, 원인이 뭐든 도움이 됨).
+     시계열(timelinevol/timelinevolraw)은 3.1 원칙상 "키워드별 트렌드"가
+     의미가 있어야 하므로 이건 합치지 않고 기존처럼 키워드별로 유지함
+     (_collect_articles_for_keywords 및 collect() 참고).
 """
 
+import re as _re
 import threading
 import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 import requests
+import requests.sessions
+import requests.utils as _requests_utils
 from gdeltdoc import GdeltDoc, Filters
 from gdeltdoc.errors import RateLimitError
+
+# --- 2026-07-16 추가: User-Agent 미기재 가설 대응 (7번 섹션 미결정 항목) ---
+#
+# 배경: gdeltdoc 라이브러리 자체 GitHub 이슈(#22, alex9smith/gdelt-doc-api)에서
+# "요청 수가 적었는데도 rate limit 에러를 겪었고, 브라우저 요청은 정상 동작
+# 했다 - api_client.py에 User-Agent 헤더를 추가했더니 해결됐다"는 보고를
+# 실제로 확인함(우리가 쓰는 바로 그 라이브러리의 이슈 트래커). 이 패치가
+# 라이브러리에 병합됐다는 근거는 못 찾았고, README에도 헤더/세션을
+# 커스터마이징하는 공식 옵션이 없어 - 지금도 gdeltdoc이 User-Agent 없이
+# 요청을 보내고 있을 가능성이 높다고 판단.
+#
+# gdeltdoc이 헤더 주입 방법을 공식 제공하지 않으므로, requests 라이브러리의
+# 기본 헤더(default_headers()) 자체를 오버라이드하는 방식으로 우회한다 -
+# Session()이 생성될 때마다 이 함수가 호출되므로, gdeltdoc이 내부적으로
+# 만드는 Session에도 자연히 적용된다.
+#
+# ** 주의 - 이건 프로세스 전역에 영향을 준다 **: 이 모듈을 import하는 순간
+# requests 기본 헤더가 바뀌어서, 같은 프로세스에서 실행되는 naver_collector의
+# requests.get 호출에도 이 User-Agent가 섞여 들어간다(naver_collector는
+# X-Naver-Client-Id 등 자기 인증 헤더만 명시적으로 쓰고 User-Agent는 따로
+# 지정 안 하므로 - 인증은 헤더 값 기반이라 UA가 섞여도 인증 자체엔 영향 없음,
+# 다만 "전역 부작용"이라는 점은 유지보수 시 반드시 인지할 것). WATT_collector
+# 가 이미 쓰고 있는 것과 동일한 UA 문자열을 재사용해 일관성을 맞춤.
+#
+# ** 효과 미확인 - 검증 필요 **: 위 이슈 보고는 신뢰도 높은 근거지만, 이
+# 프로젝트의 GDELT 429가 정확히 같은 원인인지는 아직 실측 안 됨. 다음
+# 실행에서 429 발생 빈도가 눈에 띄게 줄어드는지 로그로 직접 확인할 것.
+_GDELT_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+)
+
+# 2026-07-16 버그 수정: requests.sessions 모듈이 `from .utils import
+# default_headers`로 자기 네임스페이스에 직접 바인딩해서 쓰기 때문에,
+# requests.utils.default_headers만 바꾸면 Session.__init__() 내부에서 부르는
+# 건 여전히 원래 함수다 (실측 확인 - Session().headers["User-Agent"]가
+# patch 후에도 그대로 "python-requests/x.y.z"였음). requests.sessions 쪽
+# 바인딩도 같이 덮어써야 실제 Session 생성에 반영된다.
+#
+# 가드(_gdelt_ua_patched)를 두는 이유: 이 모듈이 어떤 경로로든 두 번 로드되면
+# (예: importlib.reload) "원본 함수 캡처"까지 다시 실행돼서 이미 패치된
+# 함수를 "원본"으로 잘못 캡처해버리고, 그걸 감싸는 새 wrapper가 자기 자신을
+# 무한 호출하는 RecursionError가 실제로 재현됨(실측 확인) - 원본 캡처부터
+# 최종 할당까지 전부 가드 안에 넣어서, 이미 패치돼 있으면 이 블록을 통째로
+# 건너뛴다.
+if not getattr(requests.utils, "_gdelt_ua_patched", False):
+    _original_default_headers = _requests_utils.default_headers
+
+    def _default_headers_with_gdelt_ua():
+        headers = _original_default_headers()
+        headers["User-Agent"] = _GDELT_USER_AGENT
+        return headers
+
+    requests.utils.default_headers = _default_headers_with_gdelt_ua
+    requests.sessions.default_headers = _default_headers_with_gdelt_ua
+    requests.utils._gdelt_ua_patched = True
+
+
 
 # 예시 키워드. 최종 리스트는 아직 확정 전이라 임시로 넣어둠 (naver_collector와 동일 방침).
 # GDELT DOC API는 영문 검색이 기본이므로 영문 키워드로 구성 (스펙 "필요한 것" 항목 참조).
@@ -99,8 +176,6 @@ FALSE_POSITIVE_FILTERS = {
 #
 # 패턴을 계속 늘리는 대신(제목 형식이 또 달라지면 또 놓칠 위험), 비교 전에 "구두점 앞 공백"을 없애는 정규화를 한 번 거치는 쪽을 택함.
 # 이러면 "hand, foot and mouth"/"hand , foot and mouth"/"hand  , foot and mouth" 등 공백 개수가 달라져도 전부 같은 문자열로 취급돼 안전하다.
-import re as _re
-
 _SPACE_BEFORE_PUNCT = _re.compile(r"\s+([,.;:!?])")
 
 
@@ -325,6 +400,11 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
     성공 여부는 article_search 호출 자체가 예외 없이 끝났는지 기준 (기사가
     0건이어도 호출 자체가 정상이면 True - 그 키워드는 그냥 최근 기사가 없는
     것이므로 재시도 대상이 아님).
+
+    ** 2026-07-16 - collect()의 정식 실행 경로에서는 더 이상 안 씀 **:
+    요청 횟수를 줄이려고 아래 _collect_articles_for_keywords(복수형, OR 결합)
+    로 교체됨(모듈 docstring "429 대응 2건" 참고). 이 단수형 함수는 키워드
+    하나만 따로 확인해보고 싶은 진단/디버깅 용도로 남겨둠 - 삭제하지 않음.
     """
     f = Filters(keyword=keyword, timespan=TIMESPAN, num_records=MAX_RECORDS)
     keyword_articles = []
@@ -380,6 +460,81 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
         return False, []
 
 
+def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple[bool, list[dict]]:
+    """
+    여러 키워드를 하나의 OR 쿼리로 묶어서 article_search를 "한 번만" 호출한다.
+    (2026-07-16 추가 - 위 모듈 docstring "429 대응 2건" 참고)
+
+    gdeltdoc의 Filters(keyword=[...])는 리스트를 넘기면 값들을 boolean OR로
+    묶어준다(공식 README 확인) - 기존엔 키워드 개수만큼 요청이 나갔는데
+    이걸 1번으로 줄여서 429에 걸릴 기회 자체를 줄인다.
+
+    collect()의 외부 재시도 로직이 그대로 재사용되도록, 단수형
+    _collect_articles_for_keyword와 동일한 반환 형태(성공 여부, 기사 리스트)
+    를 유지한다.
+
+    ** MAX_RECORDS 상한이 이제 "키워드 조합 전체"에 걸린다는 점 주의 **:
+    기존엔 키워드 하나당 최대 250건씩(키워드 4개면 이론상 최대 1000건)
+    받을 수 있었는데, OR로 합치면 이 조합 전체에서 최대 250건까지만
+    돌아온다. 지금 실측 키워드별 건수(avian influenza ~53, foot and mouth
+    disease ~49, feed price ~12, livestock market ~26 - 합쳐도 250 미만)로는
+    문제가 없지만, 나중에 키워드가 늘거나 특정 키워드가 급증하면 조용히
+    잘려나갈 수 있다는 걸 염두에 둘 것 (7번 섹션 "키워드 리스트 확정" 작업
+    때 같이 재검토 권장).
+
+    ** 오매칭 필터를 여러 키워드에 걸쳐 확인 **: OR로 묶으면 반환된 기사
+    하나가 정확히 어느 키워드에 매칭돼서 나온 건지 API가 알려주지 않는다.
+    그래서 keywords에 포함된 키워드 전부의 FALSE_POSITIVE_FILTERS 패턴을
+    모아 확인한다 - 오매칭 자체가 "부분 문자열 포함 매칭" 때문에 생기는
+    구조적 문제라, 어떤 키워드가 트리거했든 같은 필터를 적용하는 게
+    자연스럽다(위 FALSE_POSITIVE_FILTERS 섹션 설명 참고).
+    """
+    label = " OR ".join(keywords)
+    f = Filters(keyword=keywords, timespan=TIMESPAN, num_records=MAX_RECORDS)
+    combined_articles = []
+    false_positive_count = 0
+
+    try:
+        articles_df = _call_with_retry(gd.article_search, f, label=f"{label} / article_search")
+
+        if articles_df is not None and not articles_df.empty:
+            for _, row in articles_df.iterrows():
+                title = str(row["title"])
+                if any(_is_false_positive(kw, title) for kw in keywords):
+                    false_positive_count += 1
+                    continue
+
+                try:
+                    published_at = _parse_seendate(str(row["seendate"]))
+                except ValueError as e:
+                    print(f"[gdelt] '{label}' 기사 스킵 - {e}")
+                    continue
+
+                if not _is_recent(published_at, DAYS_BACK):
+                    continue
+
+                combined_articles.append({
+                    "source": "GDELT",
+                    "title": row["title"],
+                    "url": row["url"],
+                    "published_at": published_at.isoformat(),
+                    "category": None,
+                    "body": None,
+                    "press": _extract_domain(row["url"]),
+                    "language": row.get("language", ""),
+                    "sourcecountry": row.get("sourcecountry", ""),
+                })
+
+        fp_note = f" (오매칭 필터로 {false_positive_count}건 제외)" if false_positive_count else ""
+        print(f"[gdelt] '{label}' article_search -> 최근 {DAYS_BACK}일 이내 "
+              f"{len(combined_articles)}건 수집 완료{fp_note}")
+        return True, combined_articles
+
+    except Exception as e:
+        print(f"[gdelt] '{label}' article_search 실패: {type(e).__name__} - {e!r}")
+        return False, []
+
+
 def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
     """
     한 키워드에 대해 timelinevol/timelinevolraw를 수집한다. 실패 시 None.
@@ -410,8 +565,8 @@ def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
 
 def collect(keywords: list[str] | None = None, skip_timeline: bool = False) -> tuple[list[dict], dict]:
     """
-    KEYWORDS_EN을 순서대로 돌면서 GDELT에서 기사 메타데이터와 언급 시계열을
-    함께 수집한다. 이 함수가 gdelt_collector의 '진입점'.
+    KEYWORDS_EN을 대상으로 GDELT에서 기사 메타데이터와 언급 시계열을 함께
+    수집한다. 이 함수가 gdelt_collector의 '진입점'.
 
     keywords: 지정하면 모듈 기본값(KEYWORDS_EN) 대신 이 리스트로 순회한다.
               (2026-07-14(3차) 추가 - 테스트 스크립트에서 키워드 수를 줄여
@@ -420,15 +575,22 @@ def collect(keywords: list[str] | None = None, skip_timeline: bool = False) -> t
     skip_timeline: True면 timeline_search(timelinevol/timelinevolraw) 호출을
               건너뛰고 article_search만 수행한다. (2026-07-14(3차) 추가 -
               language/sourcecountry 분포 확인이 목적일 땐 시계열 데이터가
-              필요 없고, 키워드당 API 호출이 3번→1번으로 줄어 훨씬 빠름.
-              정식 운영에서는 시계열이 필요하므로 기본값 False 유지)
+              필요 없고, API 호출이 훨씬 줄어 빠름. 정식 운영에서는 시계열이
+              필요하므로 기본값 False 유지)
 
-    2026-07-14(4차) 변경 - article_search가 최종 실패한 키워드는 한 번에
-    포기하지 않고, 전체 라운드가 끝난 뒤 실패 키워드만 모아 최대
-    OUTER_RETRY_PASSES번 더 재시도한다 (편중된 결과물 방지, 위 "외부 재시도"
-    주석 참고). main.py의 정식 실행 흐름(인자 없이 collect() 호출)은
-    그대로 유지된다 - 재시도 로직은 이 함수 내부에 캡슐화돼 있어서 호출부는
-    바뀌지 않음.
+    ** 2026-07-16 재구성 - 기사 수집과 시계열 수집을 분리된 단계로 처리 **
+    (모듈 docstring "429 대응 2건" 참고):
+      1단계(기사 수집): 대상 키워드를 하나의 OR 쿼리로 묶어
+         _collect_articles_for_keywords를 "한 번만" 호출 - 요청 횟수를
+         최소화해 429에 걸릴 기회 자체를 줄인다. 실패하면(전역 쿨다운을
+         다 소진해도 안 되면) 같은 조합을 통째로 최대 OUTER_RETRY_PASSES
+         번 재시도한다(기존엔 "실패한 키워드만" 재시도했지만, 이제 기사
+         수집이 키워드 단위가 아니라 조합 단위이므로 재시도도 조합 단위).
+      2단계(시계열 수집): 3.1 원칙("해외에서 이 이슈가 지금 뜨는지/식는지"
+         키워드별로 봐야 함)에 따라 이건 합치지 않고 기존처럼 키워드별로
+         순회한다 - _collect_timeline_for_keyword 그대로 재사용, 이 부분은
+         동작 변경 없음(외부 재시도 대상도 기존처럼 아님, article_search만큼
+         치명적이지 않다는 기존 판단 유지).
 
     반환값:
       articles: 공통 스키마 리스트. 다음 단계(정규화/이슈그룹핑)로 그대로 전달됨
@@ -439,58 +601,52 @@ def collect(keywords: list[str] | None = None, skip_timeline: bool = False) -> t
     gd = GdeltDoc()
     target_keywords = keywords if keywords is not None else KEYWORDS_EN
 
-    all_articles = []
-    timeline_by_keyword = {}
-
-    round_keywords = []
+    active_keywords = []
     for keyword in target_keywords:
         if keyword in SKIP_KEYWORDS:
             print(f"[gdelt] '{keyword}' 스킵 - {SKIP_KEYWORDS[keyword]}")
             continue
-        round_keywords.append(keyword)
+        active_keywords.append(keyword)
 
-    failed_keywords = []
+    all_articles = []
+    timeline_by_keyword = {}
+
+    if not active_keywords:
+        return all_articles, timeline_by_keyword
+
+    # --- 1단계: 기사 수집 - 키워드를 하나의 OR 쿼리로 묶어 요청 횟수 최소화 ---
+    remaining = list(active_keywords)
+    article_search_ok = False
 
     for round_num in range(OUTER_RETRY_PASSES + 1):
         if round_num > 0:
-            if not failed_keywords:
-                break  # 지난 라운드에서 실패한 키워드가 없으면 더 돌 필요 없음
-            print(f"[gdelt] --- 외부 재시도 라운드 {round_num}/{OUTER_RETRY_PASSES} - "
-                  f"이전 라운드 실패 키워드 {len(failed_keywords)}개: {failed_keywords} ---")
+            print(f"[gdelt] --- 기사 수집 외부 재시도 라운드 {round_num}/{OUTER_RETRY_PASSES} "
+                  f"- 대상 키워드 {len(remaining)}개: {remaining} ---")
             print(f"[gdelt] 라운드 간 안전 대기 {OUTER_RETRY_WAIT_SECONDS}초")
             time.sleep(OUTER_RETRY_WAIT_SECONDS)
-            round_keywords = failed_keywords
 
-        failed_keywords = []
+        success, articles = _collect_articles_for_keywords(gd, remaining)
+        if success:
+            all_articles.extend(articles)
+            article_search_ok = True
+            break
+        # 실패하면 remaining을 그대로 유지한 채 다음 라운드에서 같은 조합을 재시도
 
-        for keyword in round_keywords:
-            # 1) 기사 메타데이터 수집
-            success, keyword_articles = _collect_articles_for_keyword(gd, keyword)
-            if success:
-                all_articles.extend(keyword_articles)
-            else:
-                failed_keywords.append(keyword)
+    if not article_search_ok:
+        print(f"[gdelt] 기사 수집 최종 실패 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
+              f"이번 실행은 GDELT 기사 0건으로 처리됨): {remaining}")
 
-            if skip_timeline:
-                # 테스트 모드 - 시계열 호출 자체를 안 함 (키워드당 API 호출 3번->1번)
-                print(f"[gdelt] '{keyword}' 시계열 수집 스킵 (skip_timeline=True, 테스트 모드)")
-                time.sleep(REQUEST_INTERVAL)
-                continue
-
-            time.sleep(REQUEST_INTERVAL)
-
-            # 2) 언급 시계열 수집 (timelinevol, timelinevolraw 둘 다 - 스펙 참조)
-            # 기사 수집 성공 여부와 무관하게 독립적으로 시도
-            # - 시계열만 실패해도 위에서 이미 확보한 기사(성공한 경우)는 그대로 유지됨
+    # --- 2단계: 시계열 수집 - 3.1 원칙대로 키워드별 개별 수집 유지 (합치지 않음) ---
+    if skip_timeline:
+        for keyword in active_keywords:
+            print(f"[gdelt] '{keyword}' 시계열 수집 스킵 (skip_timeline=True, 테스트 모드)")
+    else:
+        time.sleep(REQUEST_INTERVAL)
+        for keyword in active_keywords:
             timeline_entry = _collect_timeline_for_keyword(gd, keyword)
             if timeline_entry is not None:
                 timeline_by_keyword[keyword] = timeline_entry
-
             time.sleep(REQUEST_INTERVAL)
-
-    if failed_keywords:
-        print(f"[gdelt] 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
-              f"기사 0건으로 처리됨): {failed_keywords}")
 
     return all_articles, timeline_by_keyword
 
