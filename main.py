@@ -227,8 +227,8 @@ def step4_llm_summary(domestic_ranked: list[dict],
     반환값은 입력과 같은 형태(list[dict])에 "summary"/"summary_skipped_reason"
     필드가 추가된 것 - 저장 레이어(5단계, 아직 미구현)에 그대로 넘길 수 있다.
     """
-    domestic_summarized = llm_summarizer.summarize_top_issues(domestic_ranked)
-    international_summarized = llm_summarizer.summarize_top_issues(international_ranked)
+    domestic_summarized = llm_summarizer.summarize_top_issues(domestic_ranked, label="국내")
+    international_summarized = llm_summarizer.summarize_top_issues(international_ranked, label="해외")
     return domestic_summarized, international_summarized
 
 
