@@ -121,4 +121,12 @@ jobs:
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
-        run: python main.py
+        # -u: 파이썬 stdout 버퍼링 비활성화 (2026-07-17 추가).
+        # 이게 없으면 print()가 터미널이 아닌 곳(이 로그 파이프)에 출력될 때
+        # 기본적으로 블록 단위로 버퍼링돼서, 실제로는 진행 중인데 로그에
+        # 한동안 아무것도 안 뜨다가 나중에 한꺼번에 쏟아지는 것처럼 보이는
+        # 문제가 실제로 관찰됨(HF Hub 경고 같은 stderr 메시지는 버퍼링 없이
+        # 바로 나가서, 실행 순서상 더 나중인데도 화면엔 먼저 뜨는 역전
+        # 현상으로 확인됨). -u를 주면 print()가 매번 즉시 flush돼서 실행
+        # 상태를 실시간으로 볼 수 있다.
+        run: python -u main.py
