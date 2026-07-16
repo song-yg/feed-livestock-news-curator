@@ -164,11 +164,27 @@ def _extract_press(originallink: str) -> str:
     originallink(원문 URL)의 도메인을 언론사 식별자로 대신 사용한다.
 
     예: "https://www.yna.co.kr/view/AKR2026..." -> "yna.co.kr"
+
+    2026-07-15 코드 리뷰 반영:
+    - www. 제거를 .replace("www.", "") 대신 startswith 체크 후 슬라이싱으로
+      변경함 - .replace()는 문자열 어디에 있든 매칭돼서, 만약 서브도메인
+      이름 중간에 우연히 "www."가 들어간 경우(드물지만 가능) 의도치 않게
+      지워질 수 있었음. startswith는 맨 앞에 있을 때만 제거하므로 더 안전.
+    - 서브도메인 통합(예: biz.yna.co.kr / www.yna.co.kr을 같은 언론사로 인식)은
+      검토했으나 보류함 - 정확히 하려면 한국 도메인 특유의 복합 접미사(.co.kr,
+      .or.kr, .go.kr 등)를 다뤄야 해서 간단한 규칙으로는 안 되고, tldextract
+      같은 라이브러리를 새로 추가해야 함. 실제 수집 데이터에서 이게 scorer.py
+      PRESS_DEDUP_CAP(동일 언론사 도배 dedup) 정확도를 왜곡하는 사례가 아직
+      확인된 바 없어(이론적 가능성만 있음), 이 프로젝트의 기존 철학(확인된
+      패턴만 대응, 일반화 규칙은 미리 안 만듦 - gdelt_collector의
+      FALSE_POSITIVE_FILTERS, keyword_tagger의 EXCLUDED_TERMS와 동일 원칙)대로
+      실측으로 문제가 확인되면 그때 대응하기로 결정.
     """
     if not originallink:
         return ""
     domain = urlparse(originallink).netloc
-    domain = domain.replace("www.", "")
+    if domain.startswith("www."):
+        domain = domain[4:]
     return domain
 
 
