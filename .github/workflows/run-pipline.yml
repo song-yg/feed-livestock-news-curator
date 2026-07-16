@@ -45,6 +45,11 @@ jobs:
         # 이 프로젝트(Python 전용)에 전혀 안 쓰는 프리인스톨 툴을 먼저
         # 지워서 여유를 만든다 (안전하게 삭제 가능한 것으로 알려진 경로만
         # 대상 - 삭제 실패해도 파이프라인이 안 죽도록 || true 처리)
+        #
+        # ** 실측 확인 완료 (2026-07-15) **: 정리 전 16GB 여유(72GB 중 56GB
+        # 사용, 79%) -> 정리 후 35GB 여유(37GB 사용, 52%)로 19GB 확보됨.
+        # 이후 PyTorch(CPU)/requirements/Playwright 설치까지 에러 없이
+        # 통과해 main.py 실행 진입까지 확인됨 - 디스크 문제 해결 검증 완료.
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup || true
           sudo apt-get clean
@@ -102,10 +107,17 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
           # --- 임시 대체 경로 (키 승인 전까지만) ---
-          # 아래 두 값을 채우면 LLM_PROVIDER=openrouter로 3차를 임시 실행할 수
+          # 아래 세 값을 채우면 LLM_PROVIDER=openrouter로 3차를 임시 실행할 수
           # 있습니다. 다만 이건 로컬 검증용으로 설계된 임시 경로라(9.5 섹션 -
           # 무료 모델은 예고 없이 정책이 바뀔 수 있음), Anthropic 키가 승인되면
-          # 이 두 값을 지우고 위 ANTHROPIC_API_KEY만 쓰는 걸 권장합니다.
+          # 이 세 값을 지우고 위 ANTHROPIC_API_KEY만 쓰는 걸 권장합니다.
+          #
+          # 참고(2026-07-15 실측 확인): OPENROUTER_MODEL을 리포 Variables에
+          # 등록 안 해도 이 줄 자체는 그대로 둬도 안전합니다 - GitHub가
+          # 미등록 vars를 빈 문자열로 넘기는 걸 issue_grouper.py가 감지해서
+          # 기본값(openrouter/free)으로 자연스럽게 대체하도록 수정함(예전엔
+          # 이 부분이 버그라 model= 빈 값이 API로 그대로 나가 400 에러가
+          # 났었음 - 지금은 해결됨).
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
