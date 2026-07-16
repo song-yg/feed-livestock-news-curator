@@ -354,6 +354,12 @@ LLM_API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
 LLM_BATCH_SIZE = 20  # 한 번의 API 호출에 몇 쌍까지 같이 물어볼지 (호출 수 절약,
                       # OpenRouter 무료 티어 분당/일 요청 한도 감안해도 안전한 크기)
 
+# OpenRouter 요청에 붙이는 선택적 식별 헤더. HTTP 헤더 값은 latin-1(ASCII 계열)
+# 인코딩만 허용되므로 반드시 ASCII 문자열이어야 한다 - 2026-07-16, 여기 한글을
+# 넣었다가 매 배치가 UnicodeEncodeError로 죽는 게 실측으로 확인된 적 있음
+# (아래 자체 테스트에 이 상수의 ASCII 여부를 검증하는 assert가 있음).
+_OPENROUTER_X_TITLE = "feed-livestock-news-issue-grouping-stage3"
+
 _LLM_SYSTEM_PROMPT = (
     "너는 뉴스 이슈 그룹핑을 보조하는 판정기다. 두 기사 제목이 주어지면, "
     "두 기사가 \"완전히 동일한 사건\"을 다루는지 판단하라. "
@@ -400,8 +406,13 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str) -> list[bool]
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "content-type": "application/json",
-                # OpenRouter 권장 헤더(선택) - 프로젝트 식별용, 없어도 동작함
-                "X-Title": "사료축산뉴스-이슈그룹핑-3차보조",
+                # OpenRouter 권장 헤더(선택) - 프로젝트 식별용, 없어도 동작함.
+                # 2026-07-16 수정: HTTP 헤더 값은 latin-1 인코딩만 허용되는데
+                # 한글 문자열을 넣었다가 UnicodeEncodeError로 매 배치가 실패
+                # 하는 게 실측으로 확인됨(3차가 시작은 됐지만 모든 배치가
+                # 이 예외로 죽어서 결과적으로 이전 버그와 똑같이 0쌍 병합됨).
+                # ASCII 전용 문자열로 교체.
+                "X-Title": _OPENROUTER_X_TITLE,
             }
             body = {
                 "model": LLM_MODEL_OPENROUTER,
@@ -733,4 +744,22 @@ if __name__ == "__main__":
         _requests.post = _original_post
         del _os.environ["ANTHROPIC_API_KEY"]
 
-    print("\n[issue_grouper] 자체 점검 전체 통과 (1차/2차 그룹핑 + 음성 검증 + 3차 배선 확인)")
+    # === OpenRouter 요청 헤더가 실제로 인코딩 가능한지 확인 (2026-07-16 추가) ===
+    # 배경: X-Title 헤더에 한글을 넣었다가 UnicodeEncodeError로 3차 LLM 보조의
+    # 모든 배치가 실패하는 게 실측으로 확인된 적 있음 (requests.post를 통째로
+    # mock으로 바꿔치기하는 위 스모크 테스트는 실제 HTTP 헤더 인코딩 단계를
+    # 건너뛰기 때문에 이 버그를 못 잡았음). HTTP 헤더 인코딩은 실제로는
+    # urllib3/http.client가 소켓에 쓰기 직전(더 아래 레이어)에서 수행하고
+    # requests.models.PreparedRequest.prepare_headers()는 값만 저장할 뿐 이
+    # 검증을 안 한다는 게 실제로 확인됨(테스트해봤더니 한글이 통과해버림) -
+    # 그래서 실제 실패와 동일한 지점인 str.encode("latin-1")을 직접 호출해서
+    # 검증한다. 앞으로 헤더에 비-ASCII 문자가 섞이면 여기서 바로 실패해야 한다.
+    for header_name, header_value in {
+        "Authorization": "Bearer dummy-key-for-header-encoding-check",
+        "content-type": "application/json",
+        "X-Title": _OPENROUTER_X_TITLE,
+    }.items():
+        header_value.encode("latin-1")  # 실패하면 UnicodeEncodeError로 여기서 바로 죽음
+    print(f"[검증] OpenRouter 요청 헤더(X-Title='{_OPENROUTER_X_TITLE}') latin-1 인코딩 가능 확인 - 통과")
+
+    print("\n[issue_grouper] 자체 점검 전체 통과 (1차/2차 그룹핑 + 음성 검증 + 3차 배선 확인 + 헤더 인코딩 확인)")
