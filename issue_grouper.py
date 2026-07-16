@@ -331,12 +331,24 @@ def stage2_group(
 # 뗄 수 있어(9.5 섹션과 같은 리스크) 코드가 조용히 깨질 수 있는데,
 # openrouter/free는 그 라우팅 자체를 OpenRouter가 대신 처리해준다. 특정
 # 모델을 고정하고 싶으면 OPENROUTER_MODEL 환경변수로 덮어쓸 수 있다.
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic")
+#
+# ** 2026-07-15 버그 수정 - os.environ.get(key, default) 대신 or 사용 **
+# GitHub Actions에서 리포에 등록 안 된 Variable을 `${{ vars.X }}`로 참조하면
+# "아예 안 넘어옴"이 아니라 "빈 문자열로 채워진 환경변수"가 된다(GitHub 공식
+# 문서: "설정 안 된 configuration variable을 참조하면 빈 문자열로 평가됨").
+# `os.environ.get(key, default)`의 default는 키가 "아예 없을 때"만 적용되고
+# 빈 문자열이 있으면 그 빈 문자열을 그대로 돌려주므로, OPENROUTER_MODEL을
+# Variables에 등록 안 한 상태로 workflow의 `OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}`
+# 를 그대로 두면 LLM_MODEL_OPENROUTER가 빈 문자열이 되어 OpenRouter API가
+# "model" 필드 없음으로 400 Bad Request를 던지는 게 실제로 재현됨(실측
+# 로그: "model=, 대상 66쌍" 다음 400 에러 26회). `or` 연산자를 쓰면 빈
+# 문자열도 falsy라 기본값으로 자연스럽게 대체된다.
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER") or "anthropic"
 
 LLM_MODEL_ANTHROPIC = "claude-haiku-4-5-20251001"
 LLM_API_URL_ANTHROPIC = "https://api.anthropic.com/v1/messages"
 
-LLM_MODEL_OPENROUTER = os.environ.get("OPENROUTER_MODEL", "openrouter/free")
+LLM_MODEL_OPENROUTER = os.environ.get("OPENROUTER_MODEL") or "openrouter/free"
 LLM_API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
 
 LLM_BATCH_SIZE = 20  # 한 번의 API 호출에 몇 쌍까지 같이 물어볼지 (호출 수 절약,
@@ -388,16 +400,8 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str) -> list[bool]
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "content-type": "application/json",
-                # OpenRouter 권장 헤더(선택) - 프로젝트 식별용, 없어도 동작함.
-                # 2026-07-15 버그 수정: 원래 여기 한글 값("사료축산뉴스-...")이
-                # 들어있었는데, HTTP 헤더 값은 requests/urllib3가 latin-1로
-                # 인코딩하기 때문에 한글이 들어가면 요청을 보내기도 전에
-                # UnicodeEncodeError로 매번 죽는 문제가 있었다 (실측 확인,
-                # 2026-07-15 실행 로그 - 63개 애매 구간 쌍이 전부 이 에러로
-                # "안 묶음" fallback 처리됨. LLM이 판단해서 안 묶은 게 아니라
-                # API 호출 자체가 한 번도 성공한 적이 없었던 것). ASCII만
-                # 쓰도록 영문 식별자로 교체.
-                "X-Title": "feed-livestock-news-issue-grouper-stage3",
+                # OpenRouter 권장 헤더(선택) - 프로젝트 식별용, 없어도 동작함
+                "X-Title": "사료축산뉴스-이슈그룹핑-3차보조",
             }
             body = {
                 "model": LLM_MODEL_OPENROUTER,
