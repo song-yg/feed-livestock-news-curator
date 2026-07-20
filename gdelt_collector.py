@@ -63,6 +63,8 @@ from urllib.parse import urlparse
 import requests
 import requests.sessions
 import requests.utils as _requests_utils
+
+import keyword_source
 from gdeltdoc import GdeltDoc, Filters
 from gdeltdoc.errors import RateLimitError
 
@@ -528,6 +530,29 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
         fp_note = f" (오매칭 필터로 {false_positive_count}건 제외)" if false_positive_count else ""
         print(f"[gdelt] '{label}' article_search -> 최근 {DAYS_BACK}일 이내 "
               f"{len(combined_articles)}건 수집 완료{fp_note}")
+
+        # --- 2026-07-17 추가: 키워드별 매칭 현황 (제목 기준 근사치) ---
+        # 배경: OR로 합친 뒤로는 "4개 키워드가 각각 실제로 얼마나 수집됐는지"
+        # 로그로 전혀 구분이 안 돼서, "키워드 하나만 성공하면 나머지는
+        # 조용히 스킵되는 것 아니냐"는 의심이 실제로 제기됨. 추가 API 호출
+        # 없이(429 부담을 다시 늘리지 않으려고), 이미 받아온 기사 제목에
+        # 각 키워드가 부분 문자열로 들어있는지만 사후 대조해서 근사치를 보여준다.
+        #
+        # ** 주의 - 이건 정확한 집계가 아니라 근사치다 **: GDELT 검색은
+        # 제목뿐 아니라 본문 전체를 대상으로 매칭하는데, 우리는 본문을
+        # 안 받아오므로(GDELT는 본문 미제공) 제목에 키워드가 없어도 실제로는
+        # 그 키워드로 매칭됐을 수 있다 - 그래서 아래 숫자의 합이 전체 수집
+        # 건수보다 작게 나올 수 있다("본문에만 있던 매칭"은 집계에서 빠짐).
+        # 그래도 "이 키워드가 최소 이만큼은 확실히 걸렸다"는 하한선 확인
+        # 용도로는 충분하다 - 목적(키워드 하나가 나머지를 잠식하는지 확인)에
+        # 필요한 만큼의 신뢰도는 됨.
+        print(f"[gdelt] 키워드별 매칭 현황(제목 기준 근사치 - 본문에만 있는 매칭은 " 
+              f"집계 안 됨, 하나의 기사가 여러 키워드에 동시 매칭될 수 있어 합계가 "
+              f"전체 건수와 다를 수 있음):")
+        for kw in keywords:
+            kw_lower = kw.lower()
+            count = sum(1 for a in combined_articles if kw_lower in a["title"].lower())
+            print(f"  - '{kw}': {count}건")
         return True, combined_articles
 
     except Exception as e:
@@ -563,7 +588,7 @@ def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
         return None
 
 
-def collect(keywords: list[str] | None = None, skip_timeline: bool = True) -> tuple[list[dict], dict]:
+def collect(keywords: list[str] | None = None, skip_timeline: bool = False) -> tuple[list[dict], dict]:
     """
     KEYWORDS_EN을 대상으로 GDELT에서 기사 메타데이터와 언급 시계열을 함께
     수집한다. 이 함수가 gdelt_collector의 '진입점'.
@@ -599,7 +624,11 @@ def collect(keywords: list[str] | None = None, skip_timeline: bool = True) -> tu
                 스코어링에는 안 들어가고 결과물에 참고 지표로만 별도 표시 (3.1 규칙)
     """
     gd = GdeltDoc()
-    target_keywords = keywords if keywords is not None else KEYWORDS_EN
+    # keywords 인자로 명시적으로 넘겨준 게 있으면(테스트용) 그걸 그대로 쓰고,
+    # 없으면 2026-07-17부터 구글 시트에 등록된 활성 키워드를 우선 사용,
+    # 시트 미설정/읽기 실패 시 KEYWORDS_EN(하드코딩)으로 안전하게 대체
+    # (keyword_source.py 참고 - 이 함수는 예외를 던지지 않음)
+    target_keywords = keywords if keywords is not None else keyword_source.get_keywords("en", KEYWORDS_EN)
 
     active_keywords = []
     for keyword in target_keywords:
