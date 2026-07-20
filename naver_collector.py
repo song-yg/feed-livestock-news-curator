@@ -13,6 +13,8 @@ from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
+import keyword_source
+
 # 실행 시점에 .env 파일을 찾아서 그 안의 값들을 환경변수로 등록해준다.
 # .env 파일이 없어도 에러 없이 그냥 넘어감 (예: GitHub Actions에서는
 # .env 없이 Secrets가 이미 환경변수로 주입돼 있으므로 이 줄은 그냥 무시됨)
@@ -23,7 +25,9 @@ NAVER_API_URL = "https://openapi.naver.com/v1/search/news.json"
 # 이 프로젝트는 주 1회 실행이므로, 최근 7일 이내 기사만 남긴다.
 DAYS_BACK = 7
 
-# 예시 키워드. 최종 리스트는 아직 확정 전이라 임시로 넣어둠.
+# 예시 키워드(fallback). 2026-07-17부터 구글 시트(KEYWORD_SHEET_CSV_URL)가
+# 설정돼 있으면 그쪽을 우선 쓰고, 없거나 읽기 실패하면 이 리스트로 대체된다
+# (keyword_source.py 참고 - 담당자 없이도 시트 편집만으로 키워드 추가 가능).
 KEYWORDS = ["조류독감", "구제역", "사료 가격", "축산물 수급"]
 
 
@@ -57,8 +61,13 @@ def collect() -> list[dict]:
     client_id = os.environ["NAVER_CLIENT_ID"]
     client_secret = os.environ["NAVER_CLIENT_SECRET"]
 
+    # 2026-07-17 추가: 구글 시트에 등록된 활성 키워드를 우선 사용하고,
+    # 시트 미설정/읽기 실패 시 위 KEYWORDS(하드코딩)로 안전하게 대체
+    # (keyword_source.py 참고 - 이 함수는 예외를 던지지 않음)
+    target_keywords = keyword_source.get_keywords("ko", KEYWORDS)
+
     all_results = []
-    for keyword in KEYWORDS:
+    for keyword in target_keywords:
         try:
             keyword_results = []
             start = 1
