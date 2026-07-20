@@ -100,6 +100,15 @@ jobs:
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
 
+          # --- 선택: 구글 시트 키워드 연동 (keyword_source.py, 2026-07-17 신규) ---
+          # 담당자 없이도 다른 사람이 키워드를 편하게 추가/수정할 수 있게
+          # 구글 시트를 키워드 소스로 쓸 수 있게 함. 시트를 "파일 > 공유 >
+          # 웹에 게시 > CSV"로 게시한 뒤 그 URL을 아래 Variable에 등록.
+          # 비워두면(또는 시트 읽기 실패 시) 각 collector의 기존 하드코딩
+          # 키워드 리스트로 안전하게 대체됨 - 이 값이 없어도 파이프라인은
+          # 그대로 정상 동작함.
+          KEYWORD_SHEET_CSV_URL: ${{ vars.KEYWORD_SHEET_CSV_URL }}
+
           # --- 선택: 3차 LLM 그룹핑 보조 (issue_grouper.py) ---
           # 둘 다 비워두면 3차는 "안 묶음" 기본값으로 안전하게 생략되고
           # 나머지 파이프라인(1~3단계)은 그대로 정상 동작합니다.
