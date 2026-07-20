@@ -31,7 +31,7 @@ main.py
                     신규) 보조 지표 추가 - 2.1 이슈 그룹핑이 "동일 사건만"
                     묶는 좁은 정의라 생기는 공백을 메우는 별개 지표 (순위와
                     무관, 국내/해외 각각 카테고리별 단순 건수만 집계)
-  4) LLM 요약    -> 구현 완료 (2026-07-17, llm_summarizer.py): (A) 자체 요약
+  4) LLM 요약    -> 구현 완료 (2026-07-16, llm_summarizer.py): (A) 자체 요약
                     + (A-1) 얇은 재료 fallback. (B) 그룹핑 보조는 2.1에서
                     이미 구현 완료(issue_grouper.stage3_llm_assist). 프로바이더
                     설정(LLM_PROVIDER, 모델명, X-Title 등)은 issue_grouper.py
