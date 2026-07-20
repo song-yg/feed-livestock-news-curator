@@ -55,15 +55,24 @@ def _time_one_call(gd: "gc.GdeltDoc", mode: str, keyword: str) -> tuple[float, i
 def main() -> None:
     print(f"테스트 키워드: {TEST_KEYWORDS}")
     print(f"비교할 모드: {MODES}\n")
+    print("** 순서 효과 통제: 키워드마다 호출 순서를 번갈아가며 테스트함 **")
+    print("(2026-07-20 수정 - 담당자 지적: 첫 실행에서 timelinevolraw가 실패한 게 "
+          "모드 자체 때문인지, 그냥 두 번째로 불려서 그 순간 붐빈 시간대에 걸린 건지 "
+          "구분이 안 됨 - 매번 같은 순서로 부르면 이 둘을 절대 구분 못 함. 키워드 인덱스가 "
+          "짝수면 [timelinevol, timelinevolraw] 순서, 홀수면 반대 순서로 호출)\n")
 
     gd = gc.GdeltDoc()
     results: dict[str, list[float]] = {mode: [] for mode in MODES}
+    call_order_used: list[str] = []  # 키워드별로 어느 순서를 썼는지 기록
 
-    for keyword in TEST_KEYWORDS:
+    for idx, keyword in enumerate(TEST_KEYWORDS):
+        order = MODES if idx % 2 == 0 else list(reversed(MODES))
+        call_order_used.append(" -> ".join(order))
+
         print("=" * 60)
-        print(f"키워드: '{keyword}'")
+        print(f"키워드: '{keyword}' (호출 순서: {' -> '.join(order)})")
         print("=" * 60)
-        for mode in MODES:
+        for mode in order:
             print(f"\n[{mode}] 호출 중...")
             elapsed, rows, success = _time_one_call(gd, mode, keyword)
             status = "성공" if success else "실패"
@@ -73,15 +82,14 @@ def main() -> None:
         print()
 
     print("=" * 60)
-    print("=== 비교 결과 (키워드별) ===")
+    print("=== 비교 결과 (키워드별, 실행한 순서 표시) ===")
     print("=" * 60)
-    header = f"{'키워드':30s}" + "".join(f"{mode:>18s}" for mode in MODES)
-    print(header)
     for i, keyword in enumerate(TEST_KEYWORDS):
-        row = f"{keyword:30s}" + "".join(f"{results[mode][i]:>15.1f}초" for mode in MODES)
-        print(row)
+        print(f"'{keyword}' - 순서: {call_order_used[i]}")
+        for mode in MODES:
+            print(f"  {mode:18s} {results[mode][i]:.1f}초")
 
-    print("\n=== 모드별 평균 ===")
+    print("\n=== 모드별 평균 (순서 섞인 상태) ===")
     averages = {}
     for mode in MODES:
         avg = sum(results[mode]) / len(results[mode]) if results[mode] else 0
@@ -95,6 +103,9 @@ def main() -> None:
         diff = averages[slower] - averages[faster]
         print(f"\n'{faster}'가 '{slower}'보다 평균 {_format_seconds(diff)} 더 빠름 "
               f"({ratio:.2f}배)")
+        print("\n주의: 키워드가 2개뿐이라 순서를 한 번씩만 바꿔본 것 - 이걸로도 순서 효과가 "
+              "100% 안 섞였다고 확신할 수는 없음. 여러 번 반복 실행해서 표본을 더 "
+              "쌓아보는 걸 권장 (담당자가 이미 계획한 대로).")
 
 
 if __name__ == "__main__":
