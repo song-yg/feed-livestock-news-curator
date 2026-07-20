@@ -633,7 +633,7 @@ def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
         return None
 
 
-def collect(keywords: list[str] | None = None, skip_timeline: bool = False) -> tuple[list[dict], dict]:
+def collect(keywords: list[str] | None = None, skip_timeline: bool = True) -> tuple[list[dict], dict]:
     """
     KEYWORDS_EN을 대상으로 GDELT에서 기사 메타데이터와 언급 시계열을 함께
     수집한다. 이 함수가 gdelt_collector의 '진입점'.
