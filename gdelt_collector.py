@@ -213,6 +213,38 @@ TIMESPAN = f"{DAYS_BACK}d"
 # (naver처럼 start 파라미터로 추가 페이지네이션하는 기능 자체가 없음 - API 레벨 한계)
 MAX_RECORDS = 250
 
+# --- 2026-07-20 추가: 적응형 배치 수집 (담당자 3안 채택) ---
+#
+# 배경: 키워드를 전부 OR로 합치면(2026-07-16) 250건 상한을 광범위한 키워드
+# 하나가 독차지하는 문제가 실측 확인됨(`vaccination`이 250건 중 60건/24%
+# 차지). 반대로 키워드를 전부 개별 요청하면(2026-07-20 1차 대응) 크라우딩은
+# 안 생기지만 키워드 수가 늘수록 요청 횟수가 그대로 비례해서 늘어나
+# 429/런타임 부담이 커짐.
+#
+# 담당자가 제시한 두 대안(① 키워드를 미리 "위험/안전"으로 수동 분류해서
+# 위험한 것만 개별 처리, ② 무작위로 고정 묶음을 나눠서 그냥 돌리기) 둘 다
+# 기각함: ①은 "지금은 널널한데 갑자기 뜨는 키워드"를 못 잡고 사람이 계속
+# 재분류해야 하는 유지보수 부담이 있고, ②는 하필 두 인기 키워드가 같은
+# 고정 묶음에 우연히 들어가면 그 조합이 계속 나쁜 채로 반복됨.
+#
+# 채택한 3안: 일단 작게 묶어서(BATCH_SIZE) 보내보고, 그 배치 결과에서
+# 상한(MAX_RECORDS) 근처까지 찼는데 특정 키워드가 결과의 상당 비율을
+# 차지했으면("크라우딩 감지") 그 배치의 나머지 키워드만 그 자리에서
+# 개별로 추가 요청해서 보충한다. 사람이 미리 분류할 필요도 없고, 그
+# 실행에서 실제로 터진 키워드를 즉시 감지해서 대응하므로 "갑자기 뜬
+# 키워드"도 놓치지 않는다 (아래 collect()/_detect_crowded_keywords 참고).
+BATCH_SIZE = 5  # 잠정값 - 실측하면서 조정 (작을수록 크라우딩 적지만 요청 많아짐)
+
+# 배치 결과가 상한(MAX_RECORDS)의 이 비율 이상 찼을 때만 크라우딩 검사를
+# 한다 - 상한에 안 걸렸으면애초에 뭔가 밀려났을 리가 없으므로 검사 자체가
+# 무의미함(불필요한 오탐 방지).
+CROWDING_CAP_TRIGGER_RATIO = 0.9
+
+# 배치 결과 중 한 키워드가(제목 기준 근사치) 이 비율 이상을 차지하면
+# "크라우딩"으로 판단해 나머지 키워드를 개별 재요청한다. 잠정값 - 실측
+# 필요.
+CROWDING_SHARE_THRESHOLD = 0.4
+
 # 키워드 사이 요청 간격.
 # GDELT는 공식적으로 "몇 초에 몇 건"인지 수치를 공개하지 않음. 기존엔 8초로 설정했었으나 (2026-07-14 확인) 실제 실행에서 거의 매 호출마다 429가 발생해 재시도 백오프가 누적되는 문제가 있어 15초로 상향.
 # 그래도 429가 잦으면 추가 상향 검토 필요 (정확한 공식 수치는 여전히 비공개라 경험적으로 조정하는 값).
@@ -605,6 +637,44 @@ def _collect_articles_individually(gd: "GdeltDoc", keywords: list[str]) -> tuple
     return any_success, all_articles
 
 
+def _detect_crowded_keywords(articles: list[dict], keywords: list[str]) -> list[str]:
+    """
+    2026-07-20 추가 (담당자 3안 - 적응형 배치). 배치(OR 결합) 요청 결과에서
+    특정 키워드가 결과를 과도하게 차지해서, 상한(MAX_RECORDS) 때문에 같은
+    배치의 다른 키워드가 밀려났을 가능성이 있는지 감지한다.
+
+    반환값: "크라우딩을 일으킨 것으로 보이는" 키워드 리스트. 호출부는 이
+    리스트에 없는(=밀려났을 가능성이 있는) 나머지 배치 키워드를 개별로
+    추가 요청해서 보충한다.
+
+    ** 판단 기준 **
+    1. 배치 결과 건수가 MAX_RECORDS의 CROWDING_CAP_TRIGGER_RATIO(90%)
+       이상이어야 검사 자체를 시작한다 - 상한에 안 걸렸으면 애초에 밀려난
+       기사가 있을 수 없으므로 검사가 무의미함(오탐 방지).
+    2. 제목 기준 부분 문자열 매칭으로 키워드별 건수를 세고(근사치 - 아래
+       한계 참고), 배치 전체 대비 비율이 CROWDING_SHARE_THRESHOLD(40%)
+       이상이면 그 키워드를 크라우딩 원인으로 판단한다.
+
+    ** 한계 (기존 "키워드별 매칭 현황" 로그와 같은 이유) **
+    GDELT는 제목뿐 아니라 본문 전체로 매칭하는데 본문은 안 받아오므로,
+    이 함수는 "제목에 명시적으로 드러난 크라우딩"만 잡아낸다 - 본문에만
+    있던 매칭으로 크라우딩이 생겨도 이 함수는 못 잡을 수 있다(과소 탐지
+    쪽으로 치우침 - 놓치는 게 있을 수 있지만, 반대로 불필요한 추가 요청을
+    남발하지는 않는다는 뜻이라 안전한 방향의 편향으로 판단).
+    """
+    total = len(articles)
+    if total < MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
+        return []
+
+    crowders = []
+    for keyword in keywords:
+        keyword_lower = keyword.lower()
+        count = sum(1 for a in articles if keyword_lower in a["title"].lower())
+        if count / total >= CROWDING_SHARE_THRESHOLD:
+            crowders.append(keyword)
+    return crowders
+
+
 def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
     """
     한 키워드에 대해 timelinevol/timelinevolraw를 수집한다. 실패 시 None.
@@ -633,7 +703,7 @@ def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
         return None
 
 
-def collect(keywords: list[str] | None = None, skip_timeline: bool = True) -> tuple[list[dict], dict]:
+def collect(keywords: list[str] | None = None, skip_timeline: bool = False) -> tuple[list[dict], dict]:
     """
     KEYWORDS_EN을 대상으로 GDELT에서 기사 메타데이터와 언급 시계열을 함께
     수집한다. 이 함수가 gdelt_collector의 '진입점'.
@@ -648,19 +718,34 @@ def collect(keywords: list[str] | None = None, skip_timeline: bool = True) -> tu
               필요 없고, API 호출이 훨씬 줄어 빠름. 정식 운영에서는 시계열이
               필요하므로 기본값 False 유지)
 
-    ** 2026-07-16 재구성 - 기사 수집과 시계열 수집을 분리된 단계로 처리 **
-    (모듈 docstring "429 대응 2건" 참고):
-      1단계(기사 수집): 대상 키워드를 하나의 OR 쿼리로 묶어
-         _collect_articles_for_keywords를 "한 번만" 호출 - 요청 횟수를
-         최소화해 429에 걸릴 기회 자체를 줄인다. 실패하면(전역 쿨다운을
-         다 소진해도 안 되면) 같은 조합을 통째로 최대 OUTER_RETRY_PASSES
-         번 재시도한다(기존엔 "실패한 키워드만" 재시도했지만, 이제 기사
-         수집이 키워드 단위가 아니라 조합 단위이므로 재시도도 조합 단위).
-      2단계(시계열 수집): 3.1 원칙("해외에서 이 이슈가 지금 뜨는지/식는지"
-         키워드별로 봐야 함)에 따라 이건 합치지 않고 기존처럼 키워드별로
-         순회한다 - _collect_timeline_for_keyword 그대로 재사용, 이 부분은
-         동작 변경 없음(외부 재시도 대상도 기존처럼 아님, article_search만큼
-         치명적이지 않다는 기존 판단 유지).
+    ** 2026-07-20 재구성(2차) - 적응형 배치 수집 (담당자 3안 채택) **
+    2026-07-16에 키워드를 OR로 전부 묶었다가(250건 상한을 한 키워드가
+    독차지하는 문제 발생) 2026-07-20에 전부 개별 요청으로 되돌렸는데
+    (요청 횟수가 키워드 수에 비례해서 늘어남), 담당자가 "키워드가 최종
+    단계에서 훨씬 많아질 텐데 이대로면 요청이 너무 많아지지 않냐"고 지적함.
+
+    담당자가 제시한 두 대안(① 위험 키워드를 미리 수동으로 분류, ② 무작위
+    고정 묶음)을 함께 검토한 뒤 기각하고 3안(적응형 배치)을 채택함 - ①은
+    "갑자기 뜬 키워드"를 못 잡고 사람이 계속 재분류해야 하며, ②는 나쁜
+    조합이 우연히 고정되면 계속 반복될 수 있음. 3안은 사람이 미리 분류할
+    필요 없이, **그 실행 안에서 실시간으로 크라우딩을 감지해서 보정**한다:
+
+      1단계: 활성 키워드를 BATCH_SIZE(기본 5)개씩 묶어 각 배치를 OR로
+             결합해 요청(_collect_articles_for_keywords 재사용) - 배치가
+             많아도 요청 횟수는 "키워드 수 / BATCH_SIZE"로 완만하게 늘어남.
+      2단계: 각 배치 결과에 _detect_crowded_keywords를 적용해, 상한
+             (MAX_RECORDS) 근처까지 찼는데 특정 키워드가 결과의 상당
+             비율(CROWDING_SHARE_THRESHOLD)을 차지했으면 "크라우딩"으로
+             판단하고, 그 배치의 **나머지** 키워드만 개별 재요청 대상으로
+             남겨둔다.
+      3단계: 배치 자체가 실패한 경우(전체)와 크라우딩으로 밀려난 키워드를
+             모아서 키워드별 개별 요청으로 보충 - 실패한 것만 외부 재시도
+             라운드(OUTER_RETRY_PASSES)를 돈다(2026-07-14(4차) 원래 설계와
+             동일한 재시도 정책).
+
+    _collect_articles_for_keywords(복수형, OR 결합)와
+    _collect_articles_individually(전체 개별 폴백)는 이 배치 로직에서
+    그대로 재사용된다.
 
     반환값:
       articles: 공통 스키마 리스트. 다음 단계(정규화/이슈그룹핑)로 그대로 전달됨
@@ -688,34 +773,67 @@ def collect(keywords: list[str] | None = None, skip_timeline: bool = True) -> tu
     if not active_keywords:
         return all_articles, timeline_by_keyword
 
-    # --- 1단계: 기사 수집 - 키워드를 하나의 OR 쿼리로 묶어 요청 횟수 최소화 ---
-    remaining = list(active_keywords)
-    article_search_ok = False
+    # --- 1단계: 배치 단위 수집 + 크라우딩 감지 ---
+    batches = [active_keywords[i:i + BATCH_SIZE] for i in range(0, len(active_keywords), BATCH_SIZE)]
+    pending_individual: list[str] = []  # 배치 실패 또는 크라우딩으로 밀려나 개별 확인이 필요한 키워드
+
+    for batch in batches:
+        if len(batch) == 1:
+            # 배치 크기 1은 그냥 개별 요청과 같으므로 굳이 OR로 묶지 않고 바로 개별 처리 대상으로 보냄
+            pending_individual.append(batch[0])
+            continue
+
+        success, batch_articles = _collect_articles_for_keywords(gd, batch)
+        if not success:
+            print(f"[gdelt] 배치 {batch} 요청 실패 - 개별 요청으로 보충 예정")
+            pending_individual.extend(batch)
+        else:
+            all_articles.extend(batch_articles)
+            crowders = _detect_crowded_keywords(batch_articles, batch)
+            if crowders:
+                others = [kw for kw in batch if kw not in crowders]
+                print(f"[gdelt] 배치 {batch} 내 크라우딩 감지({crowders}가 결과의 "
+                      f"{int(CROWDING_SHARE_THRESHOLD * 100)}% 이상 차지 추정) - "
+                      f"나머지 키워드 {others} 개별 재요청으로 보충 예정")
+                pending_individual.extend(others)
+        time.sleep(REQUEST_INTERVAL)
+
+    # --- 2단계: 개별 보충 요청 - 실패한 것만 외부 재시도 라운드 ---
+    round_keywords = list(dict.fromkeys(pending_individual))  # 순서 유지하며 중복 제거
+    failed_keywords: list[str] = []
 
     for round_num in range(OUTER_RETRY_PASSES + 1):
         if round_num > 0:
-            print(f"[gdelt] --- 기사 수집 외부 재시도 라운드 {round_num}/{OUTER_RETRY_PASSES} "
-                  f"- 대상 키워드 {len(remaining)}개: {remaining} ---")
+            if not failed_keywords:
+                break  # 지난 라운드에서 실패한 키워드가 없으면 더 돌 필요 없음
+            print(f"[gdelt] --- 기사 수집 외부 재시도 라운드 {round_num}/{OUTER_RETRY_PASSES} - "
+                  f"이전 라운드 실패 키워드 {len(failed_keywords)}개: {failed_keywords} ---")
             print(f"[gdelt] 라운드 간 안전 대기 {OUTER_RETRY_WAIT_SECONDS}초")
             time.sleep(OUTER_RETRY_WAIT_SECONDS)
+            round_keywords = failed_keywords
 
-        success, articles = _collect_articles_for_keywords(gd, remaining)
-        if success:
-            all_articles.extend(articles)
-            article_search_ok = True
+        if not round_keywords:
             break
-        # 실패하면 remaining을 그대로 유지한 채 다음 라운드에서 같은 조합을 재시도
 
-    if not article_search_ok:
-        print(f"[gdelt] 기사 수집 최종 실패 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
-              f"이번 실행은 GDELT 기사 0건으로 처리됨): {remaining}")
+        failed_keywords = []
 
-    # --- 2단계: 시계열 수집 - 3.1 원칙대로 키워드별 개별 수집 유지 (합치지 않음) ---
+        for keyword in round_keywords:
+            success, keyword_articles = _collect_articles_for_keyword(gd, keyword)
+            if success:
+                all_articles.extend(keyword_articles)
+            else:
+                failed_keywords.append(keyword)
+            time.sleep(REQUEST_INTERVAL)
+
+    if failed_keywords:
+        print(f"[gdelt] 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
+              f"기사 0건으로 처리됨): {failed_keywords}")
+
+    # --- 3단계: 시계열 수집 - 3.1 원칙대로 키워드별 개별 수집 유지 (합치지 않음) ---
     if skip_timeline:
         for keyword in active_keywords:
             print(f"[gdelt] '{keyword}' 시계열 수집 스킵 (skip_timeline=True, 테스트 모드)")
     else:
-        time.sleep(REQUEST_INTERVAL)
         for keyword in active_keywords:
             timeline_entry = _collect_timeline_for_keyword(gd, keyword)
             if timeline_entry is not None:
