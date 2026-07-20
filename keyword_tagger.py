@@ -205,6 +205,33 @@ def print_category_distribution(articles: list[dict]) -> None:
         print(f"  {category:15s} {count:4d}건 ({pct:.1f}%)")
 
 
+def print_uncategorized_sample(articles: list[dict], sample_size: int = 30) -> None:
+    """
+    '기타'로 분류된 기사 제목 샘플을 출력한다 (2026-07-17 추가).
+
+    배경: '기타' 비율이 70% 넘게 나오는 게 실행마다 반복 확인됐는데,
+    실제로 뭐가 '기타'에 몰리는지 숫자(비율)만으로는 감이 안 잡혀서
+    "이 새끼들은 뭐지" 같은 반응이 나올 수밖에 없었음 - 키워드 사전을
+    어떻게 보강할지 논의하려면 실제 제목을 눈으로 봐야 함.
+
+    무작위 추출이 아니라 리스트 앞에서부터 sample_size개만 그대로 보여준다
+    - 표본 대표성을 엄밀히 따지는 통계용이 아니라 "감 잡기용" 진단
+    도구라 단순하게 유지 (print_category_distribution과 같은 성격).
+    """
+    uncategorized = [a for a in articles if a.get("category", "기타") == "기타"]
+    total = len(uncategorized)
+    print(f"\n=== '기타' 분류 기사 샘플 (전체 {total}건 중 최대 {sample_size}건) ===")
+    if total == 0:
+        print("  (해당 없음)")
+        return
+    for i, article in enumerate(uncategorized[:sample_size], start=1):
+        source = article.get("source", "?")
+        title = article.get("title", "(제목 없음)")
+        print(f"  {i:2d}. [{source}] {title}")
+    if total > sample_size:
+        print(f"  ... 외 {total - sample_size}건 생략")
+
+
 if __name__ == "__main__":
     # 간단한 자체 점검용 - 실제 기사 없이도 매칭 로직이 도는지 확인
     sample_titles = [
