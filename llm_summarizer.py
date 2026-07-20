@@ -29,12 +29,21 @@ import issue_grouper as _ig  # LLM_PROVIDER, 모델명, API URL, X-Title 상수 
 
 
 _SYSTEM_PROMPT = (
-    "너는 사료·축산업 뉴스 큐레이션 서비스의 요약 작성자다. 주어진 이슈(같은 사건을 다루는 기사 제목들과 참고 정보)를 보고 한국어로 2~3문장의 자체 요약을 작성하라. 원문을 그대로 옮기지 말고 핵심 내용만 새로 요약한다. (9.4 안전장치 1번 - 없는 내용 추가 금지). 확실하지 않은 수치나 사실은 임의로 만들어내지 말고, 주어진 제목/참고 정보에 있는 내용만 사용한다. 확실하지 않으면 요약 대신 애매함을 그대로 표현하라(9.5 섹션 - 확실하지 않으면 요약 대신 제목만 나열하는 원칙과 같은 결). 전문용어·질병명·정부기관명·제도명 등 고유명사는 임의로 한글화하지 말고 영문 원어가 있으면 괄호로 병기한다(12.2 언어 처리 방침). 다른 설명 없이 요약 문장만 출력한다."
+    "너는 사료·축산업 뉴스 큐레이션 서비스의 요약 작성자다. 주어진 이슈(같은 "
+    "사건을 다루는 기사 제목들과 참고 정보)를 보고 한국어로 2~3문장의 자체 "
+    "요약을 작성하라. 원문을 그대로 옮기지 말고 핵심 내용만 새로 요약한다 "
+    "(9.4 안전장치 1번 - 없는 내용 추가 금지). 확실하지 않은 수치나 사실은 "
+    "임의로 만들어내지 말고, 주어진 제목/참고 정보에 있는 내용만 사용한다. "
+    "확실하지 않으면 요약 대신 애매함을 그대로 표현하라(9.5 섹션 - 확실하지 "
+    "않으면 요약 대신 제목만 나열하는 원칙과 같은 결). 전문용어·질병명·"
+    "정부기관명·제도명 등 고유명사는 임의로 한글화하지 말고 영문 원어가 "
+    "있으면 괄호로 병기한다(12.2 언어 처리 방침). 다른 설명 없이 요약 "
+    "문장만 출력한다."
 )
 
 # 그룹 하나에 기사가 아주 많을 때(예: 50건 이상) 제목을 전부 프롬프트에
 # 넣으면 비용/속도 낭비가 크므로 상한을 둔다 - 나머지는 "외 N건 생략"으로 표시.
-_MAX_TITLES_IN_PROMPT = 15
+_MAX_TITLES_IN_PROMPT = 10
 # 참고 컨텍스트(본문 발췌/description)도 기사 몇 건까지만 볼지 상한
 _MAX_CONTEXT_ARTICLES = 5
 _MAX_BODY_EXCERPT_CHARS = 300
@@ -130,6 +139,24 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str) -> str | None:
         return None
 
 
+def _is_suspicious_summary(text: str) -> bool:
+    """
+    2026-07-17 추가: 실측 확인된 문제 대응 - 오픈라우터 무료 라우터
+    (openrouter/free)로 요약을 생성했더니, 정상 요약 대신 콘텐츠 안전성
+    판정 결과로 보이는 텍스트("User Safety: safe")를 그대로 반환한 사례가
+    해외 Top5 중 2건 발견됨(기사 수 2건/4건으로 서로 다름 - 재료 부족과는
+    무관한 별개 현상으로 확인). 정확한 원인은 미확인(오픈라우터 무료
+    라우터가 요청마다 다른 실제 모델로 라우팅될 수 있어, 그중 일부가
+    콘텐츠 안전성 필터 응답을 요약 대신 반환한 것으로 추정할 뿐).
+
+    "확실히 요약이 아니라고 판단할 수 있는 좁은 패턴만" 걸러낸다(요청 -
+    과도하게 넓히면 정상 요약도 걸러질 위험이 있어, 실제로 관측된 문구
+    ("user safety")만 좁게 대응. 품질이 낮거나 짧은 요약까지 거르는 건
+    이번 범위 밖).
+    """
+    return "user safety" in text.lower()
+
+
 def summarize_issue(item: dict) -> dict:
     """
     이슈 하나(scorer.score_group() 결과 dict)에 (A)/(A-1) 로직을 적용해
@@ -169,6 +196,14 @@ def summarize_issue(item: dict) -> dict:
     if not summary_text:
         result["summary"] = None
         result["summary_skipped_reason"] = "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+        return result
+
+    if _is_suspicious_summary(summary_text):
+        result["summary"] = None
+        result["summary_skipped_reason"] = (
+            "LLM 응답이 요약이 아닌 것으로 추정됨(안전성 필터 오작동 등, 원인 미확인) - "
+            "본문 요약 생성 실패, 원문 제목만 노출"
+        )
         return result
 
     result["summary"] = summary_text
