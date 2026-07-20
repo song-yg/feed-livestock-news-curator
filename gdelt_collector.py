@@ -307,7 +307,11 @@ def _call_with_retry(func, *args, label: str = "", **kwargs):
     """
     RateLimitError(429)와 일시적 네트워크 에러(ConnectTimeout 등)를 서로 다른
     정책으로 재시도한다 (429는 길게, 네트워크 에러는 짧게). 그 외 예외는 바로
-    올려보내서 (9.1 방침대로) collect()의 try/except가 그 키워드만 건너뛰게 한다.
+    올려보낸다 - 단수형 경로(_collect_articles_for_keyword)에서는 그 키워드만
+    건너뛰지만, 결합 경로(_collect_articles_for_keywords)에서는 ValueError를
+    별도로 잡아 키워드별 개별 요청으로 격리한다(2026-07-17 추가, 아래
+    _collect_articles_individually 참고) - "그 키워드만"이라는 이 문단의
+    원래 전제는 키워드를 하나로 합치기 전(2026-07-16 이전) 기준이었음.
 
     2026-07-14 변경: 429는 이 함수 호출 하나만 기다리고 마는 게 아니라,
     전역 쿨다운(_trigger_cooldown)을 걸어서 이후에 오는 모든 호출(다른
@@ -555,9 +559,50 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
             print(f"  - '{kw}': {count}건")
         return True, combined_articles
 
+    except ValueError as e:
+        # 2026-07-17 추가: "phrase too short" 등 GDELT가 쿼리 자체를 거부하는
+        # 에러(RateLimitError/네트워크 에러와 달리 시간이 지나도 절대 안
+        # 풀림)는 결합 쿼리 안에 문제 키워드가 "섞여 있는 한" 재시도해도
+        # 100% 같은 이유로 또 실패한다 - 그런데 collect()의 외부 재시도
+        # 로직은 원래 429처럼 "시간이 지나면 풀리는 실패"를 염두에 두고
+        # 만든 거라, 이 경우엔 재시도 2번을 그대로 낭비하고 결국 GDELT
+        # 기사 전체가 0건으로 끝나버린다(키워드 4개를 OR로 합친 뒤 생긴
+        # 새로운 위험 - 예전엔 키워드마다 따로 요청해서 하나가 거부돼도
+        # 그 키워드만 실패했음). 재시도 대신 그 즉시 키워드별 개별 요청으로
+        # 내려가서 문제 키워드만 격리하고, 나머지는 정상적으로 살린다.
+        print(f"[gdelt] '{label}' article_search 실패(쿼리 자체 거부로 추정 - "
+              f"{type(e).__name__}: {e}) - 재시도 대신 키워드별 개별 요청으로 즉시 전환")
+        return _collect_articles_individually(gd, keywords)
+
     except Exception as e:
         print(f"[gdelt] '{label}' article_search 실패: {type(e).__name__} - {e!r}")
         return False, []
+
+
+def _collect_articles_individually(gd: "GdeltDoc", keywords: list[str]) -> tuple[bool, list[dict]]:
+    """
+    결합 쿼리(_collect_articles_for_keywords)가 "phrase too short"류 - 재시도로
+    해결 안 되는 - 에러로 실패했을 때 호출되는 격리 폴백 (2026-07-17 추가).
+
+    키워드를 하나씩 따로 요청해서(기존 _collect_articles_for_keyword 재사용)
+    문제 있는 키워드만 그 자리에서 실패로 남기고, 나머지는 정상적으로
+    결과에 포함시킨다 - 결합 요청 방식이 가진 "하나가 전체를 잠식하는"
+    위험을 이 경로에서만 다시 키워드 1개 단위로 좁혀서 상쇄한다.
+
+    구글 시트(keyword_source.py)로 키워드를 등록하게 되면서, 담당자가
+    모르는 사이 짧은 영문 키워드가 추가돼 이 상황이 실제로 발생할 수
+    있는 조건이 갖춰졌다 - 이 폴백이 없으면 그 실행의 GDELT 기사가
+    전부 0건으로 끝나버릴 수 있음.
+    """
+    all_articles = []
+    any_success = False
+    for keyword in keywords:
+        success, keyword_articles = _collect_articles_for_keyword(gd, keyword)
+        if success:
+            any_success = True
+            all_articles.extend(keyword_articles)
+        time.sleep(REQUEST_INTERVAL)
+    return any_success, all_articles
 
 
 def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
