@@ -209,6 +209,28 @@ DAYS_BACK = 7
 # (GDELT 공식 블로그 "GDELT DOC 2.0 API Debuts!" 기준 - 검색으로 검증함)
 TIMESPAN = f"{DAYS_BACK}d"
 
+# --- 2026-07-21 추가: 시계열 전용 기간 (article_search와 분리) ---
+#
+# GDELT 공식 문서 확인: timeline_search는 요청 기간 길이에 따라 해상도가
+# 자동으로 바뀐다 - 72시간 미만이면 15분 단위, 72시간~1주일이면 1시간
+# 단위, "1주일 초과"면 1일 단위. 지금 TIMESPAN(7d, 정확히 "1주일")을 그대로
+# 쓰면 1시간 단위(7일치 실측 결과 166행)로 나오는데, 이 프로젝트는 주
+# 1회 실행되는 주간 다이제스트라 시간 단위 디테일이 애초에 필요 없다는
+# 담당자 지적으로 8일(1주일 "초과")로 바꿔서 일 단위(약 8행)로 받도록 함.
+#
+# ** article_search와 상수를 공유하지 않는 이유 **: TIMESPAN을 그냥
+# 8d로 바꾸면 article_search도 8일치를 가져오게 되는데, 그러면 (a) "최근
+# 7일" 원칙이 깨지고 (b) 어차피 나중에 DAYS_BACK 기준으로 걸러질 여분의
+# 기사가 GDELT 250건 상한 경쟁에 불필요하게 끼어들어 크라우딩만 심해짐
+# (7. 아직 결정 안 된 것들의 크라우딩 이슈와 같은 맥락). 그래서 시계열만
+# 쓰는 별도 상수로 분리.
+#
+# ** 429 감소 효과는 미확인 **: GDELT의 "함대 전체 QPS" 가설이 맞다면
+# 429는 응답 데이터量이 아니라 요청 "빈도" 때문에 걸리는 거라, 해상도를
+# 낮춘다고 429 자체가 줄어든다는 보장은 없음 - 다만 "필요한 만큼만
+# 받는다"는 것 자체는 429와 무관하게 맞는 방향이라 반영함.
+TIMELINE_TIMESPAN = "8d"
+
 # article_search는 GDELT DOC API 자체 한계로 한 번 호출에 최대 250건까지만 반환됨
 # (naver처럼 start 파라미터로 추가 페이지네이션하는 기능 자체가 없음 - API 레벨 한계)
 MAX_RECORDS = 250
@@ -679,8 +701,13 @@ def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
     """
     한 키워드에 대해 timelinevol/timelinevolraw를 수집한다. 실패 시 None.
     (2026-07-14(4차) - collect() 안에 있던 로직을 분리, 동작은 기존과 동일)
+
+    2026-07-21: article_search용 TIMESPAN(7d) 대신 TIMELINE_TIMESPAN(8d)을
+    쓴다 - "1주일 초과"부터 GDELT가 일 단위 해상도로 전환해주는 걸 이용해,
+    이 프로젝트에 필요 없는 시간 단위 디테일(7d 그대로 쓰면 166행/시간
+    단위) 대신 일 단위(~8행)로 받는다 - 위 TIMELINE_TIMESPAN 정의 주석 참고.
     """
-    f = Filters(keyword=keyword, timespan=TIMESPAN, num_records=MAX_RECORDS)
+    f = Filters(keyword=keyword, timespan=TIMELINE_TIMESPAN, num_records=MAX_RECORDS)
     try:
         vol_df = _call_with_retry(gd.timeline_search, "timelinevol", f,
                                    label=f"{keyword} / timelinevol")

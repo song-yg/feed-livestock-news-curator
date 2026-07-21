@@ -44,7 +44,7 @@ def _collect_timelinevol_only(gd: "gc.GdeltDoc", keyword: str) -> tuple[float, i
     반환한다. gdelt_collector._collect_timeline_for_keyword와 같은 패턴이되
     timelinevolraw 호출 부분만 뺐다.
     """
-    f = gc.Filters(keyword=keyword, timespan=gc.TIMESPAN, num_records=gc.MAX_RECORDS)
+    f = gc.Filters(keyword=keyword, timespan=gc.TIMELINE_TIMESPAN, num_records=gc.MAX_RECORDS)
     t0 = time.time()
     try:
         df = gc._call_with_retry(gd.timeline_search, "timelinevol", f,

@@ -39,7 +39,7 @@ def _time_one_call(gd: "gc.GdeltDoc", mode: str, keyword: str) -> tuple[float, i
     한 키워드에 대해 timeline_search를 한 모드로 한 번 호출하고,
     (걸린 시간, 반환된 행 수, 성공 여부)를 반환한다.
     """
-    f = gc.Filters(keyword=keyword, timespan=gc.TIMESPAN, num_records=gc.MAX_RECORDS)
+    f = gc.Filters(keyword=keyword, timespan=gc.TIMELINE_TIMESPAN, num_records=gc.MAX_RECORDS)
     t0 = time.time()
     try:
         df = gc._call_with_retry(gd.timeline_search, mode, f, label=f"{keyword} / {mode}")
