@@ -1,0 +1,37 @@
+# timelinevol 단독 사용 시 소요시간 테스트 - 테스트 전용 workflow (2026-07-21)
+#
+# test_timeline_timing.py로 timelinevol/timelinevolraw를 비교한 결과
+# (4회 반복) timelinevol이 대체로 유리하다는 근거가 나와서, timelinevolraw
+# 를 빼고 timelinevol만 썼을 때 실전 규모(키워드 5개)에서 얼마나 걸리는지
+# 확인하는 워크플로입니다. 메인 파이프라인과 완전히 분리된 진단용입니다.
+#
+# 실행 방법: Actions 탭 > "timelinevol 단독 테스트" > Run workflow
+# 결과 확인: 실행 로그 맨 아래 "=== 결과 요약 ===" 부분
+
+name: timelinevol 단독 테스트
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  test-timelinevol-only:
+    runs-on: ubuntu-latest
+    # 키워드 5개, 최악의 경우(전부 백오프 4단계) 키워드당 15분씩 잡아도
+    # 75분 - 여유 있게 설정
+    timeout-minutes: 120
+
+    steps:
+      - name: 리포 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 최소 의존성만 설치 (gdeltdoc, requests)
+        run: pip install gdeltdoc requests --break-system-packages
+
+      - name: timelinevol 단독 테스트 실행
+        run: python -u test_timelinevol_only.py
