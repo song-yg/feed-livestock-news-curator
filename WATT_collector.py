@@ -41,6 +41,7 @@ import re
 import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin
+from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
@@ -51,6 +52,14 @@ SITES = {
     "Feed Strategy": "https://www.feedstrategy.com",
 }
 LIST_PATH = "/latest-news"  # 2사이트 공통 확인됨
+
+# 2026-07-21 추가: WATT Global Media(WATTAgNet/Feed Strategy 둘 다 이 회사
+# 발행) 본사가 일리노이주 록포드(Rockford, IL)라는 걸 검색으로 확인 -
+# 미국 중부시간대. 발행일에 시:분:초가 없어(_parse_published_time 참고)
+# 정확한 발행 시각까지는 알 수 없지만, 최소한 "그 날짜"를 어느 시간대
+# 기준으로 해석해야 하는지는 이걸로 정할 수 있다. ZoneInfo를 쓰면 서머타임
+# (CDT/CST) 전환도 자동으로 반영됨.
+WATT_SOURCE_TIMEZONE = ZoneInfo("America/Chicago")
 
 DAYS_BACK = 7
 MAX_PAGES = 30 #이 이상이면 문제가 있음...
@@ -114,10 +123,25 @@ def _parse_published_time(raw: str) -> datetime:
     cleaned = ORDINAL_PATTERN.sub(r"\1", raw)  # "1st" -> "1"
     try:
         dt = datetime.strptime(cleaned, "%b %d, %Y")
-        # 시각 정보 자체가 없는 형식이라 항상 00:00:00 - tzinfo는 UTC로 가정.
-        # 날짜 단위 계산만 쓰는 scorer.py 특성상 타임존 오차가 결과에 미치는
-        # 영향은 무시 가능한 수준 (경계 케이스라 해봐야 최대 하루 오차).
-        return dt.replace(tzinfo=timezone.utc)
+        # 2026-07-21 수정: 예전엔 시각 정보가 없다는 이유로 그냥 UTC 자정으로
+        # 박아버렸는데, 실제로는 WATT Global Media 본사(WATTAgNet/Feed
+        # Strategy 둘 다 이 회사 발행)가 일리노이주 록포드(Rockford, IL) -
+        # 미국 중부시간대(America/Chicago, 서머타임 자동 적용)에 있다는 걸
+        # 확인함(검색으로 본사 주소 확인). 그러니 "Jul 13th"는 UTC 자정이
+        # 아니라 미국 중부시간 자정에 더 가깝다고 보는 게 맞음.
+        #
+        # 이 프로젝트의 시간대 원칙: 네이버(국내)는 API가 이미 정확한
+        # +09:00(KST)를 주므로 그대로 두고, GDELT/WATT(해외)는 UTC로
+        # 통일한다 - "국내는 KST, 해외는 UTC" 일관된 축으로 맞추기 위함
+        # (담당자 결정, 2026-07-21).
+        #
+        # 여전히 시:분:초 단위 정밀도는 없다(사이트가 날짜만 줌) - "그날의
+        # 미국 중부시간 자정"을 대표값으로 잡고 UTC로 환산하는 근사치다.
+        # scorer.py가 일 단위 정수로만 경과일을 계산하므로 이 정도 근사로도
+        # 충분하지만, 예전(그냥 UTC 자정으로 착각)보다는 최대 하루 가까이
+        # 나던 오차가 훨씬 줄어든다.
+        dt_chicago = dt.replace(tzinfo=WATT_SOURCE_TIMEZONE)
+        return dt_chicago.astimezone(timezone.utc)
     except ValueError:
         pass
 
