@@ -12,6 +12,13 @@ naver_collector / watt_collector와 반환 형태가 다르다는 점이 핵심 
     3.1 규칙대로 스코어링에는 안 들어가고 결과물에 참고 지표로만 별도 표시됨 (저장 레이어가 알아서 분리 저장)
 (2026-07-13 논의 후 확정 - "방식 A")
 
+~~2026-07-21 - 시계열 수집 완전 제거~~: 위 tuple(articles, timeline) 반환
+형태 자체는 하위호환을 위해 그대로 유지하지만, timeline은 이제 항상 빈
+딕셔너리(`{}`)다 - 실전 규모 테스트에서도 429로 16분 만에 실패하는 등
+불안정성이 해소가 안 됐고, 저장 레이어가 없어 이 데이터를 애초에 아무
+데도 안 쓰고 있었던 것도 제거 결정에 힘을 실음. 상세 → `collect()` 함수
+docstring 및 `_collect_timeline_for_keyword` 참고(코드는 남겨둠, 호출만 제거).
+
 *** 아직 검증 전 초안입니다 — "확인 필요" 표시된 부분(특히 seendate 파싱)은 실제 실행 결과를 보고 나서 다음 단계에서 고쳐야 함 (watt_collector와 동일한 방식) ***
 
 --- 2026-07-14 실행 테스트 메모 ---
@@ -702,6 +709,13 @@ def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
     한 키워드에 대해 timelinevol/timelinevolraw를 수집한다. 실패 시 None.
     (2026-07-14(4차) - collect() 안에 있던 로직을 분리, 동작은 기존과 동일)
 
+    ** 2026-07-21 - `collect()`에서 더 이상 호출 안 함 **
+    시계열 수집 자체를 완전히 제거하기로 결정(실전 규모 테스트에서도 429
+    백오프를 다 쓰고 16분 만에 실패하는 등 불안정성이 해소가 안 됨, 저장
+    레이어가 없어 데이터를 애초에 아무 데도 안 쓰고 있었던 것도 근거).
+    함수 자체는 참고/향후 복원 가능성을 위해 코드에 남겨둠 - 죽은 코드지만
+    실행되지 않으므로 부작용은 없음.
+
     2026-07-21: article_search용 TIMESPAN(7d) 대신 TIMELINE_TIMESPAN(8d)을
     쓴다 - "1주일 초과"부터 GDELT가 일 단위 해상도로 전환해주는 걸 이용해,
     이 프로젝트에 필요 없는 시간 단위 디테일(7d 그대로 쓰면 166행/시간
@@ -730,20 +744,21 @@ def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
         return None
 
 
-def collect(keywords: list[str] | None = None, skip_timeline: bool = False) -> tuple[list[dict], dict]:
+def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     """
-    KEYWORDS_EN을 대상으로 GDELT에서 기사 메타데이터와 언급 시계열을 함께
-    수집한다. 이 함수가 gdelt_collector의 '진입점'.
+    KEYWORDS_EN을 대상으로 GDELT에서 기사 메타데이터를 수집한다.
+    이 함수가 gdelt_collector의 '진입점'.
 
     keywords: 지정하면 모듈 기본값(KEYWORDS_EN) 대신 이 리스트로 순회한다.
               (2026-07-14(3차) 추가 - 테스트 스크립트에서 키워드 수를 줄여
               빠르게 확인해보기 위한 용도. main.py의 정식 실행은 인자 없이
               collect()를 호출하므로 기존 동작과 완전히 동일함)
-    skip_timeline: True면 timeline_search(timelinevol/timelinevolraw) 호출을
-              건너뛰고 article_search만 수행한다. (2026-07-14(3차) 추가 -
-              language/sourcecountry 분포 확인이 목적일 땐 시계열 데이터가
-              필요 없고, API 호출이 훨씬 줄어 빠름. 정식 운영에서는 시계열이
-              필요하므로 기본값 False 유지)
+
+    ** 2026-07-21 - 시계열 수집 완전 제거 **
+    예전엔 `skip_timeline` 파라미터로 시계열(timelinevol/timelinevolraw)
+    수집 여부를 껐다 켰다 했는데, 이제 아예 파라미터 자체를 없앴다 -
+    시계열을 완전히 뺀 결정이라 "켜고 끄는 스위치"가 필요 없어짐. 상세
+    배경은 아래 반환값 설명 및 함수 본문의 "2026-07-21 결정" 주석 참고.
 
     ** 2026-07-20 재구성(2차) - 적응형 배치 수집 (담당자 3안 채택) **
     2026-07-16에 키워드를 OR로 전부 묶었다가(250건 상한을 한 키워드가
@@ -776,9 +791,10 @@ def collect(keywords: list[str] | None = None, skip_timeline: bool = False) -> t
 
     반환값:
       articles: 공통 스키마 리스트. 다음 단계(정규화/이슈그룹핑)로 그대로 전달됨
-      timeline: {키워드: {"vol": [...], "volraw": [...]}} 형태. skip_timeline=True면
-                항상 빈 딕셔너리.
-                스코어링에는 안 들어가고 결과물에 참고 지표로만 별도 표시 (3.1 규칙)
+      timeline: 2026-07-21부터 시계열 수집을 완전히 제거해서 **항상 빈
+                딕셔너리(`{}`)**. `main.py`가 여전히 `(articles, timeline)`
+                튜플 형태로 언패킹하므로 반환값 개수는 그대로 유지 - 호출부
+                수정 없이 안전하게 제거하려는 의도.
     """
     gd = GdeltDoc()
     # keywords 인자로 명시적으로 넘겨준 게 있으면(테스트용) 그걸 그대로 쓰고,
@@ -856,17 +872,18 @@ def collect(keywords: list[str] | None = None, skip_timeline: bool = False) -> t
         print(f"[gdelt] 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
               f"기사 0건으로 처리됨): {failed_keywords}")
 
-    # --- 3단계: 시계열 수집 - 3.1 원칙대로 키워드별 개별 수집 유지 (합치지 않음) ---
-    if skip_timeline:
-        for keyword in active_keywords:
-            print(f"[gdelt] '{keyword}' 시계열 수집 스킵 (skip_timeline=True, 테스트 모드)")
-    else:
-        for keyword in active_keywords:
-            timeline_entry = _collect_timeline_for_keyword(gd, keyword)
-            if timeline_entry is not None:
-                timeline_by_keyword[keyword] = timeline_entry
-            time.sleep(REQUEST_INTERVAL)
-
+    # --- 2026-07-21 결정: 시계열 수집 완전 제거 ---
+    # timelinevol 단독(키워드 5개) 실전 규모 테스트에서도 429 백오프 4단계를
+    # 다 쓰고 16분 만에 실패하는 사례가 나옴 - 시계열은 원래도 "켰을 때 몇
+    # 시간, 끄면 10분" 수준으로 무거웠던 게 8일/일 단위 해상도(2026-07-21,
+    # TIMELINE_TIMESPAN)로 완화를 시도했음에도 여전히 불안정하다고 판단해
+    # 담당자가 최종적으로 제거를 결정함. 저장 레이어(5단계)가 아직 없어서
+    # 이 데이터를 애초에 아무 데도 안 쓰고 있었던 것도 제거 결정에 힘을 실음
+    # (9.5 섹션과 같은 결의 판단 - 안 쓰는 기능에 429/런타임 부담을 계속
+    # 감수할 이유가 없음).
+    #
+    # _collect_timeline_for_keyword 함수 자체는 코드에 남겨둔다(아래 참고) -
+    # 필요시 이 블록에서 다시 호출하기만 하면 복원 가능.
     return all_articles, timeline_by_keyword
 
 
@@ -906,14 +923,14 @@ def _print_distribution(articles: list[dict]) -> None:
 
 if __name__ == "__main__":
     # 터미널에서 python gdelt_collector.py 로 직접 실행했을 때만 동작.
+    # 2026-07-21: 시계열 수집을 완전히 제거해서(collect() 자체가 항상
+    # timeline={}를 반환) 여기서도 시계열 관련 출력을 뺐다 - 예전엔
+    # "시계열 수집된 키워드: []"처럼 매번 빈 리스트가 찍혀서 "이번엔 안
+    # 잡혔나?"로 헷갈릴 수 있었는데, 실제로는 애초에 안 부르는 거라 그
+    # 오해를 없앴다.
     articles, timeline = collect()
     print(f"\n총 {len(articles)}건 기사 수집 완료")
     for a in articles[:3]:
         print(a)
-    print(f"\n시계열 수집된 키워드: {list(timeline.keys())}")
-    if timeline:
-        first_keyword = next(iter(timeline))
-        print(f"\n'{first_keyword}' 시계열 샘플 (vol 앞 2건): {timeline[first_keyword]['vol'][:2]}")
-        print(f"'{first_keyword}' 시계열 샘플 (volraw 앞 2건): {timeline[first_keyword]['volraw'][:2]}")
 
     _print_distribution(articles)
