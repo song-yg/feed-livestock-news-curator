@@ -40,7 +40,6 @@ KEYWORD_SHEET_CSV_URL 환경변수가 없거나, 네트워크 실패, 시트 형
 import csv
 import io
 import os
-
 import requests
 
 

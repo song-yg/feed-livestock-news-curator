@@ -54,14 +54,12 @@ data/YYYY-WW/scored.json 등에서 지난주 파일을 읽어와 비교하는 �
 """
 
 from collections import Counter
-
 from keyword_tagger import CATEGORY_KEYWORDS
 import scorer
 
 
-# CATEGORY_KEYWORDS의 카테고리 순서 그대로 + "기타"를 마지막에 추가해서
-# 출력 순서를 고정한다 (키워드표 카테고리 번호 순 - keyword_tagger.py의
-# 동점 처리 결정적 규칙과 같은 이유: 실행마다 순서가 흔들리지 않도록)
+# CATEGORY_KEYWORDS의 카테고리 순서 그대로 + "기타"를 마지막에 추가해서 출력 순서를 고정한다.
+# (키워드표 카테고리 번호 순 - keyword_tagger.py의 동점 처리 결정적 규칙과 같은 이유: 실행마다 순서가 흔들리지 않도록)
 _CATEGORY_ORDER = list(CATEGORY_KEYWORDS.keys()) + ["기타"]
 
 
@@ -69,9 +67,8 @@ def count_by_category(articles: list[dict]) -> Counter:
     """
     기사 리스트 하나를 받아 카테고리별 건수를 센다.
 
-    articles는 keyword_tagger.tag_articles()가 이미 "category" 필드를
-    채워둔 상태여야 한다 (2.2 태깅이 먼저 실행돼 있어야 함 - 이 함수 자체는
-    태깅을 하지 않고, 이미 붙어있는 category 필드만 집계한다).
+    articles는 keyword_tagger.tag_articles()가 이미 "category" 필드를v채워둔 상태여야 한다.
+    (2.2 태깅이 먼저 실행돼 있어야 함 - 이 함수 자체는 태깅을 하지 않고, 이미 붙어있는 category 필드만 집계한다).
     """
     return Counter(a.get("category", "기타") for a in articles)
 
@@ -81,8 +78,7 @@ def aggregate(articles: list[dict]) -> dict[str, Counter]:
     3.1 원칙대로 국내/해외 두 축으로 나눠서 각각 카테고리별 건수를 집계한다.
 
     반환값: {"국내": Counter, "해외": Counter}
-    (scorer.split_domestic_international과 동일한 축 정의 - 네이버=국내,
-    WATT/GDELT=해외)
+    (scorer.split_domestic_international과 동일한 축 정의 - 네이버=국내, WATT/GDELT=해외)
     """
     domestic, international = scorer.split_domestic_international(articles)
     return {

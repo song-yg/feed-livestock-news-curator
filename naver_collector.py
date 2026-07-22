@@ -12,7 +12,6 @@ import requests
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-
 import keyword_source
 
 # 실행 시점에 .env 파일을 찾아서 그 안의 값들을 환경변수로 등록해준다.
