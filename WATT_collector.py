@@ -146,8 +146,12 @@ def _collect_site(page, source_name: str, base_url: str) -> list[dict]:
                 continue
 
             if not _is_recent(detail["published_at"], DAYS_BACK):
-                # 최신순 정렬이 확실하므로, 여기서 바로 이 사이트 수집을 끝낸다
-                print(f"[watt] {source_name} {page_num}페이지에서 기간 이탈, 종료")
+                #로깅 추가
+                cutoff = datetime.now(detail["published_at"].tzinfo) - timedelta(days=DAYS_BACK)
+                print(f"[watt] {source_name} {page_num}페이지에서 기간 이탈, 종료 "
+                      f"(기사: \"{item['title']}\" / 판정된 발행일: "
+                      f"{detail['published_at'].isoformat()} / 기준선(오늘-{DAYS_BACK}일): "
+                      f"{cutoff.isoformat()})")
                 hit_cutoff = True
                 break
 
@@ -193,7 +197,8 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
 
         if title and link and not any(pat in link for pat in EXCLUDED_PATH_PATTERNS):
             results.append({"title": title, "url": link, "category": category})
-
+            
+    print(f"[watt] {url} - 목록에서 {len(results)}개 항목 읽음")
     return results
 
 # ------------------------------------------------------------------
