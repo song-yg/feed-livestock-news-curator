@@ -62,7 +62,9 @@ LIST_PATH = "/latest-news"  # 2사이트 공통 확인됨
 WATT_SOURCE_TIMEZONE = ZoneInfo("America/Chicago")
 
 DAYS_BACK = 7
-MAX_PAGES = 30 #이 이상이면 문제가 있음...
+# MAX_PAGES 상수는 2026-07-22 페이지네이션 제거(위 _collect_site docstring
+# 참고 - Cloudflare가 쿼리스트링 무시하고 캐싱하는 것으로 확인돼 1페이지만
+# 수집하기로 결정)로 더 이상 쓰이지 않아 삭제함.
 
 # requests의 UA만 바꿔도 403이 계속 떠서(TLS 핑거프린팅 등 추정) Playwright로 전환.
 # 완전히 정체를 숨기지는 않기 위해 커스텀 헤더에 연락처는 남겨둠.
@@ -187,67 +189,64 @@ def collect() -> list[dict]:
 
 
 def _collect_site(page, source_name: str, base_url: str) -> list[dict]:
+    """
+    2026-07-22 대응: WATTAgNet 응답 헤더(`cf-cache-status: HIT`, `age`가 요청
+    간격만큼 정확히 계속 늘어남)로 실측 확인한 결과, Cloudflare가 쿼리스트링
+    (`?page=N`)을 무시하고 경로(`/latest-news`) 기준으로만 캐싱하고 있음이
+    확인됨 - 즉 `?page=2`, `?page=3`... 을 아무리 요청해도 전부 같은 1페이지
+    캐시 스냅샷만 돌아옴(URL 파라미터/헤더로 우회 시도했으나 CDN 설정 자체라
+    코드로 뚫을 방법이 없음, 위 EXTRA_HEADERS 주석 참고).
+
+    이게 그동안 실행마다 0건/10건/360건처럼 결과가 요동친 근본 원인이었음
+    - "새 페이지를 계속 읽는 줄" 알았지만 실제로는 매번 같은 1페이지 캐시를
+    반복 파싱하고 있었고, 그 캐시 스냅샷이 우연히 뭘 담고 있었는지에 따라
+    결과가 완전히 달라진 것.
+
+    담당자 결정(2026-07-22): 페이지네이션을 아예 시도하지 않고 1페이지(캐시된
+    최신 스냅샷, 최대 12개)만 수집한다. 캐시가 주기적으로 갱신되므로(실측
+    `age` 기준 대략 40분 전후) 1페이지 자체는 그럭저럭 최신이고, 안 뚫리는
+    2페이지 이상을 억지로 시도하다 가짜로 부풀려진 데이터(360건 사고)를
+    만드는 것보다 안전하다는 판단. 7일 안에 12건보다 많은 기사가 나온 날엔
+    일부 누락될 수 있다는 트레이드오프는 감수하기로 함.
+    """
+    list_url = f"{base_url}{LIST_PATH}"
+    items = _fetch_listing_page(page, list_url)
+
+    if not items:
+        print(f"[watt] {source_name}: 항목 없음, 종료")
+        return []
+
+    print(f"[watt] {source_name} - 첫 항목: \"{items[0]['title']}\" "
+          f"({items[0]['url']}) / 마지막 항목: \"{items[-1]['title']}\"")
+
     results = []
-
-    for page_num in range(1, MAX_PAGES + 1):
-        # 2026-07-22: URL에 캐시 버스팅 타임스탬프(`_cb=...`)를 붙였다가,
-        # 모든 페이지가 1페이지와 완전히 동일한 콘텐츠(같은 첫/마지막 항목)를
-        # 반환하는 것이 실측으로 확인됨 - 사이트가 이 파라미터를 만나면
-        # `page=N`을 무시하고 항상 1페이지를 돌려주는 것으로 추정(원인 미확정,
-        # 사이트 쪽 라우팅/캐시 키 처리 방식 추정). 캐시 문제보다 훨씬 심각한
-        # 회귀라 즉시 제거 - 헤더 기반 캐시 무력화(EXTRA_HEADERS의
-        # Cache-Control/Pragma)만 남기고, URL 쿼리 파라미터 방식은 폐기.
-        list_url = f"{base_url}{LIST_PATH}" if page_num == 1 else f"{base_url}{LIST_PATH}?page={page_num}"
-        items = _fetch_listing_page(page, list_url)
-
-        if not items:
-            print(f"[watt] {source_name} {page_num}페이지: 항목 없음, 종료")
-            break
-
-        # 2026-07-22 추가: 캐시 버스팅 파라미터 도입 후 23페이지(276건)를
-        # 넘어도 "기간 이탈"이 안 뜨는 이상 현상 발생(담당자 실측) - 페이지네이션
-        # 자체가 깨져서 같은 콘텐츠를 반복해서 주는 건 아닌지 바로 확인할 수
-        # 있게, 각 페이지의 첫/마지막 항목 제목을 그대로 로그에 남긴다.
-        print(f"[watt] {source_name} {page_num}페이지 - 첫 항목: \"{items[0]['title']}\" "
-              f"({items[0]['url']}) / 마지막 항목: \"{items[-1]['title']}\"")
-
-        hit_cutoff = False
-        for item in items:
-            time.sleep(REQUEST_INTERVAL)
-            detail = _fetch_detail(page, item["url"])
-            if detail is None:
-                # 상세 페이지 파싱 실패 - 이 기사만 건너뜀 (전체 중단 아님)
-                continue
-
-            if not _is_recent(detail["published_at"], DAYS_BACK):
-                # 최신순 정렬이 확실하므로, 여기서 바로 이 사이트 수집을 끝낸다
-                # 2026-07-22 추가: "왜" 기간 이탈로 판정됐는지 실제 날짜 값을
-                # 남긴다 - 담당자가 같은 사이트에서 실행마다 0건/10건/360건
-                # 처럼 크게 다른 결과를 실측 확인했는데, 기존 로그로는 원인
-                # 파악이 안 돼서(파싱된 날짜가 진짜로 오래된 건지, 아니면
-                # 날짜 파싱 자체가 잘못돼서 최신 기사를 오래된 걸로 오판한
-                # 건지 구분 불가) 추가함.
-                cutoff = datetime.now(detail["published_at"].tzinfo) - timedelta(days=DAYS_BACK)
-                print(f"[watt] {source_name} {page_num}페이지에서 기간 이탈, 종료 "
-                      f"(기사: \"{item['title']}\" / 판정된 발행일: "
-                      f"{detail['published_at'].isoformat()} / 기준선(오늘-{DAYS_BACK}일): "
-                      f"{cutoff.isoformat()})")
-                hit_cutoff = True
-                break
-
-            results.append({
-                "source": source_name,
-                "title": item["title"],
-                "url": item["url"],
-                "published_at": detail["published_at"].isoformat(),
-                "category": item["category"],
-                "body": detail["body"],  # 메모리에서만 사용 - repo 저장 시 제외 (저장 레이어 책임)
-            })
-
-        if hit_cutoff:
-            break
-
+    for item in items:
         time.sleep(REQUEST_INTERVAL)
+        detail = _fetch_detail(page, item["url"])
+        if detail is None:
+            # 상세 페이지 파싱 실패 - 이 기사만 건너뜀 (전체 중단 아님)
+            continue
+
+        if not _is_recent(detail["published_at"], DAYS_BACK):
+            # 1페이지(캐시된 최신 12개) 안에서도 7일 지난 기사는 제외한다.
+            # 페이지네이션이 없으니 "여기서 종료"할 다음 페이지 자체가 없어,
+            # 그냥 이 기사만 걸러내고 나머지 항목은 계속 확인한다(예전처럼
+            # break해서 전체를 끝내지 않음 - 1페이지 안에서 순서가 뒤섞여
+            # 있을 가능성에도 안전하도록).
+            cutoff = datetime.now(detail["published_at"].tzinfo) - timedelta(days=DAYS_BACK)
+            print(f"[watt] {source_name} - 기간 밖 기사 제외 (기사: \"{item['title']}\" / "
+                  f"판정된 발행일: {detail['published_at'].isoformat()} / "
+                  f"기준선(오늘-{DAYS_BACK}일): {cutoff.isoformat()})")
+            continue
+
+        results.append({
+            "source": source_name,
+            "title": item["title"],
+            "url": item["url"],
+            "published_at": detail["published_at"].isoformat(),
+            "category": item["category"],
+            "body": detail["body"],  # 메모리에서만 사용 - repo 저장 시 제외 (저장 레이어 책임)
+        })
 
     return results
 
