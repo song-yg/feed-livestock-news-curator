@@ -190,15 +190,14 @@ def _collect_site(page, source_name: str, base_url: str) -> list[dict]:
     results = []
 
     for page_num in range(1, MAX_PAGES + 1):
-        # 2026-07-22 추가: 캐시 우회용 타임스탬프 쿼리 파라미터. 이 URL은
-        # item["url"](상세 페이지 링크, 기사 dict에 저장돼 이후 dedup 등에
-        # 쓰임)과는 별개로 "목록 페이지 탐색용"으로만 쓰이므로, 파라미터를
-        # 붙여도 저장되는 기사 데이터에는 영향 없음.
-        cache_bust = f"_cb={int(time.time())}"
-        if page_num == 1:
-            list_url = f"{base_url}{LIST_PATH}?{cache_bust}"
-        else:
-            list_url = f"{base_url}{LIST_PATH}?page={page_num}&{cache_bust}"
+        # 2026-07-22: URL에 캐시 버스팅 타임스탬프(`_cb=...`)를 붙였다가,
+        # 모든 페이지가 1페이지와 완전히 동일한 콘텐츠(같은 첫/마지막 항목)를
+        # 반환하는 것이 실측으로 확인됨 - 사이트가 이 파라미터를 만나면
+        # `page=N`을 무시하고 항상 1페이지를 돌려주는 것으로 추정(원인 미확정,
+        # 사이트 쪽 라우팅/캐시 키 처리 방식 추정). 캐시 문제보다 훨씬 심각한
+        # 회귀라 즉시 제거 - 헤더 기반 캐시 무력화(EXTRA_HEADERS의
+        # Cache-Control/Pragma)만 남기고, URL 쿼리 파라미터 방식은 폐기.
+        list_url = f"{base_url}{LIST_PATH}" if page_num == 1 else f"{base_url}{LIST_PATH}?page={page_num}"
         items = _fetch_listing_page(page, list_url)
 
         if not items:
