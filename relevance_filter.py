@@ -57,9 +57,11 @@ LLM_API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
 _OPENROUTER_X_TITLE = "feed-livestock-news-relevance-filter"
 
 # 한 번의 API 호출에 몇 건까지 같이 물어볼지. issue_grouper의 LLM_BATCH_SIZE(20,
-# 페어 단위)보다 넉넉하게 잡음 - 페어보다 가벼운 단건 판정이라서. 잠정값 -
-# 파싱 실패율 실측하면서 조정 필요.
-BATCH_SIZE = 30
+# 페어 단위)와 맞춤. 원래 30으로 시작했으나 실측 결과 무료 라우터가 30건
+# 배치에서 개수를 자주 못 맞춰서(29건/31건 등) 20으로 하향 - id 기반 매칭
+# (아래 _call_llm 참고)으로 어긋나도 배치 전체를 안 버리게 됐지만, 애초에
+# 어긋나는 빈도 자체를 줄이는 것도 유효한 보강이라 같이 적용.
+BATCH_SIZE = 20
 
 # 기사 본문/요약 스니펫을 프롬프트에 넣을 때 자를 최대 길이. 너무 길면 배치당
 # 토큰이 커져서 비용/실패 위험이 늘고, 판정에는 앞부분 몇 문장이면 충분하다고
@@ -98,8 +100,8 @@ _SYSTEM_PROMPT = (
     "걸러내는 것보다, 무관한 기사가 몇 개 더 통과하는 편이 안전하다).\n\n"
     "제목 언어가 서로 다를 수 있다(한국어/영어/기타 언어 혼재) - 언어와 "
     "무관하게 같은 기준으로 판단한다.\n\n"
-    "다른 설명 없이 JSON 배열만 출력한다. 각 원소는 {\"relevant\": true|false} "
-    "형태이며, 입력받은 기사의 순서와 개수를 정확히 맞춰야 한다."
+    "다른 설명 없이 JSON 배열만 출력한다. 각 원소는 {\"id\": 번호, \"relevant\": "
+    "true|false} 형태이며, id는 입력받은 기사의 번호와 정확히 일치해야 한다."
 )
 
 
@@ -127,8 +129,9 @@ def _build_user_prompt(batch: list[dict]) -> str:
             f'{idx}. 제목: "{title}" / 카테고리: {category} / 요약: {snippet_part}'
         )
     lines.append(
-        f"\n총 {len(batch)}건이다. 이 개수 그대로 JSON 배열로만 답하라 (예: "
-        f'[{{"relevant": true}}, {{"relevant": false}}, ...]).'
+        f'\n총 {len(batch)}건이다. 각 원소에 위 번호를 "id"로 그대로 포함해서 '
+        f'JSON 배열로만 답하라 (예: [{{"id": 1, "relevant": true}}, '
+        f'{{"id": 2, "relevant": false}}, ...]). id를 빠뜨리거나 순서를 바꾸지 마라.'
     )
     return "\n".join(lines)
 
@@ -192,18 +195,39 @@ def _call_llm(batch: list[dict], api_key: str) -> list[bool] | None:
               f"({len(batch)}건) 전부 통과 처리: {type(e).__name__} - {e!r}")
         return None
 
-    if not isinstance(parsed, list) or len(parsed) != len(batch):
+    if not isinstance(parsed, list) or not parsed:
         actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
-        print(f"[relevance_filter] LLM({LLM_PROVIDER}) 출력 개수/형식 불일치"
-              f"(기대 {len(batch)}, 실제 {actual}) - 이 배치 전부 통과 처리")
+        print(f"[relevance_filter] LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 "
+              f"아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 통과 처리")
         return None
 
-    try:
-        return [bool(item["relevant"]) for item in parsed]
-    except (KeyError, TypeError) as e:
-        print(f"[relevance_filter] LLM({LLM_PROVIDER}) 출력 항목 형식 이상 - "
-              f"이 배치 전부 통과 처리: {type(e).__name__} - {e!r}")
-        return None
+    # 2026-07-22 변경: 기존엔 "출력 개수 != 입력 개수"면 배치 전체를 버렸는데,
+    # 실측 결과 30건 중 1건만 빠지거나 하나 더 생기는 경미한 어긋남에도
+    # 배치 전체(29~31건)가 통째로 낭비되는 게 확인됨(담당자 지적). id를
+    # 명시적으로 주고받게 해서, 어긋나도 "일치하는 것만 살리고, 안 맞는 것만
+    # 개별적으로 안전한 기본값(통과)으로 처리"하도록 개선.
+    by_id: dict[int, bool] = {}
+    for item in parsed:
+        try:
+            by_id[int(item["id"])] = bool(item["relevant"])
+        except (KeyError, TypeError, ValueError):
+            continue  # id/relevant 형식이 이상한 개별 항목만 무시하고 계속 진행
+
+    results = []
+    missing = []
+    for idx in range(1, len(batch) + 1):
+        if idx in by_id:
+            results.append(by_id[idx])
+        else:
+            missing.append(idx)
+            results.append(True)  # 안전한 기본값 - 통과
+
+    if missing:
+        print(f"[relevance_filter] LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
+              f"(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 통과 처리, "
+              f"나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
+
+    return results
 
 
 def filter_articles(articles: list[dict]) -> list[dict]:

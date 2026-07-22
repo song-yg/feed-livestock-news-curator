@@ -44,6 +44,8 @@ USER_AGENT = (
 # TODO: songyg9977@gmail.com 실제 연락처로 교체 필요
 EXTRA_HEADERS = {
     "X-Crawler-Contact": "songyg9977@gmail.com",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
 }
 
 REQUEST_INTERVAL = 1.5
@@ -130,7 +132,11 @@ def _collect_site(page, source_name: str, base_url: str) -> list[dict]:
     results = []
 
     for page_num in range(1, MAX_PAGES + 1):
-        list_url = f"{base_url}{LIST_PATH}" if page_num == 1 else f"{base_url}{LIST_PATH}?page={page_num}"
+        cache_bust = f"_cb={int(time.time())}"
+        if page_num == 1:
+            list_url = f"{base_url}{LIST_PATH}?{cache_bust}"
+        else:
+            list_url = f"{base_url}{LIST_PATH}?page={page_num}&{cache_bust}"
         items = _fetch_listing_page(page, list_url)
 
         if not items:
@@ -197,7 +203,7 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
 
         if title and link and not any(pat in link for pat in EXCLUDED_PATH_PATTERNS):
             results.append({"title": title, "url": link, "category": category})
-            
+
     print(f"[watt] {url} - 목록에서 {len(results)}개 항목 읽음")
     return results
 
