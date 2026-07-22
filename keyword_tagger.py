@@ -119,6 +119,37 @@ def _build_flat_index():
 _FLAT_INDEX = _build_flat_index()
 
 
+def _dedupe_contained(terms: list[str]) -> list[str]:
+    """
+    2026-07-20 추가. 리스트 안에서 다른 항목의 부분 문자열인 항목은 제거한다
+    (대소문자 무시, 더 구체적인/긴 쪽을 남김).
+
+    배경: CATEGORY_KEYWORDS에 "feed cost"/"feed costs"처럼 한쪽이 다른 쪽의
+    부분 문자열인 쌍이 실제로 다수 존재함(전수 조사 결과 27건 - corn/corn
+    futures, wheat/wheat futures, 사료/배합사료업체, 계열화/계열화사업법 등).
+    이런 쌍은 같은 개념을 사실상 두 번 세는 것이라, 제목에 "feed costs"가
+    있으면 "feed cost"와 "feed costs" 둘 다 매칭돼 그 카테고리의 매칭
+    개수가 인위적으로 부풀려짐 - tag_title()의 "가장 많이 매칭된 카테고리
+    채택" 동점 처리 공정성에 직접 영향을줌(부풀려진 카테고리가 실제로는
+    안 이겨야 할 경합에서 이기는 경우가 생길 수 있음).
+
+    사전(CATEGORY_KEYWORDS) 자체는 원본 키워드표를 그대로 옮긴 것이라는
+    이 모듈의 원칙(모듈 docstring 참고)을 지키기 위해, 사전을 고치는 대신
+    이 집계 단계에서 구조적으로 해결한다 - 사전에 두 표현이 다 남아있어도
+    "같은 언급"으로 인식되면 카운트는 1로만 잡힌다(더 구체적인 표현 쪽을
+    matched_terms에 남겨서 정보 손실은 없음).
+
+    예: ["corn", "corn futures", "CBOT corn"] -> ["corn futures", "CBOT corn"]
+    """
+    result = []
+    for term in terms:
+        term_lower = term.lower()
+        if any(term != other and term_lower in other.lower() for other in terms):
+            continue  # 리스트 안의 다른 항목에 완전히 포함되면 제외
+        result.append(term)
+    return result
+
+
 def tag_title(title: str) -> tuple[str, list[str]]:
     """
     제목 하나를 카테고리에 매칭한다.
@@ -130,6 +161,11 @@ def tag_title(title: str) -> tuple[str, list[str]]:
     사전에 정의된 순서(= 키워드표 카테고리 번호 순) 상 먼저 나오는 쪽을 채택 -
     사전 순서 자체에 우선순위 의미는 없지만, 결과가 실행마다 흔들리지 않도록
     결정적(deterministic) 규칙 하나는 필요해서 정함.
+
+    2026-07-20 수정: 카테고리별 원 매칭 리스트에 _dedupe_contained를 적용해서,
+    "corn"/"corn futures"처럼 한쪽이 다른 쪽에 포함되는 매칭은 하나로 센다
+    (위 _dedupe_contained 참고 - 매칭 개수 인위적 부풀림이 동점 처리 공정성을
+    해치는 걸 방지).
 
     반환값: (category, matched_terms)
       - 아무 카테고리에도 안 걸리면 ("기타", []) - 2.2 스펙대로 기사를 탈락시키지
@@ -143,7 +179,8 @@ def tag_title(title: str) -> tuple[str, list[str]]:
     best_matches: list[str] = []
 
     for category, flat_terms in _FLAT_INDEX.items():
-        matches = [orig for lower, orig in flat_terms if lower in title_lower]
+        raw_matches = [orig for lower, orig in flat_terms if lower in title_lower]
+        matches = _dedupe_contained(raw_matches)
         if len(matches) > len(best_matches):
             best_category = category
             best_matches = matches
@@ -245,3 +282,16 @@ if __name__ == "__main__":
     for t in sample_titles:
         category, matched = tag_title(t)
         print(f"[{category:15s}] {t}  <- {matched}")
+
+    # 2026-07-20 추가 - 부분 문자열 포함 관계인 매칭이 중복 집계되지 않는지 검증
+    # ("feed cost"가 "feed costs"의 부분 문자열이라 실제로 겹치는 게 확인된 사례)
+    _, matched_dup = tag_title("Global feed costs surge amid grain shortage")
+    assert not ("feed cost" in matched_dup and "feed costs" in matched_dup), \
+        "feed cost/feed costs가 중복 집계됨 - _dedupe_contained 회귀"
+    print(f"\n[검증] 'feed costs' 제목 매칭 결과 (중복 해소 확인): {matched_dup}")
+
+    _, matched_corn = tag_title("CBOT corn futures rally on export demand")
+    assert "corn" not in matched_corn, "일반형 'corn'이 안 걸러지고 남아있음"
+    print(f"[검증] 'CBOT corn futures' 제목 매칭 결과: {matched_corn}")
+
+    print("\n[keyword_tagger] 자체 점검 통과 (매칭 로직 + 부분문자열 중복 해소 검증)")
