@@ -172,12 +172,6 @@ def _collect_site(page, source_name: str, base_url: str) -> list[dict]:
 def _fetch_listing_page(page, url: str) -> list[dict]:
     page.goto(url, timeout=30000, wait_until="networkidle")
 
-    # 확인 완료 (2026-07-14 WATTAgNet 11건 Playwright 실행 / 2026-07-15
-    # Feed Strategy 라이브 페이지 대조):
-    # "제목 링크로 보이는 <h5><a>" 패턴이 실제 목록 아이템과 일치함을 확인.
-    # 오탐(광고/추천 위젯 포함) 없이 정상 동작. (Feed Strategy는 실제 코드
-    # 실행이 아니라 라이브 페이지 조회로 구조만 대조한 것 - 위 모듈 docstring
-    # "검증 상태" 참고)
     try:
         page.wait_for_selector("h5 a, h4 a", timeout=15000)
     except Exception:
@@ -192,9 +186,6 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
         title = heading.get_text(strip=True)
         link = urljoin(url, heading["href"])
 
-        # 확인 완료: 헤드라인 바로 앞 카테고리 링크 방식으로 정상 추출됨
-        # (WATTAgNet 11건 실행 기준 2026-07-14 / Feed Strategy는 2026-07-15
-        # 라이브 페이지 대조로 같은 패턴 확인 - 위 모듈 docstring 참고)
         category = None
         prev_link = heading.find_previous("a")
         if prev_link and prev_link.get_text(strip=True):
@@ -230,9 +221,6 @@ def _fetch_detail(page, url: str) -> dict | None:
         print(f"[watt] {e}")
         return None
 
-    # 본문 컨테이너 class를 몰라서 "추천/관련기사 위젯 전 <p> 태그 전부"로
-    # 긁는 방식으로 짰었는데, 실제 기사로 전체 출력 검증해본 결과 위젯 텍스트
-    # 섞임 없이 깔끔하게 추출됨 확인 완료 (2026-07-13) - 이 방식으로 확정.
     paragraphs = []
     for p_tag in soup.find_all("p"):
         text = p_tag.get_text(strip=True)

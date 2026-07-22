@@ -839,6 +839,21 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
                       f"{int(CROWDING_SHARE_THRESHOLD * 100)}% 이상 차지 추정) - "
                       f"나머지 키워드 {others} 개별 재요청으로 보충 예정")
                 pending_individual.extend(others)
+            elif len(batch_articles) >= MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
+                # 2026-07-22 추가: 특정 키워드 하나가 독차지한 건 아니지만(그래서
+                # _detect_crowded_keywords는 아무도 못 잡음), 배치 결과가 상한
+                # 근처까지 찼다는 사실 자체는 여전히 위험 신호다 - 여러 키워드가
+                # "골고루" 상한에 밀려서 다들 조금씩 손실을 봤을 수 있는데, 이
+                # 경우 제목 기준 근사치 비율로는 아무도 40%(CROWDING_SHARE_THRESHOLD)를
+                # 못 넘어서 기존 로직은 "크라우딩 없음"으로 오판하고 그냥 지나쳤음
+                # (담당자 실측 지적으로 발견 - 기존엔 "한 키워드가 독차지"하는
+                # 패턴만 상정하고 설계돼서 이 케이스가 누락돼 있었음).
+                # 특정 원인 키워드를 지목할 수 없으므로, 안전하게 배치 전체를
+                # 개별 재요청 대상으로 보충한다.
+                print(f"[gdelt] 배치 {batch} 결과가 상한 근처까지 참({len(batch_articles)}건) - "
+                      f"특정 키워드 독차지는 아니라 크라우딩 주범을 지목할 수 없지만, "
+                      f"골고루 상한에 밀렸을 위험이 있어 배치 전체 {batch} 개별 재요청으로 보충 예정")
+                pending_individual.extend(batch)
         time.sleep(REQUEST_INTERVAL)
 
     # --- 2단계: 개별 보충 요청 - 실패한 것만 외부 재시도 라운드 ---
