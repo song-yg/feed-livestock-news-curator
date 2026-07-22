@@ -259,7 +259,23 @@ EXCLUDED_PATH_PATTERNS = ("/brand-insights/",)
 
 
 def _fetch_listing_page(page, url: str) -> list[dict]:
-    page.goto(url, timeout=30000, wait_until="networkidle")
+    response = page.goto(url, timeout=30000, wait_until="networkidle")
+
+    # 2026-07-22 추가: 같은 사이트에서 실행마다 콘텐츠가 요동치는 원인이
+    # (a) CDN/캐시 계층이 오래된 스냅샷을 주는 것인지, (b) 안티봇 시스템이
+    # 자동화 트래픽을 감지해 의도적으로 다른(오래된/제한된) 콘텐츠를 주는
+    # 것인지 구분이 안 돼서(담당자 지적), 응답 헤더 중 캐시/서버 식별에
+    # 쓰이는 것들을 그대로 로그에 남긴다.
+    # - cf-cache-status/x-cache/age가 있고 HIT면 -> 캐시 문제 쪽에 무게
+    # - 이런 헤더가 없거나 MISS인데도 내용이 반복되면 -> 캐시가 아니라
+    #   서버가 매 요청마다 새로 렌더링하면서 의도적으로 다른 콘텐츠를 주는
+    #   것(안티봇 대응 등)일 가능성이 커짐
+    if response is not None:
+        headers = response.headers
+        interesting_keys = ("cf-cache-status", "x-cache", "age", "cache-control", "server", "cf-ray", "vary")
+        found = {k: headers[k] for k in interesting_keys if k in headers}
+        print(f"[watt] {url} - 응답 헤더(캐시/서버 관련): "
+              f"{found if found else '(해당 헤더 없음)'}")
 
     # 확인 완료 (2026-07-14 WATTAgNet 11건 Playwright 실행 / 2026-07-15
     # Feed Strategy 라이브 페이지 대조):
