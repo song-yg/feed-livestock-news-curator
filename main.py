@@ -57,6 +57,7 @@ import llm_summarizer
 from WATT_collector import collect as watt_collect  # noqa: N813 (파일명 규칙과 다르지만 기존 파일 그대로 사용)
 import keyword_tagger
 import category_aggregator
+import relevance_filter
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +263,13 @@ def run() -> None:
     keyword_tagger.tag_articles(articles)
     keyword_tagger.print_category_distribution(articles)
     keyword_tagger.print_uncategorized_sample(articles, sample_size=30)
+
+    print("\n=== [2.5] 관련성 필터 (LLM - 사료·축산업 뉴스가 아닌 기사 제외) ===")
+    # 2026-07-22 신설. 키워드 매칭만으로는 못 거르는 오매칭(동음이의어, 기관명
+    # 일부로만 등장, 각주성 언급 등)을 LLM이 제목/요약 맥락으로 판단해 걸러낸다
+    # - 이후 단계(임베딩 계산, 3차 LLM 그룹핑 보조)의 대상도 함께 줄어드는
+    # 효과가 있음. 자세한 설계 배경은 relevance_filter.py 모듈 docstring 참고.
+    articles = relevance_filter.filter_articles(articles)
 
     print("\n=== [2.1] 이슈 그룹핑 임베딩 모델 로드 (BGE-M3, 실행당 1회) ===")
     embedding_model = _load_embedding_model()
