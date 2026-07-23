@@ -158,7 +158,7 @@ jobs:
         run: python -u main.py
 
       - name: 유사도 디버그 CSV 업로드 (그룹핑 임계값 튜닝용)
-        # 2026-07-24 추가(담당자 요청): THRESHOLD/BORDERLINE_MARGIN을 눈으로
+        # 2026-07-23 추가(담당자 요청): THRESHOLD/BORDERLINE_MARGIN을 눈으로
         # 보고 직접 조정하고 싶다는 요청 - issue_grouper.export_similarity_scores()가
         # 만든 similarity_debug/similarity_scores.csv를 GitHub Actions
         # 아티팩트로 업로드한다. raw.json/scored.json/summary.md와 달리
@@ -179,7 +179,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: 저장 결과물(data/) 커밋 & 푸시
+      - name: 저장 결과물(data/, state/) 커밋 & 푸시
         # 2026-07-23 추가: storage.py가 data/YYYY-WW/에 raw.json/scored.json/
         # summary.md를 만들어도, 이 스텝이 없으면 GitHub-hosted 러너가 실행
         # 끝나고 통째로 폐기되면서 파일도 같이 사라진다(러너는 매번 완전히
@@ -187,6 +187,10 @@ jobs:
         # 결과물 아카이브"이자 "다음 주 지난주 대비 증감 비교의 재료"로 쓰려면
         # 반드시 리포에 커밋까지 해야 함(storage.py 모듈 docstring의 저장
         # 방식 결정 참고).
+        # 2026-07-23 추가: state/gdelt_skip_keywords.json(학습형 스킵 목록,
+        # gdelt_collector.py 참고)도 같은 이유로 커밋 대상에 추가 - data/와
+        # 성격은 다르지만(주차 무관, 계속 누적) 마찬가지로 다음 실행에
+        # 이어지려면 리포에 남아있어야 함.
         # 변경 사항이 없으면(예: main.py가 도중에 실패해 data/ 갱신이 없는
         # 경우) commit이 빈 커밋이 되지 않도록 diff 확인 후 조건부로 실행.
         #
@@ -203,9 +207,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/
+          git add data/ state/
           if git diff --cached --quiet; then
-            echo "data/ 변경 사항 없음 - 커밋 생략"
+            echo "data/, state/ 변경 사항 없음 - 커밋 생략"
           else
             git commit -m "chore: 사료축산뉴스 큐레이션 결과 저장 ($(date -u +%Y-%m-%d))"
             git pull --rebase origin main
