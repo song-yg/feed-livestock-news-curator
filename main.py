@@ -54,6 +54,8 @@ main.py를 6단계 전부 완성형으로 만들지 않고, 위 범위까지만 
 남겨둔다 (아래 _step6_deploy_todo).
 """
 
+from collections import defaultdict
+
 import gdelt_collector
 import naver_collector
 import scorer
@@ -64,6 +66,13 @@ import keyword_tagger
 import category_aggregator
 import relevance_filter
 import storage
+
+# 2026-07-23 신규: 카테고리별 Top N (국내/해외 축과 별개로, 카테고리 축에서도
+# Top N을 뽑는 기능 - 최종 목표인 "주간 Top N + 카테고리별 Top N" 중 카테고리
+# 축 담당). 처음엔 1로 시작 - LLM 요약 호출이 카테고리 수(최대 9개) x
+# 국내/해외(2) x 이 값만큼 늘어나서, OpenRouter 429 상황을 감안해 최소로
+# 시작하고 나중에 조정하기로 함(담당자 결정). 여기서만 바꾸면 전체에 반영됨.
+CATEGORY_TOP_N = 1
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +155,25 @@ def normalize(articles: list[dict]) -> list[dict]:
 # 3) 스코어링 (섹션 3) - scorer.py 그대로 사용
 # ---------------------------------------------------------------------------
 
-def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list[dict]]:
+def _is_korean_gdelt_article(article: dict) -> bool:
+    """
+    2026-07-23 개선: GDELT 소스 기사가 실제로 한국어(국내) 기사인지 판단한다.
+    처음엔 scorer._is_korean_title()(제목의 한글 유니코드 비율)만 썼는데,
+    raw.json을 직접 열어보다가 GDELT 응답에 이미 "language": "Korean" 같은
+    필드가 자체적으로 붙어 있는 걸 발견함(담당자 발견) - GDELT가 크롤링
+    시점에 이미 판별해둔 원본 신호라, 제목 글자를 세어 우리가 다시 추측하는
+    것보다 훨씬 신뢰도가 높음. language 필드가 있으면 그걸 우선 쓰고,
+    없는 경우(예: 이 필드가 비어있는 응답이 실제로 관측됨, 위 raw.json
+    "쯔양" 기사 중 하나가 sourcecountry는 빈 문자열이었던 사례 참고)에만
+    기존 글자 세기 방식으로 안전하게 fallback한다.
+    """
+    language = article.get("language")
+    if language:
+        return language == "Korean"
+    return scorer._is_korean_title(article.get("title", ""))
+
+
+def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list[dict], dict, dict]:
     """
     2.1 이슈 그룹핑(issue_grouper.group_issues) + 3.1/3.2 국내/해외 개별 랭킹(Top N)까지 수행.
     (2026-07-15, to_singleton_groups 임시 처리를 실제 그룹핑으로 교체 - 배경 문서 "진행할 것 — 최우선" 참조)
@@ -171,10 +198,15 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
     disease" 검색에 "구제역"이라는 단어를 쓴 순수 국내 기사가 걸리는 경우 -
     유튜버 닉네임 동음이의 협박 소송 기사가 실제로 "해외" Top1을 두 번이나
     도배한 사례로 실측 확인됨, 2026-07-22/23) 국내 이슈가 "해외" 축으로
-    잘못 분류된다. `scorer._is_korean_title()`(한글 유니코드 비율 체크,
-    라이브러리 없이 결정론적으로 판단 - 담당자 논의로 결정, 제목처럼 짧은
-    텍스트에서 langdetect류가 신뢰도가 떨어지는 것으로 알려져 있어 대신
-    채택)로 재분류함.
+    잘못 분류된다. `_is_korean_gdelt_article()`로 재분류함 - GDELT 응답에
+    이미 붙어있는 `language` 필드("Korean" 등, GDELT가 크롤링 시점에
+    자체 판별한 원본 신호)를 우선 쓰고, 이 필드가 없는 예외적인 경우에만
+    `scorer._is_korean_title()`(제목의 한글 유니코드 비율 체크)로 안전하게
+    fallback한다. 처음엔 `_is_korean_title()`만 썼는데, raw.json을 직접
+    열어보다가 GDELT가 이미 `language` 필드를 주고 있다는 걸 발견해서
+    (담당자 발견, 2026-07-23) 더 신뢰도 높은 이 신호를 우선하도록 개선함 -
+    제목 글자를 세어 우리가 다시 추측하는 것보다, GDELT 자체 판별 결과를
+    쓰는 게 더 정확함.
     **이전 실수**: 이 재분류 로직을 처음엔 `scorer.split_domestic_international()`
     에만 넣었었는데, 실제로 이 함수 아래 국내/해외 분리 로직은 그 함수를 안
     쓰고 이 함수(main.py의 score()) 안에 별도로 구현돼 있어서 수정이 실행
@@ -185,6 +217,15 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
 
     model: sentence_transformers.SentenceTransformer 인스턴스, 또는 None.
            None이면 issue_grouper.group_issues가 2차(임베딩) 없이 1차 결과만으로 안전하게 fallback한다 (아래 _load_embedding_model 참고).
+
+    ** 2026-07-23 신규: 카테고리별 Top N도 함께 계산해서 반환 **
+    최종 목표("주간 Top N + 카테고리별 Top N", 담당자 확정)에 맞춰, 국내/해외
+    축을 나눈 domestic_groups/international_groups 각각에 대해
+    scorer.score_by_category()로 카테고리별 Top N도 같이 계산한다. 카테고리
+    축도 국내/해외 축과 독립적으로 유지(교차 안 함 - 담당자가 "구분해서" 결정)
+    - 즉 "국내 질병명 Top N", "해외 질병명 Top N"처럼 최대 카테고리 9개 x
+    국내/해외 2개 = 18개 리스트가 나올 수 있음. N 값은 CATEGORY_TOP_N 상수
+    (현재 1)로 조정 가능.
     """
     groups = issue_grouper.group_issues(articles, model=model)
 
@@ -194,12 +235,12 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
         domestic_part = [
             a for a in group
             if a.get("source") == "네이버"
-            or (a.get("source") == "GDELT" and scorer._is_korean_title(a.get("title", "")))
+            or (a.get("source") == "GDELT" and _is_korean_gdelt_article(a))
         ]
         international_part = [
             a for a in group
             if a.get("source") != "네이버"
-            and not (a.get("source") == "GDELT" and scorer._is_korean_title(a.get("title", "")))
+            and not (a.get("source") == "GDELT" and _is_korean_gdelt_article(a))
         ]
         if domestic_part:
             domestic_groups.append(domestic_part)
@@ -209,7 +250,10 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
     domestic_ranked = scorer.score_and_rank(domestic_groups, top_n=top_n)
     international_ranked = scorer.score_and_rank(international_groups, top_n=top_n)
 
-    return domestic_ranked, international_ranked
+    domestic_category_ranked = scorer.score_by_category(domestic_groups, CATEGORY_TOP_N)
+    international_category_ranked = scorer.score_by_category(international_groups, CATEGORY_TOP_N)
+
+    return domestic_ranked, international_ranked, domestic_category_ranked, international_category_ranked
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +288,43 @@ def _load_embedding_model():
 # ---------------------------------------------------------------------------
 # 4)~6) 아직 미구현 - 자리만 표시
 # ---------------------------------------------------------------------------
+
+def _regroup_by_category(items: list[dict]) -> dict[str, list[dict]]:
+    """
+    scorer.score_by_category()가 붙여둔 item["category"]를 기준으로, 평평한
+    리스트를 다시 {카테고리: [항목, ...]} 형태로 묶는다. dict는 카테고리가
+    처음 등장한 순서를 그대로 유지한다(파이썬 dict가 삽입 순서를 보존하므로
+    - print/저장 시 순서가 뒤섞이지 않게 하기 위함).
+    """
+    regrouped: dict[str, list[dict]] = defaultdict(list)
+    for item in items:
+        regrouped[item.get("category", "미상")].append(item)
+    return dict(regrouped)
+
+
+def step4_category_llm_summary(domestic_category_ranked: dict[str, list[dict]],
+                                international_category_ranked: dict[str, list[dict]],
+                                ) -> tuple[dict[str, list[dict]], dict[str, list[dict]]]:
+    """
+    2026-07-23 신규. step4_llm_summary와 같은 (A)/(A-1) 로직을 카테고리별
+    Top N 결과에도 적용한다.
+
+    domestic_category_ranked/international_category_ranked는 각각
+    {카테고리: [항목, ...]} 형태(scorer.score_by_category 반환값)라서,
+    llm_summarizer.summarize_top_issues가 기대하는 "평평한 리스트"로 한 번
+    합쳤다가(카테고리 축마다 세션 하나로 묶어 API 호출 오버헤드를 줄이는
+    이점도 있음 - llm_summarizer.py의 세션 재사용 참고) 요약이 끝나면 다시
+    카테고리별로 묶어서 돌려준다(_regroup_by_category).
+    """
+    domestic_flat = [item for items in domestic_category_ranked.values() for item in items]
+    international_flat = [item for items in international_category_ranked.values() for item in items]
+
+    domestic_summarized_flat = llm_summarizer.summarize_top_issues(domestic_flat, label="국내-카테고리")
+    international_summarized_flat = llm_summarizer.summarize_top_issues(international_flat, label="해외-카테고리")
+
+    return (_regroup_by_category(domestic_summarized_flat),
+            _regroup_by_category(international_summarized_flat))
+
 
 def step4_llm_summary(domestic_ranked: list[dict],
                        international_ranked: list[dict]) -> tuple[list[dict], list[dict]]:
@@ -293,10 +374,13 @@ def run() -> None:
     print("\n=== [2.1] 이슈 그룹핑 임베딩 모델 로드 (BGE-M3, 실행당 1회) ===")
     embedding_model = _load_embedding_model()
 
-    print("\n=== [3] 스코어링 (2.1 이슈 그룹핑 + 국내/해외 개별 Top N) ===")
-    domestic_ranked, international_ranked = score(articles, embedding_model, top_n=5)
+    print("\n=== [3] 스코어링 (2.1 이슈 그룹핑 + 국내/해외 개별 Top N + 카테고리별 Top N) ===")
+    (domestic_ranked, international_ranked,
+     domestic_category_ranked, international_category_ranked) = score(articles, embedding_model, top_n=5)
     scorer.print_top_n("국내", domestic_ranked, n=5)
     scorer.print_top_n("해외", international_ranked, n=5)
+    scorer.print_category_top_n("국내", domestic_category_ranked, n=CATEGORY_TOP_N)
+    scorer.print_category_top_n("해외", international_category_ranked, n=CATEGORY_TOP_N)
 
     print("\n=== [3-보조] 카테고리 전체 집계 (국내/해외, 2026-07-14 신규) ===")
     # 2.1 이슈 그룹핑이 "동일 사건만" 묶는 좁은 정의라 큰 트렌드가 개별
@@ -313,6 +397,14 @@ def run() -> None:
     llm_summarizer.print_summaries("국내", domestic_summarized)
     llm_summarizer.print_summaries("해외", international_summarized)
 
+    print("\n=== [4-보조] LLM 요약 생성 (카테고리별 Top N, 국내/해외 각각) ===")
+    domestic_category_summarized, international_category_summarized = step4_category_llm_summary(
+        domestic_category_ranked, international_category_ranked)
+    for category, items in domestic_category_summarized.items():
+        llm_summarizer.print_summaries(f"국내-{category}", items)
+    for category, items in international_category_summarized.items():
+        llm_summarizer.print_summaries(f"해외-{category}", items)
+
     print("\n=== [5] 저장 (data/YYYY-WW/raw.json, scored.json, summary.md) ===")
     # 2026-07-23 추가: storage.py 내부는 이미 파일 단위로 안전하게 실패를
     # 흡수하도록 만들었지만(storage.py docstring 참고), 예상 못 한 예외까지
@@ -321,6 +413,7 @@ def run() -> None:
     # 다 출력된 이번 실행 결과(수집/스코어링/요약)는 그대로 남는다.
     try:
         saved_dir = storage.save_week(articles, domestic_summarized, international_summarized,
+                                       domestic_category_summarized, international_category_summarized,
                                        gdelt_timeline, failed_sources, category_distribution)
     except Exception as e:
         print(f"[main] 저장 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "

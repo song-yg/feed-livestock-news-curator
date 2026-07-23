@@ -99,8 +99,11 @@ def save_raw(directory: str, articles: list[dict]) -> str | None:
 
 
 def save_scored(directory: str, domestic_summarized: list[dict],
-                 international_summarized: list[dict], gdelt_timeline: dict,
-                 failed_sources: list[str], category_distribution: dict) -> str | None:
+                 international_summarized: list[dict],
+                 domestic_by_category: dict[str, list[dict]],
+                 international_by_category: dict[str, list[dict]],
+                 gdelt_timeline: dict, failed_sources: list[str],
+                 category_distribution: dict) -> str | None:
     """
     스코어링+요약 결과, 카테고리 전체 집계, 실패 소스, GDELT 시계열 참고
     지표를 scored.json 하나로 묶어 저장한다.
@@ -110,6 +113,14 @@ def save_scored(directory: str, domestic_summarized: list[dict],
     계산하려면 지난주 집계 결과가 파일로 남아있어야 하기 때문(2.1 이슈
     그룹핑 자체는 매주 새로 도니, 주 단위 비교는 이 파일을 통해서만 가능).
 
+    2026-07-23 신규: 카테고리별 Top N(국내/해외 각각 {카테고리: [항목, ...]})도
+    domestic_by_category/international_by_category로 같이 저장한다 -
+    scorer.score_by_category()가 이미 각 항목에 "category" 필드를 남겨두므로
+    (main.py의 _regroup_by_category 참고) 여기서는 그대로 저장만 하면 됨.
+    "category_distribution"(단순 집계 개수)과 이름이 헷갈리지 않게 구분해서
+    키를 붙임 - category_distribution은 개수만 세는 3-보조 지표이고, 이건
+    카테고리별 실제 Top N 이슈 목록이라 성격이 다름.
+
     2026-07-23 안정성 보완: save_raw와 동일한 이유로 파일 쓰기 실패를
     안전하게 흡수한다(로그 + None 반환).
     """
@@ -117,6 +128,14 @@ def save_scored(directory: str, domestic_summarized: list[dict],
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "domestic": [_strip_scored_item(item) for item in domestic_summarized],
         "international": [_strip_scored_item(item) for item in international_summarized],
+        "domestic_by_category": {
+            category: [_strip_scored_item(item) for item in items]
+            for category, items in domestic_by_category.items()
+        },
+        "international_by_category": {
+            category: [_strip_scored_item(item) for item in items]
+            for category, items in international_by_category.items()
+        },
         "category_distribution": category_distribution,
         "gdelt_timeline": gdelt_timeline,
         "failed_sources": failed_sources,
@@ -155,8 +174,22 @@ def _format_issue_section(item: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_category_sections(by_category: dict[str, list[dict]]) -> list[str]:
+    """카테고리별 Top N을 summary.md용 마크다운 줄 리스트로 만든다."""
+    lines = []
+    for category, items in by_category.items():
+        lines.append(f"\n#### {category}")
+        for item in items:
+            lines.append("")
+            lines.append(_format_issue_section(item))
+    return lines
+
+
 def save_summary_md(directory: str, week_label: str, domestic_summarized: list[dict],
-                     international_summarized: list[dict], failed_sources: list[str]) -> str | None:
+                     international_summarized: list[dict],
+                     domestic_by_category: dict[str, list[dict]],
+                     international_by_category: dict[str, list[dict]],
+                     failed_sources: list[str]) -> str | None:
     """
     사람이 바로 읽을 배포용 요약본. llm_summarizer.print_summaries와 같은
     내용을 마크다운 파일로 남긴다(9.4 안전장치 - 요약 유무와 무관하게 원문
@@ -167,6 +200,12 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
 
     2026-07-23 안정성 보완: save_raw/save_scored와 동일한 이유로 파일 쓰기
     실패를 안전하게 흡수한다(로그 + None 반환).
+
+    2026-07-23 신규: 국내/해외 각 섹션 밑에 "카테고리별 Top N" 하위 섹션을
+    추가한다(##### 대신 #### 레벨 - 국내/해외(##)보다 한 단계, 개별 이슈
+    제목(###)과도 겹치지 않게 구분). 카테고리가 하나도 없으면(이번 주 그
+    축에 "기타" 아닌 카테고리 이슈가 전혀 없었던 경우) 하위 섹션 자체를
+    생략한다.
     """
     lines = [f"# 사료·축산업 뉴스 큐레이션 - {week_label}", ""]
     lines.append(f"생성 시각(UTC): {datetime.now(timezone.utc).isoformat()}")
@@ -179,6 +218,9 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
             lines.append(_format_issue_section(item))
     else:
         lines.append("\n(이번 주 국내 이슈 없음)")
+    if domestic_by_category:
+        lines.append("\n### 국내 - 카테고리별 Top N")
+        lines.extend(_format_category_sections(domestic_by_category))
 
     lines.append("\n## 해외")
     if international_summarized:
@@ -187,6 +229,9 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
             lines.append(_format_issue_section(item))
     else:
         lines.append("\n(이번 주 해외 이슈 없음)")
+    if international_by_category:
+        lines.append("\n### 해외 - 카테고리별 Top N")
+        lines.extend(_format_category_sections(international_by_category))
 
     if failed_sources:
         lines.append("\n## 참고 - 이번 실행에서 실패한 소스")
@@ -205,8 +250,10 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
 
 
 def save_week(articles: list[dict], domestic_summarized: list[dict],
-              international_summarized: list[dict], gdelt_timeline: dict,
-              failed_sources: list[str], category_distribution: dict,
+              international_summarized: list[dict],
+              domestic_by_category: dict[str, list[dict]],
+              international_by_category: dict[str, list[dict]],
+              gdelt_timeline: dict, failed_sources: list[str], category_distribution: dict,
               base_dir: str = "data") -> str | None:
     """
     main.py에서 부르는 단일 진입점. raw.json/scored.json/summary.md를 한
@@ -217,6 +264,10 @@ def save_week(articles: list[dict], domestic_summarized: list[dict],
     만들어졌는데 파일 하나가 실패하는 경우엔 - 나머지 파일 저장은 계속
     시도하고, 끝나고 나서 뭐가 저장되고 뭐가 안 됐는지 요약 로그를 남긴다
     (부분 성공도 사람이 바로 알 수 있게).
+
+    2026-07-23 신규: domestic_by_category/international_by_category(카테고리별
+    Top N, main.py의 step4_category_llm_summary 결과)도 같이 받아서
+    scored.json/summary.md에 반영한다.
     """
     directory = week_dir(base_dir)
     if directory is None:
@@ -229,9 +280,12 @@ def save_week(articles: list[dict], domestic_summarized: list[dict],
     saved = {
         "raw.json": save_raw(directory, articles),
         "scored.json": save_scored(directory, domestic_summarized, international_summarized,
+                                    domestic_by_category, international_by_category,
                                     gdelt_timeline, failed_sources, category_distribution),
         "summary.md": save_summary_md(directory, week_label, domestic_summarized,
-                                       international_summarized, failed_sources),
+                                       international_summarized,
+                                       domestic_by_category, international_by_category,
+                                       failed_sources),
     }
 
     succeeded = [name for name, path in saved.items() if path is not None]
@@ -268,14 +322,30 @@ if __name__ == "__main__":
             "articles": sample_articles,  # scored.json엔 빠져야 함
             "summary": "테스트 요약입니다.",
         }]
-        d = save_week(sample_articles, sample_scored, [], {}, [], {"국내": {}, "해외": {}},
-                      base_dir=tmp)
+        # 2026-07-23 추가: 카테고리별 결과 샘플 (score_by_category가 각 항목에
+        # 남기는 "category" 필드 포함해서 구성)
+        sample_by_category = {
+            "질병명": [{
+                "issue_score": 3.5, "mention_count": 2, "raw_mention_count": 2,
+                "titles": ["구제역 확산", "구제역 추가 발생"],
+                "urls": ["https://a.com/1", "https://a.com/2"],
+                "press_list": ["yna.co.kr"],
+                "articles": sample_articles,  # scored.json엔 빠져야 함
+                "summary": "카테고리별 테스트 요약입니다.",
+                "category": "질병명",
+            }]
+        }
+        d = save_week(sample_articles, sample_scored, [], sample_by_category, {},
+                      {}, [], {"국내": {}, "해외": {}}, base_dir=tmp)
         with open(os.path.join(d, "raw.json"), encoding="utf-8") as f:
             raw = json.load(f)
         assert "body" not in raw[1], "raw.json에 body가 남아있으면 안 됨"
         with open(os.path.join(d, "scored.json"), encoding="utf-8") as f:
             scored = json.load(f)
         assert "articles" not in scored["domestic"][0], "scored.json에 articles가 남아있으면 안 됨"
+        assert "질병명" in scored["domestic_by_category"], "카테고리별 결과가 scored.json에 없음"
+        assert "articles" not in scored["domestic_by_category"]["질병명"][0], \
+            "카테고리별 결과에도 articles가 빠져야 함"
         assert os.path.exists(os.path.join(d, "summary.md"))
         print("[storage] 자체 점검 통과")
     finally:

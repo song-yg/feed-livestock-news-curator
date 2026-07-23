@@ -201,6 +201,73 @@ def split_domestic_international(articles: list[dict]) -> tuple[list[dict], list
     return domestic, international
 
 
+def _majority_category(group: list[dict]) -> str:
+    """
+    그룹(같은 사건으로 묶인 기사들) 안에서 가장 많이 나온 category를 대표
+    카테고리로 정한다. 이슈 그룹핑이 "같은 사건"을 묶는 거라 보통 카테고리가
+    일관되지만, 사전 매칭이 기사마다 미묘하게 다르게 걸려 섞이는 경우가
+    있을 수 있어 다수결로 정함. 동률이면 먼저 나온 걸 쓴다 - Counter는
+    삽입 순서를 보존하는 dict 서브클래스이고 most_common()의 정렬은
+    안정정렬(stable sort)이라, 동률인 항목들은 원래 순서(그룹 안에서 먼저
+    나온 순서) 그대로 유지된다.
+    """
+    counts = Counter(a.get("category", "기타") for a in group)
+    return counts.most_common(1)[0][0]
+
+
+def score_by_category(groups: list[list[dict]], top_n: int,
+                       exclude: tuple[str, ...] = ("기타",)) -> dict[str, list[dict]]:
+    """
+    카테고리별 Top N (2026-07-23 신규, 담당자 설계 확정: "국내/해외 축과
+    독립적으로 카테고리 축도 만들되, 국내/해외 구분은 유지" - 즉 이 함수는
+    domestic_groups/international_groups 중 하나를 받아서 그 축 "안에서"
+    카테고리별로 나눈다. 호출부(main.py)가 국내용/해외용으로 각각 한 번씩
+    불러써야 함).
+
+    "기타"는 기본적으로 제외한다 - 카테고리별 Top N의 목적(질병명/무역·관세
+    처럼 명확한 주제별로 뭐가 중요한지 보기)과 "카테고리 안 걸린 잡다한 것들
+    중 언급 많은 것"은 성격이 다르기 때문(담당자 논의로 결정).
+
+    이슈가 없는 카테고리는 결과 dict에 아예 키로 안 남는다(빈 리스트를
+    안 만듦) - 호출부에서 "이 카테고리는 이번 주 이슈 없음"과 "이 카테고리
+    자체가 없음"을 구분할 필요가 없게 하기 위함.
+    """
+    by_category: dict[str, list[list[dict]]] = defaultdict(list)
+    for group in groups:
+        category = _majority_category(group)
+        if category in exclude:
+            continue
+        by_category[category].append(group)
+
+    result = {}
+    for category, cat_groups in by_category.items():
+        ranked = score_and_rank(cat_groups, top_n=top_n)
+        if ranked:
+            # 2026-07-23 추가: 이후 단계(LLM 요약, storage 저장)에서 여러
+            # 카테고리 결과를 하나의 평평한 리스트로 합쳐 처리할 일이 있는데,
+            # 그때도 "이 항목이 원래 어느 카테고리였는지" 추적할 수 있도록
+            # 항목 자체에 category를 남겨둔다.
+            for item in ranked:
+                item["category"] = category
+            result[category] = ranked
+    return result
+
+
+def print_category_top_n(label: str, category_ranked: dict[str, list[dict]], n: int) -> None:
+    """카테고리별 Top N을 사람이 읽기 좋은 형태로 출력 (진단/확인용)."""
+    if not category_ranked:
+        print(f"\n=== {label} 카테고리별 Top {n} === (해당 카테고리 이슈 없음)")
+        return
+    print(f"\n=== {label} 카테고리별 Top {n} ===")
+    for category, ranked in category_ranked.items():
+        print(f"\n[{category}]")
+        for i, item in enumerate(ranked, start=1):
+            rep_title = item["titles"][0] if item["titles"] else "(제목 없음)"
+            print(f"  {i}. [{item['issue_score']:.2f}점, 언급 {item['mention_count']}건] {rep_title}")
+            if len(item["titles"]) > 1:
+                print(f"     (그룹 내 추가 {len(item['titles']) - 1}건 생략)")
+
+
 def print_top_n(label: str, ranked: list[dict], n: int = 5) -> None:
     """상위 N개 이슈를 사람이 읽기 좋은 형태로 출력 (진단/확인용)."""
     print(f"\n=== {label} Top {min(n, len(ranked))} ===")
