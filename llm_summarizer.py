@@ -83,7 +83,7 @@ def _build_user_prompt(item: dict) -> str:
     return "\n".join(lines)
 
 
-def _call_llm(system_prompt: str, user_prompt: str, api_key: str) -> str | None:
+def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> str | None:
     """
     issue_grouper.py의 프로바이더 설정을 재사용해 LLM을 한 번 호출하고 응답
     텍스트를 반환한다. 실패 시 None (호출부가 "요약 생략, 원문 제목만"으로
@@ -93,6 +93,10 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str) -> str | None:
     배열을 기대하는 반면 이건 자연어 문장 하나를 기대한다는 점이 달라서
     별도 함수로 둔다 - 파싱 방식이 다른데 억지로 하나로 합치면 오히려
     코드가 더 헷갈림.
+
+    session: 2026-07-23 추가 - summarize_top_issues가 이슈마다 반복
+    호출하므로, 세션을 재사용해 커넥션 오버헤드를 줄인다(relevance_filter.py/
+    issue_grouper.py와 동일한 개선을 여기에도 적용).
     """
     try:
         if _ig.LLM_PROVIDER == "openrouter":
@@ -111,7 +115,7 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str) -> str | None:
                     {"role": "user", "content": user_prompt},
                 ],
             }
-            resp = requests.post(_ig.LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
+            resp = session.post(_ig.LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"].strip()
@@ -128,7 +132,7 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str) -> str | None:
                 "system": system_prompt,
                 "messages": [{"role": "user", "content": user_prompt}],
             }
-            resp = requests.post(_ig.LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
+            resp = session.post(_ig.LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             return "".join(
@@ -157,11 +161,15 @@ def _is_suspicious_summary(text: str) -> bool:
     return "user safety" in text.lower()
 
 
-def summarize_issue(item: dict) -> dict:
+def summarize_issue(item: dict, session: requests.Session | None = None) -> dict:
     """
     이슈 하나(scorer.score_group() 결과 dict)에 (A)/(A-1) 로직을 적용해
     요약을 붙인다. 원본 item은 변경하지 않고 얕은 복사본을 반환한다
     (호출부가 리스트를 여러 번 다룰 수 있어 부작용 없는 편이 안전).
+
+    session: 2026-07-23 추가. 안 넘기면(예: 이 함수를 단독으로 부를 때)
+    호출 하나짜리 임시 세션을 만들어 안전하게 동작 - summarize_top_issues처럼
+    여러 건을 반복 처리할 때만 세션을 만들어 넘겨주면 재사용 이득이 있다.
 
     반환값에 추가되는 필드:
       summary: LLM이 생성한 2~3문장 요약, 또는 None(요약 생략된 경우)
@@ -191,7 +199,11 @@ def summarize_issue(item: dict) -> dict:
         return result
 
     user_prompt = _build_user_prompt(item)
-    summary_text = _call_llm(_SYSTEM_PROMPT, user_prompt, api_key)
+    if session is not None:
+        summary_text = _call_llm(_SYSTEM_PROMPT, user_prompt, api_key, session)
+    else:
+        with requests.Session() as temp_session:
+            summary_text = _call_llm(_SYSTEM_PROMPT, user_prompt, api_key, temp_session)
 
     if not summary_text:
         result["summary"] = None
@@ -225,20 +237,21 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict
     """
     results = []
     total = len(ranked_items)
-    for i, item in enumerate(ranked_items, start=1):
-        titles = item.get("titles", [])
-        rep_title = titles[0] if titles else "(제목 없음)"
-        prefix = f"[llm_summarizer] {label} " if label else "[llm_summarizer] "
-        print(f"{prefix}({i}/{total}) '{rep_title}' (그룹 {len(titles)}건) - 요약 요청 중...")
+    with requests.Session() as session:
+        for i, item in enumerate(ranked_items, start=1):
+            titles = item.get("titles", [])
+            rep_title = titles[0] if titles else "(제목 없음)"
+            prefix = f"[llm_summarizer] {label} " if label else "[llm_summarizer] "
+            print(f"{prefix}({i}/{total}) '{rep_title}' (그룹 {len(titles)}건) - 요약 요청 중...")
 
-        result = summarize_issue(item)
+            result = summarize_issue(item, session)
 
-        if result.get("summary"):
-            print(f"{prefix}({i}/{total}) 요약 완료")
-        else:
-            print(f"{prefix}({i}/{total}) 요약 생략 - {result.get('summary_skipped_reason', '사유 불명')}")
+            if result.get("summary"):
+                print(f"{prefix}({i}/{total}) 요약 완료")
+            else:
+                print(f"{prefix}({i}/{total}) 요약 생략 - {result.get('summary_skipped_reason', '사유 불명')}")
 
-        results.append(result)
+            results.append(result)
     return results
 
 
