@@ -370,8 +370,8 @@ _LLM_SYSTEM_PROMPT = (
     "달라도 같은 사건을 가리키면 같은 사건으로 판단한다. "
     "판단이 확실하지 않으면 반드시 false로 답한다(보수적 기본값 - 잘못 "
     "묶는 것보다 안 묶는 게 안전하다). "
-    "다른 설명 없이 JSON 배열만 출력한다. 각 원소는 {\"same_event\": true|false} "
-    "형태이며, 입력받은 쌍의 순서와 개수를 정확히 맞춰야 한다."
+    "다른 설명 없이 JSON 배열만 출력한다. 각 원소는 {\"id\": 번호, \"same_event\": "
+    "true|false} 형태이며, id는 입력받은 쌍의 번호와 정확히 일치해야 한다."
 )
 
 
@@ -380,19 +380,24 @@ def _build_llm_user_prompt(pairs: list[tuple[dict, dict, float]]) -> str:
     for idx, (a, b, _sim) in enumerate(pairs, start=1):
         lines.append(f"{idx}. A: \"{a.get('title', '')}\" / B: \"{b.get('title', '')}\"")
     lines.append(
-        f"\n총 {len(pairs)}개 쌍이다. 이 개수 그대로 JSON 배열로만 답하라 (예: "
-        f"[{{\"same_event\": true}}, {{\"same_event\": false}}, ...])."
+        f'\n총 {len(pairs)}개 쌍이다. 각 원소에 위 번호를 "id"로 그대로 포함해서 '
+        f'JSON 배열로만 답하라 (예: [{{"id": 1, "same_event": true}}, '
+        f'{{"id": 2, "same_event": false}}, ...]). id를 빠뜨리거나 순서를 바꾸지 마라.'
     )
     return "\n".join(lines)
 
 
-def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str) -> list[bool] | None:
+def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requests.Session) -> list[bool] | None:
     """
     LLM API를 한 번 호출해서 pairs 각각에 대한 same_event 판정을 받아온다.
     LLM_PROVIDER 값에 따라 Anthropic(claude-haiku-4-5-20251001) 또는
     OpenRouter(무료 라우터/모델)로 분기한다 - 요청 형식은 프로바이더마다
     다르지만(Anthropic: content 블록 리스트, OpenRouter: OpenAI 호환
     choices[0].message.content), 이후 파싱/검증 로직은 공통이다.
+
+    session: 2026-07-23 추가 - stage3_llm_assist가 배치마다 반복 호출하므로,
+    세션을 재사용해 커넥션 오버헤드를 줄인다(relevance_filter.py와 동일한
+    개선을 여기에도 적용).
 
     입력/출력 개수 불일치, JSON 파싱 실패, API 에러, 항목 형식 이상 등
     신뢰할 수 없는 응답이면 None을 반환한다 - 9.4 "출력 형식을 코드로 자동
@@ -422,7 +427,7 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str) -> list[bool]
                     {"role": "user", "content": user_prompt},
                 ],
             }
-            resp = requests.post(LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
+            resp = session.post(LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             text = data["choices"][0]["message"]["content"].strip()
@@ -439,7 +444,7 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str) -> list[bool]
                 "system": _LLM_SYSTEM_PROMPT,
                 "messages": [{"role": "user", "content": user_prompt}],
             }
-            resp = requests.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
+            resp = session.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             text = "".join(
@@ -457,19 +462,41 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str) -> list[bool]
               f"전부 '안 묶음' fallback: {type(e).__name__} - {e!r}")
         return None
 
-    if not isinstance(parsed, list) or len(parsed) != len(pairs):
+    if not isinstance(parsed, list) or not parsed:
         actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
-        print(f"[issue_grouper] 3차 LLM({LLM_PROVIDER}) 출력 개수/형식 불일치(기대 {len(pairs)}, "
-              f"실제 {actual}) - 이 배치는 전부 '안 묶음' fallback")
+        print(f"[issue_grouper] 3차 LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 아니거나 "
+              f"비어있음, 실제 {actual}) - 이 배치({len(pairs)}쌍) 전부 '안 묶음' fallback")
         return None
 
-    results = []
+    # 2026-07-23 변경: relevance_filter.py에 먼저 적용했던 id 기반 부분 복구를
+    # 여기에도 이식(담당자 지적) - 기존엔 "출력 개수 != 입력 개수"면 배치
+    # 전체를 버렸는데, 실측 결과(2026-07-22) 52쌍이 429로 전멸하는 등 이
+    # 구조의 손실이 컸음. id를 명시적으로 주고받게 해서, 어긋나도 "일치하는
+    # 것만 살리고, 안 맞는 것만 개별적으로 안전한 기본값(안 묶음)으로
+    # 처리"하도록 개선. relevance_filter.py와는 기본값 방향이 다름에 주의 -
+    # 거기는 "애매하면 통과(true)"가 안전하지만, 여기는 "애매하면 안 묶음
+    # (false)"이 안전하다(9.4 원칙 - 잘못 묶는 것보다 안 묶는 게 안전).
+    by_id: dict[int, bool] = {}
     for item in parsed:
-        if not isinstance(item, dict) or not isinstance(item.get("same_event"), bool):
-            print(f"[issue_grouper] 3차 LLM({LLM_PROVIDER}) 출력 항목 형식 이상 - "
-                  f"이 배치는 전부 '안 묶음' fallback")
-            return None
-        results.append(item["same_event"])
+        try:
+            by_id[int(item["id"])] = bool(item["same_event"])
+        except (KeyError, TypeError, ValueError):
+            continue  # id/same_event 형식이 이상한 개별 항목만 무시하고 계속 진행
+
+    results = []
+    missing = []
+    for idx in range(1, len(pairs) + 1):
+        if idx in by_id:
+            results.append(by_id[idx])
+        else:
+            missing.append(idx)
+            results.append(False)  # 안전한 기본값 - 안 묶음
+
+    if missing:
+        print(f"[issue_grouper] 3차 LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
+              f"(기대 {len(pairs)}쌍 중 {len(missing)}쌍) - 그 쌍들만 '안 묶음' 기본값 처리, "
+              f"나머지 {len(pairs) - len(missing)}쌍은 정상 판정 사용")
+
     return results
 
 
@@ -504,14 +531,15 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]]) -> list[
           f"대상 {len(borderline_pairs)}쌍")
 
     confirmed = []
-    for i in range(0, len(borderline_pairs), LLM_BATCH_SIZE):
-        batch = borderline_pairs[i:i + LLM_BATCH_SIZE]
-        results = _call_llm(batch, api_key)
-        if results is None:
-            continue  # 이 배치만 안 묶음 유지, 다음 배치는 계속 시도
-        for (a, b, sim), same_event in zip(batch, results):
-            if same_event:
-                confirmed.append((a, b, sim))
+    with requests.Session() as session:
+        for i in range(0, len(borderline_pairs), LLM_BATCH_SIZE):
+            batch = borderline_pairs[i:i + LLM_BATCH_SIZE]
+            results = _call_llm(batch, api_key, session)
+            if results is None:
+                continue  # 이 배치만 안 묶음 유지, 다음 배치는 계속 시도
+            for (a, b, sim), same_event in zip(batch, results):
+                if same_event:
+                    confirmed.append((a, b, sim))
 
     print(f"[issue_grouper] 3차 LLM 보조 완료 - 애매 구간 {len(borderline_pairs)}쌍 중 "
           f"{len(confirmed)}쌍 '같은 사건'으로 최종 병합")
@@ -711,10 +739,18 @@ if __name__ == "__main__":
 
     _mock_calls = []
 
-    def _mock_post(url, headers=None, json=None, timeout=None):
+    def _mock_session_post(self, url, headers=None, json=None, timeout=None):
+        # 2026-07-23 변경: _call_llm이 이제 requests.post가 아니라
+        # session.post(Session 인스턴스 메서드)를 호출하므로, 모듈 레벨
+        # requests.post를 바꿔치기하던 예전 방식은 더 이상 이 호출을 못
+        # 가로챈다. requests.Session.post(클래스 메서드) 자체를 바꿔치기해서,
+        # 어떤 Session 인스턴스에서 호출되든 잡히게 한다(self는 무시).
         _mock_calls.append(url)
         pairs_count = json["messages"][0]["content"].count('A: "')
-        results = [{"same_event": True}] * pairs_count  # 이 스모크 테스트는 전부 True로 응답
+        # 2026-07-23 변경: _call_llm이 이제 id 기반 매칭을 쓰므로, mock
+        # 응답에도 id를 넣어야 한다(안 넣으면 전부 파싱 실패로 처리돼
+        # False 기본값이 되면서 이 테스트의 assert가 깨짐).
+        results = [{"id": i, "same_event": True} for i in range(1, pairs_count + 1)]  # 이 스모크 테스트는 전부 True로 응답
         text = __import__("json").dumps(results)
 
         class _MockResp:
@@ -724,8 +760,8 @@ if __name__ == "__main__":
                 return {"content": [{"type": "text", "text": text}]}
         return _MockResp()
 
-    _original_post = _requests.post
-    _requests.post = _mock_post
+    _original_session_post = _requests.Session.post
+    _requests.Session.post = _mock_session_post
     _os.environ["ANTHROPIC_API_KEY"] = "sk-ant-smoke-test-dummy-key"
     try:
         fake_borderline = [
@@ -737,11 +773,11 @@ if __name__ == "__main__":
         ]
         confirmed = stage3_llm_assist(fake_borderline)
         assert len(confirmed) == 1, "mock 응답이 전부 True인데 confirmed가 1개가 아님 - 배선 문제"
-        assert _mock_calls, "requests.post가 한 번도 호출 안 됨 - stage3가 실제로 API를 안 부름"
+        assert _mock_calls, "session.post가 한 번도 호출 안 됨 - stage3가 실제로 API를 안 부름"
         print(f"[검증] stage3_llm_assist 배선 정상 - mock 호출 {len(_mock_calls)}회, "
               f"confirmed {len(confirmed)}쌍")
     finally:
-        _requests.post = _original_post
+        _requests.Session.post = _original_session_post
         del _os.environ["ANTHROPIC_API_KEY"]
 
     # === OpenRouter 요청 헤더가 실제로 인코딩 가능한지 확인 (2026-07-16 추가) ===
