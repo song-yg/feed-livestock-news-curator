@@ -1,15 +1,22 @@
 # 사료·축산업 뉴스 큐레이션 - 2026-30
 
-생성 시각(UTC): 2026-07-23T04:55:01.748781+00:00
+생성 시각(UTC): 2026-07-23T06:58:54.988470+00:00
 
 ## 국내
 
-### 여름철 풀사료 '사료피' 주목…논 활용 높이고 자급기반 넓힌다
-- 점수: 12.00 / 언급 12건 (그룹 내 추가 11건 생략)
+### 동원F&B 아르르, 다이소에서 반려견용 '밥·꾸 간식' 16종 출시
+- 점수: 16.40 / 언급 20건 (그룹 내 추가 19건 생략)
 
 (요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
 
-원문 링크: https://www.farmnmarket.com/news/article.html?no=27195, https://www.newsam.co.kr/news/article.html?no=43554, https://www.asiatoday.co.kr/kn/view.php?key=20260722010007983 외 9건
+원문 링크: http://www.biztribune.co.kr/news/articleView.html?idxno=356148, https://www.donga.com/news/Economy/article/all/20260720/134331452/1, https://www.shinailbo.co.kr/news/articleView.html?idxno=5042524 외 17건
+
+### 논에서 키우는 여름 풀사료…'사료피' 주목
+- 점수: 13.00 / 언급 13건 (그룹 내 추가 12건 생략)
+
+(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
+
+원문 링크: https://news.skbroadband.com/news/articleView.html?idxno=232969, https://www.farmnmarket.com/news/article.html?no=27195, https://www.newsam.co.kr/news/article.html?no=43554 외 10건
 
 ### 부여군, FTA 피해보전직불금 '염소고기' 신청
 - 점수: 9.00 / 언급 9건 (그룹 내 추가 8건 생략)
@@ -32,21 +39,63 @@
 
 원문 링크: https://www.m-i.kr/news/articleView.html?idxno=1394512, http://www.newsworker.co.kr/news/articleView.html?idxno=437859, https://www.ggilbo.com/news/articleView.html?idxno=1170916 외 3건
 
-### 고흥군 농산물 스마트 공급센터 본격 가동…수급 조절·유통 경쟁력 기...
+### 국내 - 카테고리별 Top N
+
+#### 사료업계 특화 용어
+
+### 논에서 키우는 여름 풀사료…'사료피' 주목
+- 점수: 13.00 / 언급 13건 (그룹 내 추가 12건 생략)
+
+(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
+
+원문 링크: https://news.skbroadband.com/news/articleView.html?idxno=232969, https://www.farmnmarket.com/news/article.html?no=27195, https://www.newsam.co.kr/news/article.html?no=43554 외 10건
+
+#### 무역/관세 이슈
+
+### 부여군, FTA 피해보전직불금 '염소고기' 신청
+- 점수: 9.00 / 언급 9건 (그룹 내 추가 8건 생략)
+
+(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
+
+원문 링크: https://www.ccdn.co.kr/news/articleView.html?idxno=1089390, https://www.ggilbo.com/news/articleView.html?idxno=1170479, https://www.aflnews.co.kr/news/articleView.html?idxno=324901 외 6건
+
+#### 축종별 용어
+
+### 제주양돈농협, 소길리 어르신 건강한 여름나기 응원
+- 점수: 2.00 / 언급 2건 (그룹 내 추가 1건 생략)
+
+(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
+
+원문 링크: https://www.aflnews.co.kr/news/articleView.html?idxno=325025, https://www.newsjeju.net/news/articleView.html?idxno=423574
+
+#### 질병명
+
+### 당진시, 장마철 ASF 차단방역 강화…양돈농가 예찰·점검 확대
 - 점수: 6.00 / 언급 6건 (그룹 내 추가 5건 생략)
 
 (요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
 
-원문 링크: http://www.newsmaker.or.kr/news/articleView.html?idxno=179436, https://view.asiae.co.kr/article/2026072205322368070, https://www.newstnt.com/news/articleView.html?idxno=711109 외 3건
+원문 링크: https://www.m-i.kr/news/articleView.html?idxno=1394512, http://www.newsworker.co.kr/news/articleView.html?idxno=437859, https://www.ggilbo.com/news/articleView.html?idxno=1170916 외 3건
+
+#### 정부·제도 용어
+
+### 농진청, 가축분뇨 액비 활성화 현장 소통 강화
+- 점수: 4.00 / 언급 4건 (그룹 내 추가 3건 생략)
+
+(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
+
+원문 링크: http://www.wonyesanup.co.kr/news/articleView.html?idxno=65294, https://www.livesnews.com/news/article.html?no=62773, https://www.newsam.co.kr/news/article.html?no=43535 외 1건
+
+#### 시장/가격 용어
+
+### [북한읽기] 설비는 밀된장용인데 생산된 제품은 옥수수된장?
+- 점수: 1.00 / 언급 1건
+
+(요약 생략 - 단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1)))
+
+원문 링크: https://www.dailynk.com/20260722-4
 
 ## 해외
-
-###   쯔양 협박  구제역 , 2심서 배상액 증액 ... 8000만원 판결
-- 점수: 6.00 / 언급 6건 (그룹 내 추가 5건 생략)
-
-(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
-
-원문 링크: https://www.insight.co.kr/news/564074, http://www.newstomato.com/ReadNews.aspx?no=1307707, https://www.hani.co.kr/arti/society/society_general/1269245.html 외 3건
 
 ### 从 《 思想耀岭南 》 看县域富民产业发展 _ 南方网
 - 점수: 4.00 / 언급 4건 (그룹 내 추가 3건 생략)
@@ -75,3 +124,39 @@
 (요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
 
 원문 링크: https://www.fao.org/newsroom/detail/fao-committee-on-agriculture-opens-with-strong-call-for-science--innovation-and-technical-solutions/en, https://www.miragenews.com/fao-agri-meet-urges-science-innovation-tech-1712962/
+
+### 王煦棱 ： 升级转型若改善有效 槟政府无需聚焦关养猪场论光华日报 | 1910年创刊 创新每一天生活
+- 점수: 1.70 / 언급 2건 (그룹 내 추가 1건 생략)
+
+(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
+
+원문 링크: https://www.kwongwah.com.my/20260718/%E7%8E%8B%E7%85%A6%E6%A3%B1%EF%BC%9A%E5%8D%87%E7%BA%A7%E8%BD%AC%E5%9E%8B%E8%8B%A5%E6%94%B9%E5%96%84%E6%9C%89%E6%95%88-%E6%A7%9F%E6%94%BF%E5%BA%9C%E6%97%A0%E9%9C%80%E8%81%9A%E7%84%A6%E5%85%B3%E5%85%BB/, https://www.kwongwah.com.my/20260720/%E5%86%9C%E4%B8%9A%E9%83%A8%E7%A7%AF%E6%9E%81%E5%8D%8F%E8%B0%83%E5%85%BB%E7%8C%AA%E4%B8%9A%E8%AF%BE%E9%A2%98-%E7%BB%AD%E4%B8%8E%E4%B8%9A%E7%95%8C%E6%90%BA%E6%89%8B%E5%AF%BB%E5%B9%B3%E8%A1%A1/
+
+### 해외 - 카테고리별 Top N
+
+#### 질병명
+
+### South Africa : More Than One Million Cattle Vaccinated Against FMD in North West
+- 점수: 1.00 / 언급 1건
+
+(요약 생략 - 단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1)))
+
+원문 링크: https://allafrica.com/stories/202607210553.html
+
+#### 무역/관세 이슈
+
+### Philippines lifts import ban on Hungarian livestock products
+- 점수: 0.40 / 언급 1건
+
+(요약 생략 - 단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1)))
+
+원문 링크: http://www.philippinetimes.com/news/279191646/philippines-lifts-import-ban-on-hungarian-livestock-products
+
+#### 시장/가격 용어
+
+### Zimbabwe Emergency Food Production Project Delivers Transformative Results , Boosts Climate - Smart Agriculture and Record Wheat Harvest
+- 점수: 1.00 / 언급 1건
+
+(요약 생략 - 단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1)))
+
+원문 링크: https://allafrica.com/stories/202607220010.html

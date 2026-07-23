@@ -1,11 +1,85 @@
 {
-  "generated_at": "2026-07-23T04:55:01.748186+00:00",
+  "generated_at": "2026-07-23T06:58:54.987529+00:00",
   "domestic": [
     {
-      "issue_score": 12.0,
-      "mention_count": 12,
-      "raw_mention_count": 12,
+      "issue_score": 16.4,
+      "mention_count": 20,
+      "raw_mention_count": 20,
       "titles": [
+        "동원F&B 아르르, 다이소에서 반려견용 '밥·꾸 간식' 16종 출시",
+        "동원F&B 아르르, 다이소서 반려견용 간식 출시… 펫푸드 시장 공략 확대",
+        "동원F&B 반려동물 간식, 다이소에서 첫 선",
+        "1000원 반려견 간식 나온다… 동원F&B 아르르, 다이소서 '밥·꾸 간식' 출...",
+        "동원F&B 아르르, 다이소에 반려견용 토핑 간식 16종 선보여",
+        "동원F&B 아르르, 반려견용 '밥·꾸 간식' 16종 다이소 입점",
+        "반려견 간식도 ‘천원 시대’…동원F&B, 다이소 입점",
+        "동원F&B, 다이소 전용 '1000원 반려견 간식' 16종 선봬",
+        "다이소에 온 한 끼의 즐거움, 동원F&B ‘아르르 밥·꾸 간식’",
+        "동원F&B, 반려견 간식 16종 다이소서 출시…소용량·간편 급여",
+        "동원F&B 아르르, 다이소 입점... \"가성비 펫푸드 공략 강화\"",
+        "동원F&B 아르르, 다이소서 반려견 간식 16종 출시",
+        "동원F&B 아르르, 다이소 입점 확대…반려견 간식 16종 선봬",
+        "동원F&B 아르르, 다이소에서 반려견 간식 16종 출시",
+        "동원F&B 아르르, 다이소 반려견용 ‘밥·꾸 간식’ 16종 출시",
+        "[오늘의 신상] 동원F&B 아르르, 다이소에 반려견용 ‘밥·꾸 간식’ 16종...",
+        "댕댕이 밥사러 다이소로…동원F&B, 반려견 '밥·꾸 간식' 출시",
+        "천원으로 챙기는 반려동물 특식…동원F&B 아르르, 다이소에 반려견 간식...",
+        "동원F&B 아르르, 다이소 입점… 1000원대 반려견 '밥·꾸 간식' 16종 출시",
+        "동원F&B 아르르, 1000원 대 반려견 토핑 간식 16종 다이소서 선봬"
+      ],
+      "urls": [
+        "http://www.biztribune.co.kr/news/articleView.html?idxno=356148",
+        "https://www.donga.com/news/Economy/article/all/20260720/134331452/1",
+        "https://www.shinailbo.co.kr/news/articleView.html?idxno=5042524",
+        "https://www.s-journal.co.kr/news/articleView.html?idxno=42496",
+        "http://www.lawissue.co.kr/view.php?ud=202607201656075638204ead0791_12",
+        "http://www.updownnews.co.kr/news/articleView.html?idxno=318037",
+        "https://www.sentv.co.kr/article/view/sentv202607200157",
+        "https://www.kfenews.co.kr/news/articleView.html?idxno=660715",
+        "https://cooknchefnews.com/news/view/1065578974677593",
+        "https://www.gukjenews.com/news/articleView.html?idxno=3640526",
+        "http://www.thefirstmedia.net/news/articleView.html?idxno=204108",
+        "http://www.econonews.co.kr/news/articleView.html?idxno=441433",
+        "http://www.dailysmart.co.kr/news/articleView.html?idxno=127056",
+        "https://www.segye.com/newsView/20260720507222?OutUrl=naver",
+        "https://sports.khan.co.kr/article/202607201000003?pt=nv",
+        "https://www.viva100.com/article/20260720500155",
+        "https://www.hankyung.com/article/202607203570g",
+        "https://www.thefairnews.co.kr/news/articleView.html?idxno=82542",
+        "http://www.newsdream.kr/news/articleView.html?idxno=114649",
+        "https://www.newsmap.co.kr/news/articleView.html?idxno=1489"
+      ],
+      "press_list": [
+        "biztribune.co.kr",
+        "cooknchefnews.com",
+        "dailysmart.co.kr",
+        "donga.com",
+        "econonews.co.kr",
+        "gukjenews.com",
+        "hankyung.com",
+        "kfenews.co.kr",
+        "lawissue.co.kr",
+        "newsdream.kr",
+        "newsmap.co.kr",
+        "s-journal.co.kr",
+        "segye.com",
+        "sentv.co.kr",
+        "shinailbo.co.kr",
+        "sports.khan.co.kr",
+        "thefairnews.co.kr",
+        "thefirstmedia.net",
+        "updownnews.co.kr",
+        "viva100.com"
+      ],
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 13.0,
+      "mention_count": 13,
+      "raw_mention_count": 13,
+      "titles": [
+        "논에서 키우는 여름 풀사료…'사료피' 주목",
         "여름철 풀사료 '사료피' 주목…논 활용 높이고 자급기반 넓힌다",
         "여름철 풀사료 ‘사료피’ 논 활용도 높이고 자급기반 넓힌다",
         "농진청, 논 재배용 '사료피' 신품종 개발",
@@ -14,12 +88,13 @@
         "논에서 잘 자라는 '사료피'…풀사료 자급 확대 나선다",
         "농진청, 논에서 잘 자라는 하계 사료피 개발…\"벼 대신 재배시 농가소득...",
         "수입 조사료 의존 낮춘다…농진청, 사료피 신품종 개발",
-        "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
         "논에서도 잘 자라는 여름철 풀사료 ‘사료피’…“경제성·생산성 효과...",
         "농진청, 논 풀사료 '사료피' 신품종 개발…자급률 제고",
+        "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
         "논에서도 잘 자라는 ‘사료피’ 나왔다…여름철 풀사료 자급 확대 기대"
       ],
       "urls": [
+        "https://news.skbroadband.com/news/articleView.html?idxno=232969",
         "https://www.farmnmarket.com/news/article.html?no=27195",
         "https://www.newsam.co.kr/news/article.html?no=43554",
         "https://www.asiatoday.co.kr/kn/view.php?key=20260722010007983",
@@ -28,9 +103,9 @@
         "https://news.tf.co.kr/read/economy/2345859.htm",
         "https://view.asiae.co.kr/article/2026072214075694660",
         "https://www.etnews.com/20260722000220",
-        "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
         "https://www.mediapen.com/news/view/1111503",
         "https://www.newsis.com/view/NISX20260722_0003718640",
+        "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
         "https://biz.heraldcorp.com/article/10815810?ref=naver"
       ],
       "press_list": [
@@ -42,6 +117,7 @@
         "farmnmarket.com",
         "mediapen.com",
         "munhwa.com",
+        "news.skbroadband.com",
         "news.tf.co.kr",
         "newsam.co.kr",
         "newsis.com",
@@ -101,8 +177,8 @@
         "창녕군, 축산악취 NO! 쾌적함 OK!",
         "창녕군, 축산악취 저감시설·환경 개선으로 친환경 축산 기반 다져",
         "창녕군, 축산악취 감소에 29억원 투입해 '쾌적함을 더하다'",
-        "창녕군, 축산악취는 덜고 쾌적함은 더한다",
-        "창녕군, 축산악취 저감 위해 29억 투입 17개 사업 추진"
+        "창녕군, 축산악취 저감 위해 29억 투입 17개 사업 추진",
+        "창녕군, 축산악취는 덜고 쾌적함은 더한다"
       ],
       "urls": [
         "http://www.gnmaeil.com/news/articleView.html?idxno=591178",
@@ -111,8 +187,8 @@
         "https://www.imaeil.com/page/view/2026072112364893230",
         "https://view.asiae.co.kr/article/2026072112165560765",
         "https://www.pennmike.com/news/articleView.html?idxno=124055",
-        "https://www.newsgn.com/news/articleView.html?idxno=563240",
-        "https://www.gukjenews.com/news/articleView.html?idxno=3641457"
+        "https://www.gukjenews.com/news/articleView.html?idxno=3641457",
+        "https://www.newsgn.com/news/articleView.html?idxno=563240"
       ],
       "press_list": [
         "enewstoday.co.kr",
@@ -157,71 +233,9 @@
       ],
       "summary": null,
       "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
-    },
-    {
-      "issue_score": 6.0,
-      "mention_count": 6,
-      "raw_mention_count": 6,
-      "titles": [
-        "고흥군 농산물 스마트 공급센터 본격 가동…수급 조절·유통 경쟁력 기...",
-        "고흥 농산물 스마트 공급센터 준공…\"유통 혁신 핵심 거점 역할\"",
-        "고흥군, 농산물 스마트공급센터 준공…산지유통 경쟁력 강화 기대",
-        "고흥군, 스마트 공급센터 준공…산지유통 강화",
-        "고흥 농산물 스마트 공급센터 가동…공동선별·유통 경쟁력 강화",
-        "고흥군, \"스마트 공급센터\" 준공으로 농산물 수급조절·유통 경쟁력 강..."
-      ],
-      "urls": [
-        "http://www.newsmaker.or.kr/news/articleView.html?idxno=179436",
-        "https://view.asiae.co.kr/article/2026072205322368070",
-        "https://www.newstnt.com/news/articleView.html?idxno=711109",
-        "https://www.mhns.co.kr/news/articleView.html?idxno=753982",
-        "https://www.betanews.net/article/view/beta202607210072",
-        "http://www.newsworker.co.kr/news/articleView.html?idxno=437500"
-      ],
-      "press_list": [
-        "betanews.net",
-        "mhns.co.kr",
-        "newsmaker.or.kr",
-        "newstnt.com",
-        "newsworker.co.kr",
-        "view.asiae.co.kr"
-      ],
-      "summary": null,
-      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
     }
   ],
   "international": [
-    {
-      "issue_score": 6.0,
-      "mention_count": 6,
-      "raw_mention_count": 6,
-      "titles": [
-        "  쯔양 협박  구제역 , 2심서 배상액 증액 ... 8000만원 판결",
-        "  쯔양 협박  구제역 , 2심서 배상  8천만원 ... 사이버렉카  약점 장사  철퇴",
-        "  쯔양 협박  유튜버 구제역 , 항소심서 손해배상 8천만원으로 늘어",
-        "  쯔양 협박  구제역 , 항소심서 배상액  8000만원  으로 늘었다",
-        "  쯔양 협박  구제역 , 손배 항소심서 배상액 8000만원으로 늘어",
-        "쯔양 구제역에게 8000만원 손해배상 받는다 … 협박 실형 이어 배상액도 2심서 늘어 [ 세상 &] "
-      ],
-      "urls": [
-        "https://www.insight.co.kr/news/564074",
-        "http://www.newstomato.com/ReadNews.aspx?no=1307707",
-        "https://www.hani.co.kr/arti/society/society_general/1269245.html",
-        "http://inews24.com/view/1987391",
-        "https://www.etoday.co.kr/news/view/2605731",
-        "https://biz.heraldcorp.com/article/10815163"
-      ],
-      "press_list": [
-        "biz.heraldcorp.com",
-        "etoday.co.kr",
-        "hani.co.kr",
-        "inews24.com",
-        "insight.co.kr",
-        "newstomato.com"
-      ],
-      "summary": null,
-      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
-    },
     {
       "issue_score": 4.0,
       "mention_count": 4,
@@ -306,20 +320,300 @@
       ],
       "summary": null,
       "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 1.7,
+      "mention_count": 2,
+      "raw_mention_count": 2,
+      "titles": [
+        "王煦棱 ： 升级转型若改善有效 槟政府无需聚焦关养猪场论光华日报 | 1910年创刊 创新每一天生活",
+        "农业部积极协调养猪业课题 续与业界携手寻平衡方案光华日报 | 1910年创刊 创新每一天生活"
+      ],
+      "urls": [
+        "https://www.kwongwah.com.my/20260718/%E7%8E%8B%E7%85%A6%E6%A3%B1%EF%BC%9A%E5%8D%87%E7%BA%A7%E8%BD%AC%E5%9E%8B%E8%8B%A5%E6%94%B9%E5%96%84%E6%9C%89%E6%95%88-%E6%A7%9F%E6%94%BF%E5%BA%9C%E6%97%A0%E9%9C%80%E8%81%9A%E7%84%A6%E5%85%B3%E5%85%BB/",
+        "https://www.kwongwah.com.my/20260720/%E5%86%9C%E4%B8%9A%E9%83%A8%E7%A7%AF%E6%9E%81%E5%8D%8F%E8%B0%83%E5%85%BB%E7%8C%AA%E4%B8%9A%E8%AF%BE%E9%A2%98-%E7%BB%AD%E4%B8%8E%E4%B8%9A%E7%95%8C%E6%90%BA%E6%89%8B%E5%AF%BB%E5%B9%B3%E8%A1%A1/"
+      ],
+      "press_list": [
+        "kwongwah.com.my"
+      ],
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
     }
   ],
+  "domestic_by_category": {
+    "사료업계 특화 용어": [
+      {
+        "issue_score": 13.0,
+        "mention_count": 13,
+        "raw_mention_count": 13,
+        "titles": [
+          "논에서 키우는 여름 풀사료…'사료피' 주목",
+          "여름철 풀사료 '사료피' 주목…논 활용 높이고 자급기반 넓힌다",
+          "여름철 풀사료 ‘사료피’ 논 활용도 높이고 자급기반 넓힌다",
+          "농진청, 논 재배용 '사료피' 신품종 개발",
+          "논에서도 잘 자라는 ‘사료피’ 육종…여름철 풀사료 자급기반 넓힌다",
+          "경제성·생산성 높인 논 재배용 '사료피' 개발 … 풀사료 자급 확대",
+          "논에서 잘 자라는 '사료피'…풀사료 자급 확대 나선다",
+          "농진청, 논에서 잘 자라는 하계 사료피 개발…\"벼 대신 재배시 농가소득...",
+          "수입 조사료 의존 낮춘다…농진청, 사료피 신품종 개발",
+          "논에서도 잘 자라는 여름철 풀사료 ‘사료피’…“경제성·생산성 효과...",
+          "농진청, 논 풀사료 '사료피' 신품종 개발…자급률 제고",
+          "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
+          "논에서도 잘 자라는 ‘사료피’ 나왔다…여름철 풀사료 자급 확대 기대"
+        ],
+        "urls": [
+          "https://news.skbroadband.com/news/articleView.html?idxno=232969",
+          "https://www.farmnmarket.com/news/article.html?no=27195",
+          "https://www.newsam.co.kr/news/article.html?no=43554",
+          "https://www.asiatoday.co.kr/kn/view.php?key=20260722010007983",
+          "https://www.munhwa.com/article/11604324?ref=naver",
+          "https://biz.newdaily.co.kr/site/data/html/2026/07/22/2026072200209.html",
+          "https://news.tf.co.kr/read/economy/2345859.htm",
+          "https://view.asiae.co.kr/article/2026072214075694660",
+          "https://www.etnews.com/20260722000220",
+          "https://www.mediapen.com/news/view/1111503",
+          "https://www.newsis.com/view/NISX20260722_0003718640",
+          "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
+          "https://biz.heraldcorp.com/article/10815810?ref=naver"
+        ],
+        "press_list": [
+          "asiatoday.co.kr",
+          "biz.heraldcorp.com",
+          "biz.newdaily.co.kr",
+          "dailian.co.kr",
+          "etnews.com",
+          "farmnmarket.com",
+          "mediapen.com",
+          "munhwa.com",
+          "news.skbroadband.com",
+          "news.tf.co.kr",
+          "newsam.co.kr",
+          "newsis.com",
+          "view.asiae.co.kr"
+        ],
+        "category": "사료업계 특화 용어",
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+      }
+    ],
+    "무역/관세 이슈": [
+      {
+        "issue_score": 9.0,
+        "mention_count": 9,
+        "raw_mention_count": 9,
+        "titles": [
+          "부여군, FTA 피해보전직불금 '염소고기' 신청",
+          "부여군, FTA 피해보전직불금 '염소고기' 신청",
+          "부여군, 염소 사육 농가 FTA 피해보전직불금 신청 접수",
+          "부여군, FTA 피해보전직불금 염소고기 신청 접수",
+          "부여군, FTA 피해보전직불금 '염소고기' 신청",
+          "부여군, 2026년 FTA 직불금 지원 대상 품목 '염소고기' 선정 ... 지급 신...",
+          "부여군, 염소 사육 농가 FTA 직불금 지원",
+          "부여군, FTA 피해보전직불금 '염소고기' 신청",
+          "부여군, '염소 사육 농가' FTA 피해보전직불금 신청 받는다"
+        ],
+        "urls": [
+          "https://www.ccdn.co.kr/news/articleView.html?idxno=1089390",
+          "https://www.ggilbo.com/news/articleView.html?idxno=1170479",
+          "https://www.aflnews.co.kr/news/articleView.html?idxno=324901",
+          "https://www.jbnews.com/news/articleView.html?idxno=1507952",
+          "http://www.gocj.net/news/articleView.html?idxno=150358",
+          "https://www.gukjenews.com/news/articleView.html?idxno=3641813",
+          "https://www.newstnt.com/news/articleView.html?idxno=711004",
+          "https://www.ccdailynews.com/news/articleView.html?idxno=2429236",
+          "http://www.chungnamilbo.co.kr/news/articleView.html?idxno=899702"
+        ],
+        "press_list": [
+          "aflnews.co.kr",
+          "ccdailynews.com",
+          "ccdn.co.kr",
+          "chungnamilbo.co.kr",
+          "ggilbo.com",
+          "gocj.net",
+          "gukjenews.com",
+          "jbnews.com",
+          "newstnt.com"
+        ],
+        "category": "무역/관세 이슈",
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+      }
+    ],
+    "축종별 용어": [
+      {
+        "issue_score": 2.0,
+        "mention_count": 2,
+        "raw_mention_count": 2,
+        "titles": [
+          "제주양돈농협, 소길리 어르신 건강한 여름나기 응원",
+          "제주양돈농협, 소길리 어르신 건강한 여름나기 응원"
+        ],
+        "urls": [
+          "https://www.aflnews.co.kr/news/articleView.html?idxno=325025",
+          "https://www.newsjeju.net/news/articleView.html?idxno=423574"
+        ],
+        "press_list": [
+          "aflnews.co.kr",
+          "newsjeju.net"
+        ],
+        "category": "축종별 용어",
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+      }
+    ],
+    "질병명": [
+      {
+        "issue_score": 6.0,
+        "mention_count": 6,
+        "raw_mention_count": 6,
+        "titles": [
+          "당진시, 장마철 ASF 차단방역 강화…양돈농가 예찰·점검 확대",
+          "당진시, 폭우·태풍에 ASF 비상... '양돈농가 방역' 총력 대응",
+          "당진시, 장마철 ASF 위험주의보 발령 ··· 양돈농가 차단방역 총력",
+          "장마철 ASF 위험 커져…당진시 차단방역 나서",
+          "장마철 빗물·토양 타고 ASF 유입 위험..당진시, 양돈농가 차단방역 총력",
+          "당진시, 장마철 ASF 위험주의보 발령…양돈농가 차단방역 총력"
+        ],
+        "urls": [
+          "https://www.m-i.kr/news/articleView.html?idxno=1394512",
+          "http://www.newsworker.co.kr/news/articleView.html?idxno=437859",
+          "https://www.ggilbo.com/news/articleView.html?idxno=1170916",
+          "http://www.djtimes.co.kr/news/articleView.html?idxno=112787",
+          "https://www.idjnews.kr/news/articleView.html?idxno=301769",
+          "http://www.chungnamilbo.co.kr/news/articleView.html?idxno=900071"
+        ],
+        "press_list": [
+          "chungnamilbo.co.kr",
+          "djtimes.co.kr",
+          "ggilbo.com",
+          "idjnews.kr",
+          "m-i.kr",
+          "newsworker.co.kr"
+        ],
+        "category": "질병명",
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+      }
+    ],
+    "정부·제도 용어": [
+      {
+        "issue_score": 4.0,
+        "mention_count": 4,
+        "raw_mention_count": 4,
+        "titles": [
+          "농진청, 가축분뇨 액비 활성화 현장 소통 강화",
+          "농진청, 가축분뇨 액비 활용 확대 속도 낸다",
+          "농촌진흥청, 가축분뇨 액비 활성화 ‘현장 소통 강화’",
+          "농진청장, 합천 찾아 '가축분뇨 액비 활용' 확대안 논의"
+        ],
+        "urls": [
+          "http://www.wonyesanup.co.kr/news/articleView.html?idxno=65294",
+          "https://www.livesnews.com/news/article.html?no=62773",
+          "https://www.newsam.co.kr/news/article.html?no=43535",
+          "https://www.newsis.com/view/NISX20260720_0003715840"
+        ],
+        "press_list": [
+          "livesnews.com",
+          "newsam.co.kr",
+          "newsis.com",
+          "wonyesanup.co.kr"
+        ],
+        "category": "정부·제도 용어",
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+      }
+    ],
+    "시장/가격 용어": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "[북한읽기] 설비는 밀된장용인데 생산된 제품은 옥수수된장?"
+        ],
+        "urls": [
+          "https://www.dailynk.com/20260722-4"
+        ],
+        "press_list": [
+          "dailynk.com"
+        ],
+        "category": "시장/가격 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ]
+  },
+  "international_by_category": {
+    "질병명": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "South Africa : More Than One Million Cattle Vaccinated Against FMD in North West"
+        ],
+        "urls": [
+          "https://allafrica.com/stories/202607210553.html"
+        ],
+        "press_list": [
+          "allafrica.com"
+        ],
+        "category": "질병명",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ],
+    "무역/관세 이슈": [
+      {
+        "issue_score": 0.4,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "Philippines lifts import ban on Hungarian livestock products"
+        ],
+        "urls": [
+          "http://www.philippinetimes.com/news/279191646/philippines-lifts-import-ban-on-hungarian-livestock-products"
+        ],
+        "press_list": [
+          "philippinetimes.com"
+        ],
+        "category": "무역/관세 이슈",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ],
+    "시장/가격 용어": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "Zimbabwe Emergency Food Production Project Delivers Transformative Results , Boosts Climate - Smart Agriculture and Record Wheat Harvest"
+        ],
+        "urls": [
+          "https://allafrica.com/stories/202607220010.html"
+        ],
+        "press_list": [
+          "allafrica.com"
+        ],
+        "category": "시장/가격 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ]
+  },
   "category_distribution": {
     "국내": {
-      "질병명": 34,
-      "기타": 242,
-      "사료업계 특화 용어": 35,
-      "축종별 용어": 25,
-      "시장/가격 용어": 5,
+      "기타": 311,
+      "질병명": 33,
+      "사료업계 특화 용어": 37,
+      "축종별 용어": 26,
+      "시장/가격 용어": 6,
       "무역/관세 이슈": 9,
       "정부·제도 용어": 15
     },
     "해외": {
-      "기타": 121,
+      "기타": 118,
       "질병명": 3,
       "무역/관세 이슈": 1,
       "시장/가격 용어": 2
