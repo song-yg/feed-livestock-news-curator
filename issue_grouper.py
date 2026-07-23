@@ -15,6 +15,7 @@ issue_grouper.py
 그룹 리스트를 만든다 (아래 group_issues 참조).
 """
 
+import csv
 import json
 import os
 from itertools import combinations
@@ -221,6 +222,72 @@ def _cosine_similarity_matrix(vectors):
     return normalized @ normalized.T
 
 
+def export_similarity_scores(articles: list[dict], sim_matrix, threshold: float,
+                              borderline_margin: float, path: str = "similarity_debug/similarity_scores.csv",
+                              min_score: float = 0.4) -> str | None:
+    """
+    2026-07-24 신규(담당자 요청): THRESHOLD/BORDERLINE_MARGIN을 눈으로 보고
+    직접 튜닝하고 싶다는 요청으로 추가 - stage2_group이 계산한 유사도 행렬
+    전체를 CSV로 내보낸다. 지금은 threshold-margin ~ threshold 구간(borderline)
+    만 로그에 남기는데, 그 좁은 구간 밖의 값들도 봐야 "임계값을 어디로
+    옮기면 어떤 쌍들이 추가/제외되는지"를 판단할 수 있어서 훨씬 넓게 뽑음.
+
+    min_score: 이 값 미만인 쌍은 아예 제외한다. 기사 수가 n이면 쌍이
+    n*(n-1)/2개라 전부 다 내보내면(대부분 0에 가까운 무관한 쌍) 파일이
+    쓸데없이 커지고, 정작 튜닝에 필요한 "임계값 근처" 구간은 찾기 어려워짐 -
+    0.4는 잠정값으로, 필요하면 나중에 조정.
+
+    status 컬럼은 "지금 설정(THRESHOLD/BORDERLINE_MARGIN)으로는 이 쌍이
+    어떻게 처리됐는지" 참고용으로 같이 넣음(merged/borderline/none) - 다만
+    이건 어디까지나 현재 값 기준 참고이고, 실제 튜닝 판단은 similarity 값과
+    제목 쌍을 직접 보고 하면 됨.
+
+    실패해도(디스크 문제 등) 예외를 던지지 않고 로그만 남긴다 - 이건
+    진단/튜닝용 부가 기능이라, 실패했다고 그룹핑 자체가 죽으면 안 됨
+    (storage.py의 파일 쓰기 실패 흡수 패턴과 같은 방향).
+    """
+    n = len(articles)
+    rows = []
+    for i, j in combinations(range(n), 2):
+        sim = float(sim_matrix[i][j])
+        if sim < min_score:
+            continue
+        if sim >= threshold:
+            status = "merged"
+        elif threshold - borderline_margin <= sim < threshold:
+            status = "borderline"
+        else:
+            status = "none"
+        rows.append((sim, articles[i], articles[j], status))
+
+    rows.sort(key=lambda r: r[0], reverse=True)  # 유사도 높은 순 - 경계선을 위아래로 훑기 편하게
+
+    try:
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        with open(path, "w", newline="", encoding="utf-8-sig") as f:
+            # utf-8-sig: 엑셀에서 한글 CSV 열 때 깨지는 문제 방지(BOM 포함)
+            writer = csv.writer(f)
+            writer.writerow(["similarity", "status", "title_a", "title_b",
+                              "category_a", "category_b", "source_a", "source_b"])
+            for sim, a, b, status in rows:
+                writer.writerow([
+                    f"{sim:.4f}", status,
+                    a.get("title", ""), b.get("title", ""),
+                    a.get("category", ""), b.get("category", ""),
+                    a.get("source", ""), b.get("source", ""),
+                ])
+    except OSError as e:
+        print(f"[issue_grouper] 유사도 디버그 CSV 저장 실패(그룹핑 결과에는 영향 없음): "
+              f"{path} - {type(e).__name__}: {e}")
+        return None
+
+    print(f"[issue_grouper] 유사도 디버그 CSV 저장 완료 ({len(rows)}쌍, "
+          f"min_score={min_score} 이상만) -> {path}")
+    return path
+
+
 def stage2_group(
     articles: list[dict],
     model=None,
@@ -249,6 +316,10 @@ def stage2_group(
     texts = [_embedding_text(a) for a in articles]
     vectors = model.encode(texts, normalize_embeddings=True)
     sim_matrix = _cosine_similarity_matrix(vectors)
+
+    # 2026-07-24 추가: 임계값 튜닝용 디버그 CSV (담당자 요청) - 그룹핑 로직
+    # 자체와는 무관, 실패해도 안전하게 로그만 남기고 계속 진행함.
+    export_similarity_scores(articles, sim_matrix, threshold, borderline_margin)
 
     n = len(articles)
     uf = UnionFind(n)

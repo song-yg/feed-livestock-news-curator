@@ -157,6 +157,28 @@ jobs:
         # 상태를 실시간으로 볼 수 있다.
         run: python -u main.py
 
+      - name: 유사도 디버그 CSV 업로드 (그룹핑 임계값 튜닝용)
+        # 2026-07-24 추가(담당자 요청): THRESHOLD/BORDERLINE_MARGIN을 눈으로
+        # 보고 직접 조정하고 싶다는 요청 - issue_grouper.export_similarity_scores()가
+        # 만든 similarity_debug/similarity_scores.csv를 GitHub Actions
+        # 아티팩트로 업로드한다. raw.json/scored.json/summary.md와 달리
+        # data/ 아래 git commit은 안 함 - 이건 매주 쌓아둘 "공식 산출물"이
+        # 아니라 임계값 튜닝이 끝나면 더 이상 필요 없는 일회성 진단용 파일이라,
+        # 리포 히스토리를 불필요하게 늘리지 않으려고 Actions 아티팩트(보존
+        # 기간 지나면 자동 삭제)로만 남김 - "저장 방식(repo 커밋 vs 아티팩트)"
+        # 결정을 파일 성격에 따라 다르게 적용한 사례(storage.py 모듈 docstring의
+        # raw/scored/summary 저장 방식 결정과는 반대 방향 선택).
+        # if-no-files-found: warn - main.py가 도중에 실패해서 이 파일 자체가
+        # 안 만들어졌을 수 있는데, 그런 경우에도 아티팩트 업로드 실패로 워크플로
+        # 전체가 실패 처리되면 안 되므로 경고만 남기고 넘어가게 함.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: similarity-debug-${{ github.run_id }}
+          path: similarity_debug/similarity_scores.csv
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: 저장 결과물(data/) 커밋 & 푸시
         # 2026-07-23 추가: storage.py가 data/YYYY-WW/에 raw.json/scored.json/
         # summary.md를 만들어도, 이 스텝이 없으면 GitHub-hosted 러너가 실행
