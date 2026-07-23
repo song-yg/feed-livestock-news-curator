@@ -61,6 +61,8 @@ GDELT 접속량이 예상보다 훨씬 많아 보임(사용자 관찰) - MAX_RET
      (_collect_articles_for_keywords 및 collect() 참고).
 """
 
+import json
+import os
 import re as _re
 import threading
 import time
@@ -170,6 +172,90 @@ KEYWORDS_EN = [
 SKIP_KEYWORDS = {
     "HPAI": "GDELT API가 'phrase too short'로 거부함 (2026-07-14 확인, 재현됨)",
 }
+
+# --- 2026-07-23 신규(담당자 결정): 학습형 스킵 목록 ---
+#
+# 위 SKIP_KEYWORDS는 사람이 로그를 보고 손으로 채워넣는 "수동" 목록이라,
+# 아직 안 등록된 짧은 키워드가 시트에 새로 추가되면 등록되기 전까지 매번
+# ValueError로 요청 1번씩 계속 낭비함(430줄 근처 "키워드가 처음부터 짧으면
+# 빼면 안 되나" 논의 참고 - 길이 기반 예방적 차단은 위험해서 안 씀).
+#
+# 대신 "실제로 같은 키워드가 2번 연속 ValueError(쿼리 자체 거부)로 실패하면
+# 자동으로 스킵 목록에 편입"하는 방식을 씀 - 사람이 손으로 안 건드려도 됨.
+# GitHub Actions 러너가 매번 새 VM이라(상태가 실행 간 유지 안 됨) 이 학습
+# 결과를 파일로 저장해서 리포에 git commit해야 다음 실행에도 이어짐 -
+# storage.py가 raw.json/scored.json을 저장하는 것과 같은 패턴을 재사용함.
+#
+# data/가 아니라 별도 state/ 디렉토리에 두는 이유: data/는 "주차별 결과물
+# 아카이브"라는 의미가 이미 확정돼 있는데(storage.py 참고), 이 파일은
+# 특정 주차에 속하지 않고 계속 누적되는 "파이프라인 자체의 학습된 상태"라
+# 성격이 달라 구분함.
+#
+# 2번(SKIP_STATE_FAILURE_THRESHOLD)으로 잡은 이유: 1번 실패만으로 바로
+# 영구 등록하면, GDELT 쪽 일시적 문제로 어쩌다 한 번 오탐이 났을 때도
+# 영구히 막혀버릴 위험이 있음 - 2번 연속 확인돼야 "진짜 이 키워드 자체의
+# 문제"로 보는 게 안전하다고 판단(담당자 결정).
+SKIP_STATE_PATH = "state/gdelt_skip_keywords.json"
+SKIP_STATE_FAILURE_THRESHOLD = 2
+
+# 이번 실행 중 ValueError(쿼리 자체 거부)로 실패한 키워드를 모아두는 용도.
+# collect() 시작 시 반드시 비워야 함(모듈이 재사용될 수 있는 테스트 환경
+# 등에서 이전 실행의 잔여물이 안 섞이도록) - collect() 본문 참고.
+_value_error_keywords_this_run: list[str] = []
+
+
+def _load_skip_state(path: str = SKIP_STATE_PATH) -> dict:
+    """
+    {키워드: {"fail_count": N, "reason": "...", "last_seen": "..."}} 형태로
+    저장된 학습된 스킵 상태를 읽어온다. 파일이 없거나(첫 실행) 읽기/파싱에
+    실패하면 빈 딕셔너리로 안전하게 시작한다 - 이 파일은 어디까지나 최적화용
+    보조 데이터라, 못 읽어도 파이프라인 자체가 죽으면 안 됨(9.4/9.5 원칙과
+    같은 방향).
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"[gdelt] 학습된 스킵 상태 파일 읽기 실패(처음 실행이거나 파일 없음 - "
+              f"정상, 빈 상태로 시작): {path} - {type(e).__name__}: {e}")
+        return {}
+
+
+def _save_skip_state(state: dict, path: str = SKIP_STATE_PATH) -> None:
+    """저장 실패해도 예외를 던지지 않는다 - storage.py의 파일 쓰기 실패 흡수 패턴과 동일."""
+    try:
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+        print(f"[gdelt] 학습된 스킵 상태 저장 완료 -> {path}")
+    except OSError as e:
+        print(f"[gdelt] 학습된 스킵 상태 저장 실패(이번 실행 결과엔 영향 없음, "
+              f"다음 실행에서 다시 학습 시도됨): {path} - {type(e).__name__}: {e}")
+
+
+def _update_skip_state_after_run() -> None:
+    """
+    collect() 끝에서 호출 - 이번 실행 중 ValueError로 실패한 키워드들의
+    fail_count를 1씩 올리고, 변경이 있었으면 파일에 저장한다.
+    """
+    if not _value_error_keywords_this_run:
+        return
+
+    state = _load_skip_state()
+    now_str = datetime.now(timezone.utc).isoformat()
+    for keyword in dict.fromkeys(_value_error_keywords_this_run):  # 중복 제거, 순서 유지
+        entry = state.get(keyword, {"fail_count": 0})
+        entry["fail_count"] = entry.get("fail_count", 0) + 1
+        entry["reason"] = "GDELT API가 'phrase too short' 등으로 쿼리 자체를 거부함 (자동 학습됨)"
+        entry["last_seen"] = now_str
+        state[keyword] = entry
+        if entry["fail_count"] >= SKIP_STATE_FAILURE_THRESHOLD:
+            print(f"[gdelt] '{keyword}' - {entry['fail_count']}회 연속 ValueError 확인됨 "
+                  f"(임계값 {SKIP_STATE_FAILURE_THRESHOLD}) - 다음 실행부터 자동 스킵 대상으로 등록")
+
+    _save_skip_state(state)
 
 # --- 2026-07-14 추가: 키워드 오매칭(false positive) 필터 ---
 #
@@ -384,6 +470,44 @@ def _trigger_cooldown(seconds: float):
             _cooldown_until = new_until
 
 
+def _parse_retry_after(response) -> float | None:
+    """
+    2026-07-23 추가(담당자 확인 요청으로 조사): gdeltdoc의 RateLimitError는
+    requests.HTTPError를 상속해서 원본 응답을 response 속성에 그대로 담고
+    있음(gdeltdoc/errors.py의 `raise RateLimitError(response=response)`) -
+    이 함수는 거기서 `Retry-After` 헤더를 읽어본다.
+
+    ** 중요 - GDELT가 실제로 이 헤더를 주는지는 미확인 **: 이 환경에서
+    GDELT API로 직접 네트워크 접근이 안 돼서 실측을 못 했다. 헤더가
+    있으면 그 값을 쓰고, 없으면(또는 파싱 실패하면) None을 반환해서
+    호출부가 기존 방식(BACKOFF_BASE_SECONDS 지수 백오프 추측)으로 안전하게
+    fallback하도록 설계 - 있으면 이득, 없어도 손해 없는 변경.
+
+    HTTP 표준상 Retry-After는 초 단위 정수 또는 HTTP-date 형식일 수 있어
+    (RFC 9110) 둘 다 시도한다.
+    """
+    if response is None:
+        return None
+    value = response.headers.get("Retry-After")
+    if not value:
+        return None
+
+    try:
+        return float(value)
+    except ValueError:
+        pass
+
+    try:
+        from email.utils import parsedate_to_datetime
+        retry_dt = parsedate_to_datetime(value)
+        if retry_dt.tzinfo is None:
+            retry_dt = retry_dt.replace(tzinfo=timezone.utc)
+        seconds = (retry_dt - datetime.now(timezone.utc)).total_seconds()
+        return max(seconds, 0.0)
+    except (TypeError, ValueError):
+        return None
+
+
 def _call_with_retry(func, *args, label: str = "", **kwargs):
     """
     RateLimitError(429)와 일시적 네트워크 에러(ConnectTimeout 등)를 서로 다른
@@ -406,7 +530,13 @@ def _call_with_retry(func, *args, label: str = "", **kwargs):
     label: 로그에 찍을 식별자 (예: "avian influenza / article_search").
     2026-07-13 확인됨 - 키워드 하나당 API를 3번(article_search, timelinevol,
     timelinevolraw) 따로 호출하는데, 재시도 카운터가 호출마다 독립적으로 리셋되다
-    보니 로그만 보면 "(1/3)"이 반복되는 것처럼 헷갈릴 수 있어서 label을 붙임.
+    보니 로그만 보면 "(1/3)"이 반복되는 것처럼 헷갈릴 수 있어서 label을 붙였다.
+
+    2026-07-23 추가: 429 응답에 `Retry-After` 헤더가 실려 있으면(_parse_retry_after
+    참고) 그 값을 BACKOFF_BASE_SECONDS 지수 백오프 추측보다 우선 사용한다 -
+    서버가 정확히 알려준 시간이라면 우리 추측보다 정확할 수 있음. 헤더가
+    없으면(GDELT가 실제로 이 헤더를 주는지 여전히 미확인 상태) 기존 방식
+    그대로 fallback - 있으면 이득, 없어도 손해 없는 변경.
     """
     rate_limit_attempt = 0
     network_attempt = 0
@@ -415,14 +545,20 @@ def _call_with_retry(func, *args, label: str = "", **kwargs):
         _wait_for_cooldown()  # 다른 호출이 걸어둔 전역 쿨다운이 있으면 먼저 대기
         try:
             return func(*args, **kwargs)
-        except RateLimitError:
+        except RateLimitError as e:
             if rate_limit_attempt >= MAX_RETRIES:
                 raise
-            wait = BACKOFF_BASE_SECONDS * (2 ** rate_limit_attempt)
+            server_wait = _parse_retry_after(getattr(e, "response", None))
+            if server_wait is not None:
+                wait = server_wait
+                wait_source = "서버가 Retry-After로 알려준 값"
+            else:
+                wait = BACKOFF_BASE_SECONDS * (2 ** rate_limit_attempt)
+                wait_source = "서버가 안 알려줘서 우리 쪽 추정값"
             rate_limit_attempt += 1
             now_str = datetime.now(timezone.utc).isoformat(timespec="seconds")
-            print(f"[gdelt] {now_str} - {label} - 429 rate limit - {wait}초 전역 쿨다운 설정 "
-                  f"({rate_limit_attempt}/{MAX_RETRIES})")
+            print(f"[gdelt] {now_str} - {label} - 429 rate limit - {wait:.0f}초 전역 쿨다운 설정 "
+                  f"({wait_source}) ({rate_limit_attempt}/{MAX_RETRIES})")
             _trigger_cooldown(wait)
         except (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             if network_attempt >= NETWORK_ERROR_MAX_RETRIES:
@@ -540,6 +676,18 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
         print(f"[gdelt] '{keyword}' article_search -> 최근 {DAYS_BACK}일 이내 "
               f"{len(keyword_articles)}건 수집 완료{fp_note}")
         return True, keyword_articles
+
+    except ValueError as e:
+        # 2026-07-23 추가: 쿼리 자체가 거부된 경우(예: "phrase too short")는
+        # 시간이 지나도 안 풀리는 확정적 실패라, 위 SKIP_KEYWORDS/학습형
+        # 스킵 목록(_update_skip_state_after_run 참고)의 대상이 됨 - 여기서
+        # 발생 시점에 바로 기록해둔다. 일반 Exception과 구분해서 잡는 이유는
+        # 네트워크 오류 같은 일시적 실패까지 "이 키워드가 문제"로 학습되면
+        # 안 되기 때문(오탐 방지).
+        print(f"[gdelt] '{keyword}' article_search 실패(쿼리 자체 거부로 추정 - "
+              f"{type(e).__name__}: {e})")
+        _value_error_keywords_this_run.append(keyword)
+        return False, []
 
     except Exception as e:
         # 기사 수집 자체가 실패한 경우 - 호출부(collect())가 이 키워드를 failed_keywords에 담아 외부 재시도 라운드로 넘긴다 (2026-07-14(4차))
@@ -800,10 +948,11 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
              비율(CROWDING_SHARE_THRESHOLD)을 차지했으면 "크라우딩"으로
              판단하고, 그 배치의 **나머지** 키워드만 개별 재요청 대상으로
              남겨둔다.
-      3단계: 배치 자체가 실패한 경우(전체)와 크라우딩으로 밀려난 키워드를
-             모아서 키워드별 개별 요청으로 보충 - 실패한 것만 외부 재시도
-             라운드(OUTER_RETRY_PASSES)를 돈다(2026-07-14(4차) 원래 설계와
-             동일한 재시도 정책).
+      3단계: 배치 자체가 실패한 경우(429 등)는 **같은 배치로** 외부 재시도
+             라운드(OUTER_RETRY_PASSES)를 돈다(2026-07-23 변경, 담당자 결정 -
+             자세한 이유는 아래 본문 "2026-07-23 변경" 주석 참고). 크라우딩으로
+             밀려난 키워드(진짜 "상한 초과"류 문제)만 개별 재요청 대상으로
+             모아 별도로 재시도한다.
 
     _collect_articles_for_keywords(복수형, OR 결합)와
     _collect_articles_individually(전체 개별 폴백)는 이 배치 로직에서
@@ -823,10 +972,21 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     # (keyword_source.py 참고 - 이 함수는 예외를 던지지 않음)
     target_keywords = keywords if keywords is not None else keyword_source.get_keywords("en", KEYWORDS_EN)
 
+    # 2026-07-23 추가: 이번 실행의 학습 기록을 새로 시작 (모듈이 테스트 등에서
+    # 재사용될 수 있어 이전 실행의 잔여물이 안 섞이도록 매번 비움)
+    _value_error_keywords_this_run.clear()
+    skip_state = _load_skip_state()
+
     active_keywords = []
     for keyword in target_keywords:
         if keyword in SKIP_KEYWORDS:
             print(f"[gdelt] '{keyword}' 스킵 - {SKIP_KEYWORDS[keyword]}")
+            continue
+        learned_entry = skip_state.get(keyword)
+        if learned_entry and learned_entry.get("fail_count", 0) >= SKIP_STATE_FAILURE_THRESHOLD:
+            print(f"[gdelt] '{keyword}' 스킵 - 학습형 스킵 목록 등재됨 "
+                  f"({learned_entry.get('fail_count')}회 연속 ValueError 확인, "
+                  f"{SKIP_STATE_PATH} 참고)")
             continue
         active_keywords.append(keyword)
 
@@ -838,7 +998,8 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
 
     # --- 1단계: 배치 단위 수집 + 크라우딩 감지 ---
     batches = [active_keywords[i:i + BATCH_SIZE] for i in range(0, len(active_keywords), BATCH_SIZE)]
-    pending_individual: list[str] = []  # 배치 실패 또는 크라우딩으로 밀려나 개별 확인이 필요한 키워드
+    pending_individual: list[str] = []  # 크라우딩/상한 근접으로 밀려나 개별 확인이 필요한 키워드
+    pending_batches: list[list[str]] = []  # 배치 요청 자체가 실패해서 배치로 재시도할 것들 (2026-07-23 신규)
 
     for batch in batches:
         if len(batch) == 1:
@@ -848,8 +1009,18 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
 
         success, batch_articles = _collect_articles_for_keywords(gd, batch)
         if not success:
-            print(f"[gdelt] 배치 {batch} 요청 실패 - 개별 요청으로 보충 예정")
-            pending_individual.extend(batch)
+            # 2026-07-23 변경(담당자 결정): 예전엔 배치 요청 자체가 실패하면
+            # (429 등) 바로 개별 요청(5배 요청)으로 전환했는데, 429는 쿼리
+            # 복잡도가 아니라 "요청을 얼마나 자주 보내는지"에 걸리는 것으로
+            # 추정돼서(GDELT가 공식적으로 밝힌 기준은 아니지만, 지금까지의
+            # 실측 패턴과 일치) 실패했다고 요청 수를 5배로 늘리는 건 상황을
+            # 악화시킬 뿐이라는 지적이 있었음. 대신 같은 배치를 그대로
+            # pending_batches에 담아 두고, 아래에서 배치 단위로 재시도한다 -
+            # 정말 "250건 상한을 넘어서" 문제가 되는 경우(크라우딩)만 여전히
+            # 개별로 격리한다(바로 아래 크라우딩 분기는 그대로 유지).
+            print(f"[gdelt] 배치 {batch} 요청 실패 - 같은 배치로 재시도 예정 "
+                  f"(개별 전환 아님 - 2026-07-23 변경)")
+            pending_batches.append(batch)
         else:
             all_articles.extend(batch_articles)
             crowders = _detect_crowded_keywords(batch_articles, batch)
@@ -875,6 +1046,50 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
                       f"골고루 상한에 밀렸을 위험이 있어 배치 전체 {batch} 개별 재요청으로 보충 예정")
                 pending_individual.extend(batch)
         time.sleep(REQUEST_INTERVAL)
+
+    # --- 1-보조단계: 배치 요청 자체가 실패한 것들을 "배치 그대로" 재시도 ---
+    # (2026-07-23 신규, 담당자 결정) - 크라우딩(상한 초과류 문제)과 달리
+    # 이건 단순히 그 순간 요청이 안 됐던 것뿐이라, 개별로 쪼개서 요청 수를
+    # 5배로 늘리는 대신 같은 배치로 다시 시도한다. 여기서도 계속 실패하면
+    # (OUTER_RETRY_PASSES를 다 써도 안 되면) 마지막 안전망으로만 개별
+    # 전환한다 - 무한정 배치로만 매달리다 데이터를 아예 못 건지는 것보다는
+    # 낫다는 판단.
+    # pending_batches는 이미 1단계에서 1차 시도가 끝난 뒤 실패한 것들이라,
+    # 여기서는 재시도 라운드를 1부터 센다(0부터 다시 세면 원래 개별 재시도
+    # 섹션(아래)의 "OUTER_RETRY_PASSES+1번 시도"와 총 시도 횟수 기준이
+    # 어긋남 - 개별 섹션은 round_keywords가 "아직 한 번도 개별로 안 뚫려본
+    # 것"부터 세는 반면, 여기는 이미 1회 시도가 끝난 것부터 세는 차이).
+    batch_round = pending_batches
+    for round_num in range(1, OUTER_RETRY_PASSES + 1):
+        if not batch_round:
+            break
+        print(f"[gdelt] --- 배치 재시도 라운드 {round_num}/{OUTER_RETRY_PASSES} - "
+              f"이전 라운드 실패 배치 {len(batch_round)}개 ---")
+        print(f"[gdelt] 라운드 간 안전 대기 {OUTER_RETRY_WAIT_SECONDS}초")
+        time.sleep(OUTER_RETRY_WAIT_SECONDS)
+
+        still_failed_batches = []
+        for batch in batch_round:
+            success, batch_articles = _collect_articles_for_keywords(gd, batch)
+            if success:
+                all_articles.extend(batch_articles)
+                # 재시도로 살아난 배치도 똑같이 크라우딩 체크 (일관성 유지)
+                crowders = _detect_crowded_keywords(batch_articles, batch)
+                if crowders:
+                    others = [kw for kw in batch if kw not in crowders]
+                    pending_individual.extend(others)
+                elif len(batch_articles) >= MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
+                    pending_individual.extend(batch)
+            else:
+                still_failed_batches.append(batch)
+            time.sleep(REQUEST_INTERVAL)
+        batch_round = still_failed_batches
+
+    if batch_round:
+        print(f"[gdelt] 배치 재시도 {OUTER_RETRY_PASSES}회 후에도 실패한 배치 - "
+              f"마지막 안전망으로 개별 요청 전환: {batch_round}")
+        for batch in batch_round:
+            pending_individual.extend(batch)
 
     # --- 2단계: 개별 보충 요청 - 실패한 것만 외부 재시도 라운드 ---
     round_keywords = list(dict.fromkeys(pending_individual))  # 순서 유지하며 중복 제거
@@ -919,6 +1134,12 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     #
     # _collect_timeline_for_keyword 함수 자체는 코드에 남겨둔다(아래 참고) -
     # 필요시 이 블록에서 다시 호출하기만 하면 복원 가능.
+
+    # 2026-07-23 추가: 이번 실행에서 ValueError로 실패한 키워드들의 학습
+    # 상태를 파일에 반영(2번 연속되면 다음 실행부터 자동 스킵). git
+    # commit/push는 main.py/run-pipline.yml 쪽 책임 - 여기는 파일 생성까지만.
+    _update_skip_state_after_run()
+
     return all_articles, timeline_by_keyword
 
 
