@@ -181,16 +181,19 @@ def stage1_group(articles: list[dict]) -> tuple[list[list[dict]], list[dict]]:
 # 유사도를 계산해서 threshold 이상이면 그룹핑한다.
 #
 # 임계값(THRESHOLD)은 문서 "7. 아직 결정 안 된 것들"에 명시된 대로 아직
-# 미확정 값이다 (예상 범위 0.7~0.8대). 여기 0.75는 시범 운영 중 조정할
-# 잠정값 - scorer.py의 PRESS_DEDUP_CAP과 같은 성격의 "잠정 상수".
-THRESHOLD = 0.75
+# 미확정 값이다 (예상 범위 0.7~0.8대). scorer.py의 PRESS_DEDUP_CAP과 같은
+# 성격의 "잠정 상수".
+# 2026-07-24 조정: 0.75 -> 0.7. issue_grouper.export_similarity_scores()로
+# 뽑은 유사도 디버그 CSV를 담당자가 직접 눈으로 보고 결정함.
+THRESHOLD = 0.7
 
-# threshold 근처 "애매한 구간"의 폭. 예를 들어 THRESHOLD=0.75,
-# BORDERLINE_MARGIN=0.05면 0.70~0.75 사이가 애매 구간 -> 문서 3차(LLM 보조)
+# threshold 근처 "애매한 구간"의 폭. 예를 들어 THRESHOLD=0.7,
+# BORDERLINE_MARGIN=0.06이면 0.64~0.70 사이가 애매 구간 -> 문서 3차(LLM 보조)
 # 대상. 2026-07-15부터 3차(stage3_llm_assist)가 실제로 이 borderline_pairs를
 # 입력받아 처리한다 - LLM이 "같은 사건"으로 확정한 쌍만 병합되고, 그 외
 # (API 키 없음/호출 실패 등)는 여전히 "안 묶는" 보수적 기본값으로 fallback.
-BORDERLINE_MARGIN = 0.05
+# 2026-07-24 조정: 0.05 -> 0.06 (THRESHOLD 조정과 함께 담당자가 결정).
+BORDERLINE_MARGIN = 0.06
 
 
 def _embedding_text(article: dict) -> str:
@@ -226,7 +229,7 @@ def export_similarity_scores(articles: list[dict], sim_matrix, threshold: float,
                               borderline_margin: float, path: str = "similarity_debug/similarity_scores.csv",
                               min_score: float = 0.4) -> str | None:
     """
-    2026-07-24 신규(담당자 요청): THRESHOLD/BORDERLINE_MARGIN을 눈으로 보고
+    2026-07-23 신규(담당자 요청): THRESHOLD/BORDERLINE_MARGIN을 눈으로 보고
     직접 튜닝하고 싶다는 요청으로 추가 - stage2_group이 계산한 유사도 행렬
     전체를 CSV로 내보낸다. 지금은 threshold-margin ~ threshold 구간(borderline)
     만 로그에 남기는데, 그 좁은 구간 밖의 값들도 봐야 "임계값을 어디로
@@ -317,7 +320,7 @@ def stage2_group(
     vectors = model.encode(texts, normalize_embeddings=True)
     sim_matrix = _cosine_similarity_matrix(vectors)
 
-    # 2026-07-24 추가: 임계값 튜닝용 디버그 CSV (담당자 요청) - 그룹핑 로직
+    # 2026-07-23 추가: 임계값 튜닝용 디버그 CSV (담당자 요청) - 그룹핑 로직
     # 자체와는 무관, 실패해도 안전하게 로그만 남기고 계속 진행함.
     export_similarity_scores(articles, sim_matrix, threshold, borderline_margin)
 
@@ -437,6 +440,16 @@ _LLM_SYSTEM_PROMPT = (
     "같은 질병/주제를 다뤄도 발생 국가·장소·시점이 다르면 별개 사건으로 "
     "판단한다 (예: 한국의 조류독감 발생 기사와 미국의 조류독감 발생 기사는 "
     "질병명이 같아도 별개 사건). "
+    "국가 단위뿐 아니라 국내 지역(도/시/군) 단위가 다른 경우도 마찬가지다 "
+    "(예: 경남의 가축 폭염 피해 기사와 제주의 가축 폭염 피해 기사는 둘 다 "
+    "국내이고 같은 사안을 다뤄도 발생 지역이 다르면 별개 사건). "
+    "2026-07-24 추가: 한쪽 기사가 사안 하나(A)만 단독으로 다루고 다른 쪽 "
+    "기사가 그 사안을 포함한 여러 사안(A, B, C, D 등)을 종합해서 다루는 "
+    "경우도 별개 사건으로 판단한다 - 하나가 겹친다고 같은 사건이 아니라, "
+    "다루는 범위와 초점 자체가 다르기 때문이다 (예: \"경남 가축 폭염 피해\" "
+    "단독 기사와 \"경남 가축 폭염·호우·태풍 피해 종합\" 기사는 폭염 피해가 "
+    "겹치더라도 후자가 여러 재해를 종합 보도하는 별개 성격의 기사라 같은 "
+    "사건으로 보지 않는다). "
     "제목 언어가 서로 다를 수 있다(한국어/영어/기타 언어 혼재) - 언어가 "
     "달라도 같은 사건을 가리키면 같은 사건으로 판단한다. "
     "판단이 확실하지 않으면 반드시 false로 답한다(보수적 기본값 - 잘못 "
@@ -640,6 +653,17 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
     한다). article의 url을 구성요소 식별에 쓴다 - 이 시스템의 공통 스키마상
     url은 항상 존재하고 고유하다 (2번 섹션 "완전 동일 기사 제거" 로직도
     같은 전제로 URL을 키로 씀).
+
+    ** 2026-07-24 추가 - 연쇄(사슬) 병합 방지 **
+    확정된 쌍을 Union-Find로 그냥 다 묶으면, "A~B 확정 + B~C 확정"이라는
+    이유만으로 A~C를 LLM에 직접 물어본 적 없는데도 A+B+C가 한 그룹이 되는
+    문제가 있음(담당자 지적으로 발견) - 특히 "지역이 다르면 별개 사건",
+    "단신 vs 종합기사는 별개 사건" 같은 판정은 두 기사를 직접 비교했을
+    때만 유효해서, 간접 연결만으로 셋 이상을 묶으면 위험함. 3개 이상이
+    연결된 경우, 그 안의 모든 쌍이 실제로 LLM에게 직접 확인됐는지(완전
+    그래프/클리크인지) 검증하고, 클리크가 아니면(사슬로만 연결됐으면)
+    병합하지 않고 개별 컴포넌트로 유지한다(9.4 "애매하면 안 묶는 게
+    안전하다" 원칙과 같은 방향).
     """
     stage1_grouped, stage1_unmatched = stage1_group(articles)
 
@@ -662,29 +686,86 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
         confirmed_pairs = stage3_llm_assist(borderline_pairs)
 
     components = stage2_grouped + [[a] for a in still_unmatched]
+    components = _merge_confirmed_components(components, confirmed_pairs)
 
-    if confirmed_pairs:
-        url_to_component: dict[str, int] = {}
-        for idx, comp in enumerate(components):
-            for article in comp:
-                url_to_component[article.get("url")] = idx
+    return stage1_grouped + components
 
-        comp_uf = UnionFind(len(components))
-        for a, b, _sim in confirmed_pairs:
-            idx_a = url_to_component.get(a.get("url"))
-            idx_b = url_to_component.get(b.get("url"))
-            if idx_a is not None and idx_b is not None:
-                comp_uf.union(idx_a, idx_b)
 
-        merged_components = []
-        for indices in comp_uf.groups():
+def _merge_confirmed_components(components: list[list[dict]],
+                                 confirmed_pairs: list[tuple[dict, dict, float]]) -> list[list[dict]]:
+    """
+    stage3_llm_assist가 확정한 쌍(confirmed_pairs)을 이용해 components(각각
+    이미 확정된 이슈 그룹 혹은 단독 기사)를 추가로 병합한다.
+
+    2026-07-24 발견/수정: confirmed_pairs를 그냥 Union-Find로만 병합하면
+    "A~B가 확정되고 B~C가 확정됐다"는 이유만으로 A~C를 LLM에 한 번도 직접
+    물어본 적 없는데도 A+B+C가 통째로 한 그룹이 되는 연쇄(transitive
+    chaining) 문제가 있었음(담당자 지적으로 발견). _LLM_SYSTEM_PROMPT의
+    "지역이 다르면 별개 사건", "단신 vs 종합기사는 별개 사건" 같은 판정은
+    두 기사를 직접 비교했을 때만 유효한 결론이라, 간접 연결만으로 셋 이상을
+    한 그룹으로 넘겨짚으면 위험함 - 이 두 규칙을 추가하면서 문제가 실제로
+    발생할 여지가 커져서 지금 같이 고침.
+
+    수정 방식: edges(확정된 쌍)를 집합으로 따로 보관해두고, Union-Find
+    결과로 나온 각 연결 그룹에 대해 "그 그룹 안의 모든 쌍이 실제로 전부
+    직접 확정됐는지"(완전 그래프/클리크인지) 검증한다.
+      - 클리크면(모든 쌍이 직접 확인됨) 안전하게 병합.
+      - 클리크가 아니면(사슬로만 연결됐으면) 9.4 "애매하면 안 묶는 게
+        안전하다" 원칙에 따라 그 컴포넌트들을 병합하지 않고 그대로 둔다
+        (로그로 남김 - 왜 안 묶였는지 사후 확인 가능하게).
+    """
+    if not confirmed_pairs:
+        return components
+
+    url_to_component: dict[str, int] = {}
+    for idx, comp in enumerate(components):
+        for article in comp:
+            url_to_component[article.get("url")] = idx
+
+    edges: set[tuple[int, int]] = set()
+    for a, b, _sim in confirmed_pairs:
+        idx_a = url_to_component.get(a.get("url"))
+        idx_b = url_to_component.get(b.get("url"))
+        if idx_a is not None and idx_b is not None and idx_a != idx_b:
+            edges.add((min(idx_a, idx_b), max(idx_a, idx_b)))
+
+    if not edges:
+        return components
+
+    comp_uf = UnionFind(len(components))
+    for idx_a, idx_b in edges:
+        comp_uf.union(idx_a, idx_b)
+
+    merged_components = []
+    for indices in comp_uf.groups():
+        if len(indices) <= 2:
+            # 쌍 하나뿐이면 그 자체가 직접 확인된 관계라 연쇄 문제가 생길
+            # 여지가 없음 - 바로 병합.
             merged_group = []
             for idx in indices:
                 merged_group.extend(components[idx])
             merged_components.append(merged_group)
-        components = merged_components
+            continue
 
-    return stage1_grouped + components
+        is_clique = all(
+            (min(x, y), max(x, y)) in edges
+            for x, y in combinations(indices, 2)
+        )
+        if is_clique:
+            merged_group = []
+            for idx in indices:
+                merged_group.extend(components[idx])
+            merged_components.append(merged_group)
+        else:
+            print(f"[issue_grouper] 3차 확정 쌍이 사슬로만 연결됨(컴포넌트 "
+                  f"{len(indices)}개 - 일부 쌍은 LLM에 직접 확인된 적 없음) "
+                  f"- 연쇄 병합 방지로 안 묶고 개별 유지")
+            for idx in indices:
+                merged_components.append(components[idx])
+
+    return merged_components
+
+
 
 
 class _FakeEmbeddingModel:
