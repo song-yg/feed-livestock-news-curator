@@ -8,7 +8,7 @@ naver_collector / watt_collector와 반환 형태가 다르다는 점이 핵심 
 그 둘은 list[dict] 하나만 반환하지만, 이 모듈은 tuple(articles, timeline)을 반환한다.
 이유:
   - articles: 기사 1건 = 레코드 1건 -> 공통 스키마 그대로, 정규화/이슈그룹핑으로 감
-  - timeline: 키워드 단위 시계열(timelinevol/timelinevolraw) -> 기사 단위가 아니라서 공통 스키마에 억지로 끼워넣지 않음.
+  - timeline: 키워드 단위 시계열(timelinevol/timelinevolraw) -> 기사 단위가 아니라서 공통 스키마에 억지로 끼워넣지 않음.\
     3.1 규칙대로 스코어링에는 안 들어가고 결과물에 참고 지표로만 별도 표시됨 (저장 레이어가 알아서 분리 저장)
 (2026-07-13 논의 후 확정 - "방식 A")
 
@@ -133,17 +133,30 @@ if not getattr(requests.utils, "_gdelt_ua_patched", False):
 
 
 
-# 예시 키워드. 최종 리스트는 아직 확정 전이라 임시로 넣어둠 (naver_collector와 동일 방침).
+# 예시 키워드. 2026-07-17부터 구글 시트(KEYWORD_SHEET_CSV_URL)가 설정돼
+# 있으면 그쪽을 우선 쓰고, 없거나 읽기 실패하면 이 리스트로 대체된다
+# (keyword_source.py 참고, naver_collector.py와 동일 방침).
 # GDELT DOC API는 영문 검색이 기본이므로 영문 키워드로 구성 (스펙 "필요한 것" 항목 참조).
 #
-# 2026-07-14 확인 - "HPAI"는 GDELT API가 "너무 짧은 검색어"로 거부함 (ValueError: "The specified phrase is too short.").
-# 키워드 리스트를 본격적으로 확정할 때 더 긴 표현으로 교체하거나 제외할 것 - 지금은 리스트 자체가 임시라 그대로 둠.
+# 2026-07-23 갱신: 시트 v5(카테고리당 1개 원칙 + 앵커 복합어, 알고리즘 문서
+# "키워드 시트 v5" 참고)의 현재 활성 en 키워드와 동기화함. 예전 값에 있던
+# "avian influenza"/"HPAI"/"livestock market"은 v5에서 다른 값으로 교체됐고,
+# 특히 "HPAI"는 SKIP_KEYWORDS(아래)로 이미 걸러지고 있어 실제 API 실패를
+# 일으키진 않지만(naver_collector.py의 "구제역"처럼 활성 위험은 아님),
+# fallback이 v5와 다른 기준으로 도는 불일치를 없애기 위해 동기화함. 시트가
+# 나중에 또 바뀌면 이 fallback도 수동으로 같이 갱신해줘야 함(자동 동기화
+# 아님 - naver_collector.py KEYWORDS 갱신 시와 동일한 주의사항).
 KEYWORDS_EN = [
-    "avian influenza",
-    "HPAI",
-    "foot and mouth disease",
+    "foot-and-mouth disease",
     "feed price",
-    "livestock market",
+    "livestock movement restriction",
+    "swine industry",
+    "feed mill",
+    "feed additive",
+    "livestock import tariff",
+    "poultry vertical integration",
+    "smart farming",
+    "smart livestock barn",
 ]
 
 # --- 2026-07-14(2차) 추가: 이미 실패가 확인된 키워드 사전 스킵 ---

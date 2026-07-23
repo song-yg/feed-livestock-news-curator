@@ -27,6 +27,18 @@ on:
   #   # 매주 월요일 00:00 UTC(한국 시간 09:00) - cron은 UTC 기준
   #   - cron: "0 0 * * 1"
 
+concurrency:
+  # 2026-07-23 추가: 이 workflow를 실수로 겹쳐 실행했다가(예: 버튼을 두 번
+  # 누르거나, 이전 실행이 아직 도는 줄 모르고 재실행) push 충돌("!
+  # [rejected] main -> main (fetch first)")로 저장 결과가 통째로 날아간
+  # 사고가 실측 확인됨. group을 workflow 이름으로 고정해서, 같은 workflow가
+  # 이미 돌고 있으면 새 실행이 그걸 기다리지 않고 취소하도록 함
+  # (cancel-in-progress: true) - 이 파이프라인은 몇 시간씩 걸릴 수 있어서
+  # 대기시키기보다는, 나중에 시작한 실행이 이기고 먼저 것은 취소되는 편이
+  # 낫다고 판단.
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
@@ -155,6 +167,17 @@ jobs:
         # 방식 결정 참고).
         # 변경 사항이 없으면(예: main.py가 도중에 실패해 data/ 갱신이 없는
         # 경우) commit이 빈 커밋이 되지 않도록 diff 확인 후 조건부로 실행.
+        #
+        # 2026-07-23 추가(2차): push가 "! [rejected] main -> main (fetch first)"
+        # 로 실패하는 사고 실측 확인 - 체크아웃(job 시작 시점) 이후 원격
+        # main에 이 job이 모르는 새 커밋이 생겨서(예: 같은 파이프라인을 겹쳐
+        # 실행) non-fast-forward로 거부됨. 이 파이프라인은 GDELT 429
+        # 백오프 때문에 체크아웃부터 push까지 최대 몇 시간씩 걸릴 수 있어
+        # (job 전체 timeout-minutes: 240), 그 사이 원격이 앞서갈 여지가
+        # 충분함. push 직전에 git pull --rebase로 원격 변경사항을 먼저
+        # 반영해서 최신 위에 이 커밋을 얹도록 수정. rebase 자체가 충돌나면
+        # (예: 같은 주차 파일을 동시에 건드린 경우) 사람이 봐야 하므로
+        # 자동 해결은 시도하지 않고 그대로 실패시킨다.
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -163,5 +186,6 @@ jobs:
             echo "data/ 변경 사항 없음 - 커밋 생략"
           else
             git commit -m "chore: 사료축산뉴스 큐레이션 결과 저장 ($(date -u +%Y-%m-%d))"
+            git pull --rebase origin main
             git push
           fi

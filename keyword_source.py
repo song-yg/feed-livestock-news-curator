@@ -74,7 +74,13 @@ def _fetch_csv_rows(csv_url: str) -> list[dict] | None:
         return cached
 
     try:
-        resp = requests.get(csv_url, timeout=15)
+        # 2026-07-23: timeout을 15초 -> 30초로 늘림 - 실측(2026-07-23 실행)에서
+        # 구글 시트 CSV 요청이 정확히 15초 시점에 ReadTimeout으로 실패해
+        # fallback으로 넘어간 사례 확인됨. 시트 자체는 작은 파일이라 응답이
+        # 15초를 넘긴 건 네트워크/구글 서버 쪽 일시적 지연으로 추정 - 완전히
+        # 막힌 게 아니라 "느렸을 뿐"일 가능성이 높다고 보고, 무한정 기다리지
+        # 않으면서도 이런 일시적 지연은 흡수하도록 여유를 늘림.
+        resp = requests.get(csv_url, timeout=30)
         resp.raise_for_status()
         # 구글 시트가 게시하는 CSV는 UTF-8 BOM이 붙어서 오는 경우가 많아
         # utf-8-sig로 디코딩해야 헤더 첫 컬럼명 앞에 BOM이 안 섞여 들어옴

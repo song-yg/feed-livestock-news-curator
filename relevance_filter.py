@@ -301,9 +301,9 @@ def filter_articles(articles: list[dict]) -> list[dict]:
             batch = llm_target_articles[i:i + BATCH_SIZE]
             # 2026-07-22 추가: 어떤 기사가 어느 배치에 속했는지 로그로 안 남아서,
             # 특정 기사가 "LLM이 판정했는데 놓친 것"인지 "429 등으로 애초에 판정
-            # 자체를 못 받은 것"인지 사후에 구분이 안 되는 문제가 있었음(담당자
-            # 지적). 배치 시작 시점에 포함된 기사 제목을 남겨서, 바로 다음 줄에
-            # 나오는 성공/실패 로그와 대조하면 추적 가능하게 함.
+            # 자체를 못 받은 것"인지 사후에 구분이 안 되는 문제가 있었음.
+            # 배치 시작 시점에 포함된 기사 제목을 남겨서,
+            # 바로 다음 줄에 나오는 성공/실패 로그와 대조하면 추적 가능하게 함.
             titles_preview = " / ".join(a.get("title", "")[:40] for a in batch)
             print(f"[relevance_filter] 배치 {batch_num}/{total_batches} 처리 중 "
                   f"({len(batch)}건): {titles_preview}")
