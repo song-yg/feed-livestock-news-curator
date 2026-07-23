@@ -165,6 +165,24 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
     다만 "이 이슈가 다른 축에서도 다뤄졌다"를 화면에 🔗로 표시해주는 기능 자체는 scorer.py 상단 docstring에 이미 명시된 대로 여전히 미구현.
     이번 연결 작업 범위 밖(다음 세션에서 배포 포맷 확정 시 추가할 것).
 
+    ** 2026-07-23 버그 수정: GDELT 소스의 한국어 기사를 국내로 재분류 **
+    아래 domestic/international 분리를 소스(source)만으로 판단하면, GDELT가
+    번역 인덱싱 기능 때문에 한국어 기사를 물어오는 경우(예: "foot-and-mouth
+    disease" 검색에 "구제역"이라는 단어를 쓴 순수 국내 기사가 걸리는 경우 -
+    유튜버 닉네임 동음이의 협박 소송 기사가 실제로 "해외" Top1을 두 번이나
+    도배한 사례로 실측 확인됨, 2026-07-22/23) 국내 이슈가 "해외" 축으로
+    잘못 분류된다. `scorer._is_korean_title()`(한글 유니코드 비율 체크,
+    라이브러리 없이 결정론적으로 판단 - 담당자 논의로 결정, 제목처럼 짧은
+    텍스트에서 langdetect류가 신뢰도가 떨어지는 것으로 알려져 있어 대신
+    채택)로 재분류함.
+    **이전 실수**: 이 재분류 로직을 처음엔 `scorer.split_domestic_international()`
+    에만 넣었었는데, 실제로 이 함수 아래 국내/해외 분리 로직은 그 함수를 안
+    쓰고 이 함수(main.py의 score()) 안에 별도로 구현돼 있어서 수정이 실행
+    경로에 전혀 반영이 안 됐던 게 실측(2026-07-23 재현 확인)으로 드러남 -
+    이번엔 실제로 쓰이는 이 위치에 직접 반영함. `scorer.split_domestic_
+    international()`은 이제 아무 데서도 안 쓰이는 죽은 코드로 확인됨(정리는
+    범위 밖, 다음 세션에서 검토).
+
     model: sentence_transformers.SentenceTransformer 인스턴스, 또는 None.
            None이면 issue_grouper.group_issues가 2차(임베딩) 없이 1차 결과만으로 안전하게 fallback한다 (아래 _load_embedding_model 참고).
     """
@@ -173,8 +191,16 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
     domestic_groups = []
     international_groups = []
     for group in groups:
-        domestic_part = [a for a in group if a.get("source") == "네이버"]
-        international_part = [a for a in group if a.get("source") != "네이버"]
+        domestic_part = [
+            a for a in group
+            if a.get("source") == "네이버"
+            or (a.get("source") == "GDELT" and scorer._is_korean_title(a.get("title", "")))
+        ]
+        international_part = [
+            a for a in group
+            if a.get("source") != "네이버"
+            and not (a.get("source") == "GDELT" and scorer._is_korean_title(a.get("title", "")))
+        ]
         if domestic_part:
             domestic_groups.append(domestic_part)
         if international_part:
