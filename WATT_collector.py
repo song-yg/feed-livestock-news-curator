@@ -182,19 +182,25 @@ def collect() -> list[dict]:
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page(user_agent=USER_AGENT, extra_http_headers=EXTRA_HEADERS)
+        # 2026-07-23 안정성 보완: 기존엔 browser.close()가 for 루프 뒤에
+        # 순서대로만 있어서, browser.new_page()나 루프 안에서 (try/except로
+        # 못 잡는) 예상 밖 예외가 나면 close()가 스킵될 수 있었음(발생
+        # 가능성은 낮지만, 브라우저 프로세스가 안 정리된 채 남을 위험).
+        # try/finally로 감싸서 무슨 일이 있어도 close()가 실행되도록 함.
+        try:
+            page = browser.new_page(user_agent=USER_AGENT, extra_http_headers=EXTRA_HEADERS)
 
-        for source_name, base_url in SITES.items():
-            try:
-                site_results = _collect_site(page, source_name, base_url)
-                all_results.extend(site_results)
-                print(f"[watt] '{source_name}' -> 최근 {DAYS_BACK}일 이내 {len(site_results)}건")
-            except Exception as e:
-                # 사이트 하나 실패해도 전체를 멈추지 않는다 (9.1 소스별 독립 실행 구조)
-                print(f"[watt] '{source_name}' 수집 실패: {e}")
-                continue
-
-        browser.close()
+            for source_name, base_url in SITES.items():
+                try:
+                    site_results = _collect_site(page, source_name, base_url)
+                    all_results.extend(site_results)
+                    print(f"[watt] '{source_name}' -> 최근 {DAYS_BACK}일 이내 {len(site_results)}건")
+                except Exception as e:
+                    # 사이트 하나 실패해도 전체를 멈추지 않는다 (9.1 소스별 독립 실행 구조)
+                    print(f"[watt] '{source_name}' 수집 실패: {e}")
+                    continue
+        finally:
+            browser.close()
 
     return all_results
 
@@ -326,7 +332,18 @@ EXCLUDED_PATH_PATTERNS = ("/brand-insights/",)
 
 
 def _fetch_listing_page(page, url: str) -> list[dict]:
-    response = page.goto(url, timeout=30000, wait_until="networkidle")
+    # 2026-07-23 안정성 보완: 기존엔 page.goto()가 try/except 밖에 있어서,
+    # 네비게이션 자체가 실패하면(타임아웃, DNS 오류, 연결 끊김 등) 예외가
+    # 그대로 위(collect())까지 전파돼 그 사이트에서 이미 모은 결과까지
+    # 통째로 버려지는 구조였음(naver_collector.py의 같은 유형 문제와 동일 -
+    # 담당자 지적으로 발견). wait_for_selector 실패와 똑같은 패턴(빈 리스트
+    # 반환 + 로그)으로 통일해서, 목록 페이지 자체를 못 읽어도 그 사이트
+    # 수집이 "이번엔 0건"으로 안전하게 끝나도록 함.
+    try:
+        response = page.goto(url, timeout=30000, wait_until="networkidle")
+    except Exception as e:
+        print(f"[watt] 목록 페이지 이동 실패: {url} - {type(e).__name__}: {e}")
+        return []
 
     # 2026-07-22 추가: 같은 사이트에서 실행마다 콘텐츠가 요동치는 원인이
     # (a) CDN/캐시 계층이 오래된 스냅샷을 주는 것인지, (b) 안티봇 시스템이
@@ -385,7 +402,17 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
 
 
 def _fetch_detail(page, url: str) -> dict | None:
-    page.goto(url, timeout=30000)
+    # 2026-07-23 안정성 보완: page.goto()가 기존엔 try/except 밖에 있어서,
+    # 이 기사 하나의 네비게이션이 실패해도(타임아웃 등) 예외가 그대로
+    # 호출부(_collect_single_page/_collect_paginated의 for 루프)까지
+    # 전파돼 그때까지 모은 다른 기사 결과까지 통째로 버려지는 구조였음.
+    # 아래 wait_for_selector 실패와 같은 패턴(None 반환 - "이 기사만
+    # 건너뜀")으로 통일.
+    try:
+        page.goto(url, timeout=30000)
+    except Exception as e:
+        print(f"[watt] 상세 페이지 이동 실패: {url} - {type(e).__name__}: {e}")
+        return None
 
     try:
         page.wait_for_selector("meta[property='article:published_time']", state="attached", timeout=15000)
