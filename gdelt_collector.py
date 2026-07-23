@@ -184,8 +184,15 @@ SKIP_KEYWORDS = {
 # 새 오매칭 패턴이 확인되면 여기 추가할 것.
 #
 # 형태: {검색 키워드: [제목에 이 문자열(대소문자 무시)이 포함되면 제외, ...]}
+#
+# 2026-07-23 버그 수정: 딕셔너리 키가 "foot and mouth disease"(하이픈 없음)로
+# 등록돼 있었는데, 실제로 시트(v5)에서 쓰는 키워드는 "foot-and-mouth disease"
+# (하이픈 있음)임 - FALSE_POSITIVE_FILTERS.get(keyword, [])가 정확히 일치하는
+# 문자열만 찾기 때문에, 이 불일치로 인해 이 필터가 v5 도입 이후 계속 조용히
+# 무력화돼 있었던 것으로 추정됨(담당자 지적으로 발견 - 언제부터였는지는
+# 특정 못 함). 아래처럼 실제 키워드와 동일한 문자열로 키를 맞춰 복구함.
 FALSE_POSITIVE_FILTERS = {
-    "foot and mouth disease": ["hand, foot and mouth", "hand foot and mouth"],
+    "foot-and-mouth disease": ["hand, foot and mouth", "hand foot and mouth"],
 }
 
 # --- 2026-07-15 버그 수정: 구두점 앞 공백 정규화 ---
