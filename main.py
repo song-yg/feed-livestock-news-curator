@@ -288,13 +288,24 @@ def run() -> None:
     llm_summarizer.print_summaries("해외", international_summarized)
 
     print("\n=== [5] 저장 (data/YYYY-WW/raw.json, scored.json, summary.md) ===")
-    saved_dir = storage.save_week(articles, domestic_summarized, international_summarized,
-                                   gdelt_timeline, failed_sources, category_distribution)
+    # 2026-07-23 추가: storage.py 내부는 이미 파일 단위로 안전하게 실패를
+    # 흡수하도록 만들었지만(storage.py docstring 참고), 예상 못 한 예외까지
+    # 완벽히 막을 순 없으므로 9.1 "소스별 독립 실행 구조"와 같은 방향으로
+    # 마지막 방어선을 하나 더 둔다 - 저장이 통째로 실패해도 이미 콘솔에
+    # 다 출력된 이번 실행 결과(수집/스코어링/요약)는 그대로 남는다.
+    try:
+        saved_dir = storage.save_week(articles, domestic_summarized, international_summarized,
+                                       gdelt_timeline, failed_sources, category_distribution)
+    except Exception as e:
+        print(f"[main] 저장 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
+              f"{type(e).__name__} - {e!r}")
+        saved_dir = None
     _step6_deploy_todo()
 
     if failed_sources:
+        saved_dir_note = f"{saved_dir}/scored.json에도" if saved_dir else "(저장 실패로 파일에는 못 남았지만)"
         print(f"\n[main] 이번 실행 실패 소스: {failed_sources} (9.2 에러 리포트 - "
-              f"{saved_dir}/scored.json에도 failed_sources로 같이 저장됨, "
+              f"{saved_dir_note} failed_sources로 같이 저장됨, "
               f"배포 레이어 완성 전까지는 콘솔 로그로도 확인 가능)")
 
 

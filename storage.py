@@ -39,17 +39,27 @@ import os
 from datetime import datetime, timezone
 
 
-def week_dir(base_dir: str = "data", reference: datetime | None = None) -> str:
+def week_dir(base_dir: str = "data", reference: datetime | None = None) -> str | None:
     """
     ISO 주차 기준 'data/YYYY-WW' 경로를 만들고(없으면 생성) 반환한다.
     ISO 주차를 쓰는 이유: 그냥 달력 주(일~토 등)와 달리 "월요일 시작 +
     연도 경계에서도 주차가 안 꼬임"이 보장돼서, 이 프로젝트처럼 매주
     월요일 실행을 상정한 파이프라인과 자연스럽게 맞는다.
+
+    2026-07-23 안정성 보완: 디렉토리 생성 자체가 실패하면(권한 문제, 디스크
+    공간 부족 등) 예외를 그대로 던지는 대신 로그를 남기고 None을 반환한다 -
+    호출부(save_week)가 이걸 보고 저장 전체를 안전하게 건너뛸 수 있게 함
+    (9.1 "소스별 독립 실행 구조"와 같은 방향 - 저장 실패가 이미 끝난
+    수집/스코어링/요약 결과까지 통째로 날려버리면 안 됨).
     """
     now = reference or datetime.now(timezone.utc)
     iso = now.isocalendar()
     path = os.path.join(base_dir, f"{iso.year}-{iso.week:02d}")
-    os.makedirs(path, exist_ok=True)
+    try:
+        os.makedirs(path, exist_ok=True)
+    except OSError as e:
+        print(f"[storage] 저장 디렉토리 생성 실패: {path} - {type(e).__name__}: {e}")
+        return None
     return path
 
 
@@ -61,25 +71,36 @@ def _strip_scored_item(item: dict) -> dict:
     return {k: v for k, v in item.items() if k != "articles"}
 
 
-def save_raw(directory: str, articles: list[dict]) -> str:
+def save_raw(directory: str, articles: list[dict]) -> str | None:
     """
     2.5 관련성 필터까지 통과해 실제로 스코어링에 쓰인 기사 전체(정규화+태깅+
     필터링 완료 상태)를 raw.json으로 저장한다 - "raw"라는 이름이지만 수집
     직후 원본이 아니라 "이번 주 분석에 실제로 쓰인 최종 데이터셋"이라는
     의미. 수집 직후 원본(필터링 전)은 지금은 별도로 안 남긴다 - 필요해지면
     추후 raw_unfiltered.json 등으로 분리 추가 가능.
+
+    2026-07-23 안정성 보완: 파일 쓰기(디스크 공간 부족, 권한 문제, JSON
+    직렬화 불가능한 값 섞임 등) 실패 시 예외를 그대로 던지지 않고 로그만
+    남기고 None을 반환한다 - 이 시점엔 이미 수집/스코어링/요약이 다 끝난
+    뒤라, 저장 하나 실패했다고 전체 실행을 죽여서 콘솔에 남은 결과 확인
+    기회까지 뺏으면 안 된다는 판단(save_week이 이 None을 보고 나머지
+    파일 저장은 계속 시도함).
     """
     cleaned = [_strip_body(a) for a in articles]
     path = os.path.join(directory, "raw.json")
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(cleaned, f, ensure_ascii=False, indent=2)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(cleaned, f, ensure_ascii=False, indent=2)
+    except (OSError, TypeError, ValueError) as e:
+        print(f"[storage] raw.json 저장 실패: {path} - {type(e).__name__}: {e}")
+        return None
     print(f"[storage] raw.json 저장 완료 ({len(cleaned)}건) -> {path}")
     return path
 
 
 def save_scored(directory: str, domestic_summarized: list[dict],
                  international_summarized: list[dict], gdelt_timeline: dict,
-                 failed_sources: list[str], category_distribution: dict) -> str:
+                 failed_sources: list[str], category_distribution: dict) -> str | None:
     """
     스코어링+요약 결과, 카테고리 전체 집계, 실패 소스, GDELT 시계열 참고
     지표를 scored.json 하나로 묶어 저장한다.
@@ -88,6 +109,9 @@ def save_scored(directory: str, domestic_summarized: list[dict],
     모듈 docstring에 이미 명시돼 있음 - 다음 주 실행에서 "지난주 대비 증감"을
     계산하려면 지난주 집계 결과가 파일로 남아있어야 하기 때문(2.1 이슈
     그룹핑 자체는 매주 새로 도니, 주 단위 비교는 이 파일을 통해서만 가능).
+
+    2026-07-23 안정성 보완: save_raw와 동일한 이유로 파일 쓰기 실패를
+    안전하게 흡수한다(로그 + None 반환).
     """
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -98,8 +122,12 @@ def save_scored(directory: str, domestic_summarized: list[dict],
         "failed_sources": failed_sources,
     }
     path = os.path.join(directory, "scored.json")
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
+    except (OSError, TypeError, ValueError) as e:
+        print(f"[storage] scored.json 저장 실패: {path} - {type(e).__name__}: {e}")
+        return None
     print(f"[storage] scored.json 저장 완료 -> {path}")
     return path
 
@@ -128,7 +156,7 @@ def _format_issue_section(item: dict) -> str:
 
 
 def save_summary_md(directory: str, week_label: str, domestic_summarized: list[dict],
-                     international_summarized: list[dict], failed_sources: list[str]) -> str:
+                     international_summarized: list[dict], failed_sources: list[str]) -> str | None:
     """
     사람이 바로 읽을 배포용 요약본. llm_summarizer.print_summaries와 같은
     내용을 마크다운 파일로 남긴다(9.4 안전장치 - 요약 유무와 무관하게 원문
@@ -136,6 +164,9 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
 
     문서 작업 시 언더바(_) 등 앞의 이스케이프는 넣지 않는다(마크다운 렌더링
     시 불필요한 백슬래시가 그대로 노출되는 문제 방지 - 프로젝트 방침).
+
+    2026-07-23 안정성 보완: save_raw/save_scored와 동일한 이유로 파일 쓰기
+    실패를 안전하게 흡수한다(로그 + None 반환).
     """
     lines = [f"# 사료·축산업 뉴스 큐레이션 - {week_label}", ""]
     lines.append(f"생성 시각(UTC): {datetime.now(timezone.utc).isoformat()}")
@@ -163,8 +194,12 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
 
     content = "\n".join(lines) + "\n"
     path = os.path.join(directory, "summary.md")
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(content)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+    except OSError as e:
+        print(f"[storage] summary.md 저장 실패: {path} - {type(e).__name__}: {e}")
+        return None
     print(f"[storage] summary.md 저장 완료 -> {path}")
     return path
 
@@ -172,21 +207,42 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
 def save_week(articles: list[dict], domestic_summarized: list[dict],
               international_summarized: list[dict], gdelt_timeline: dict,
               failed_sources: list[str], category_distribution: dict,
-              base_dir: str = "data") -> str:
+              base_dir: str = "data") -> str | None:
     """
     main.py에서 부르는 단일 진입점. raw.json/scored.json/summary.md를 한
     디렉토리에 다 저장하고 그 디렉토리 경로를 반환한다.
+
+    2026-07-23 안정성 보완: 디렉토리 생성 자체가 실패하면 저장을 아예
+    포기하고 None을 반환한다(로그는 week_dir이 이미 남김). 디렉토리는
+    만들어졌는데 파일 하나가 실패하는 경우엔 - 나머지 파일 저장은 계속
+    시도하고, 끝나고 나서 뭐가 저장되고 뭐가 안 됐는지 요약 로그를 남긴다
+    (부분 성공도 사람이 바로 알 수 있게).
     """
     directory = week_dir(base_dir)
+    if directory is None:
+        print("[storage] 저장 디렉토리를 만들지 못해 이번 주 저장을 건너뜀 "
+              "(raw.json/scored.json/summary.md 전부 저장 안 됨)")
+        return None
+
     week_label = os.path.basename(directory)
 
-    save_raw(directory, articles)
-    save_scored(directory, domestic_summarized, international_summarized,
-                gdelt_timeline, failed_sources, category_distribution)
-    save_summary_md(directory, week_label, domestic_summarized,
-                     international_summarized, failed_sources)
+    saved = {
+        "raw.json": save_raw(directory, articles),
+        "scored.json": save_scored(directory, domestic_summarized, international_summarized,
+                                    gdelt_timeline, failed_sources, category_distribution),
+        "summary.md": save_summary_md(directory, week_label, domestic_summarized,
+                                       international_summarized, failed_sources),
+    }
 
-    print(f"[storage] 이번 주 저장 완료 -> {directory}/ (raw.json, scored.json, summary.md)")
+    succeeded = [name for name, path in saved.items() if path is not None]
+    failed = [name for name, path in saved.items() if path is None]
+
+    if failed:
+        print(f"[storage] 이번 주 저장 일부 실패 - 성공: {succeeded or '없음'} / "
+              f"실패: {failed} (실패 원인은 위 개별 로그 참고) -> {directory}/")
+    else:
+        print(f"[storage] 이번 주 저장 완료 -> {directory}/ (raw.json, scored.json, summary.md)")
+
     return directory
 
 
