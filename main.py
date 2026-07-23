@@ -40,13 +40,18 @@ main.py
                     베껴 쓰지 않고 이미 검증된 값을 공유해 재발을 막음.
                     API 키가 없거나 LLM 호출이 실패해도 그 이슈는 "요약 생략,
                     원문 제목만 노출"로 안전하게 fallback(9.4/9.5 원칙 재사용)
-                    - 저장/배포 레이어가 아직 없어 지금은 콘솔 출력까지만.
-  5) 저장        -> 미구현 (TODO) - 이번엔 확인용으로 scored 결과를 콘솔 출력만 함
+  5) 저장        -> 구현 완료 (2026-07-23, storage.py) - data/YYYY-WW/에
+                    raw.json(정규화+필터링된 최종 기사 데이터)/scored.json
+                    (스코어링+요약 결과, articles 필드는 raw.json과 중복이라
+                    제외)/summary.md(사람이 읽을 배포용 요약본) 저장. WATT
+                    body는 저작권상 raw.json에서도 제외(storage.py docstring
+                    참고). git 커밋/푸시는 워크플로(run-pipline.yml) 책임 -
+                    이 단계는 파일 생성까지만.
   6) 배포        -> 미구현 (TODO)
 
 main.py를 6단계 전부 완성형으로 만들지 않고, 위 범위까지만 실제로 동작하는
-파이프라인으로 잇는다. 5/6은 다음 세션에서 채울 자리를 함수 스텁으로만
-남겨둔다 (아래 _step5_storage_todo 등).
+파이프라인으로 잇는다. 6은 다음 세션에서 채울 자리를 함수 스텁으로만
+남겨둔다 (아래 _step6_deploy_todo).
 """
 
 import gdelt_collector
@@ -58,6 +63,7 @@ from WATT_collector import collect as watt_collect  # noqa: N813 (파일명 규�
 import keyword_tagger
 import category_aggregator
 import relevance_filter
+import storage
 
 
 # ---------------------------------------------------------------------------
@@ -233,19 +239,6 @@ def step4_llm_summary(domestic_ranked: list[dict],
     return domestic_summarized, international_summarized
 
 
-def _step5_storage_todo(domestic_summarized: list[dict], international_summarized: list[dict],
-                         gdelt_timeline: dict, failed_sources: list[str],
-                         category_distribution: dict) -> None:
-    """
-    TODO (섹션 5): data/YYYY-WW/raw.json, scored.json, summary.md 저장.
-    9.2 에러 리포트(failed_sources)도 이 단계 결과물에 자동으로 붙여야 함.
-    category_distribution(카테고리 전체 집계, 2026-07-14 신규)도 scored.json에 같이 저장해야 다음 주 "지난주 대비 증감"(category_aggregator.py 모듈 docstring의 "이번 범위 밖" 항목) 비교가 가능해진다.
-    domestic_summarized/international_summarized(2026-07-17, 4단계 연결)는 이미
-    summary/summary_skipped_reason 필드가 붙어 있으므로 summary.md에는 이걸 그대로 쓰면 됨.
-    저장 레이어 구현 시 함께 반영할 것. 지금은 저장 대신 콘솔 출력으로 대체 (아래 print_summary 참고).
-    """
-
-
 def _step6_deploy_todo() -> None:
     """TODO (섹션 6, 7번 섹션): 1단계는 이메일 본문(HTML) 배포로 확정돼 있음."""
 
@@ -294,13 +287,15 @@ def run() -> None:
     llm_summarizer.print_summaries("국내", domestic_summarized)
     llm_summarizer.print_summaries("해외", international_summarized)
 
-    _step5_storage_todo(domestic_summarized, international_summarized, gdelt_timeline,
-                         failed_sources, category_distribution)
+    print("\n=== [5] 저장 (data/YYYY-WW/raw.json, scored.json, summary.md) ===")
+    saved_dir = storage.save_week(articles, domestic_summarized, international_summarized,
+                                   gdelt_timeline, failed_sources, category_distribution)
     _step6_deploy_todo()
 
     if failed_sources:
         print(f"\n[main] 이번 실행 실패 소스: {failed_sources} (9.2 에러 리포트 - "
-              f"저장/배포 레이어 완성 전까지는 콘솔 로그로만 확인 가능)")
+              f"{saved_dir}/scored.json에도 failed_sources로 같이 저장됨, "
+              f"배포 레이어 완성 전까지는 콘솔 로그로도 확인 가능)")
 
 
 if __name__ == "__main__":

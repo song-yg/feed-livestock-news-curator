@@ -160,13 +160,44 @@ def to_singleton_groups(articles: list[dict]) -> list[list[dict]]:
     return [[a] for a in articles]
 
 
+def _is_korean_title(title: str, threshold: float = 0.2) -> bool:
+    """
+    2026-07-22 추가: GDELT는 번역 인덱싱 기능이 있어서, 영어 키워드로 검색해도
+    한국어 기사가 걸려 들어오는 경우가 있음(예: `foot-and-mouth disease` 검색에
+    "구제역"이라는 단어를 쓴 순수 국내 기사 - 유튜버 닉네임 동음이의 사건이
+    실제로 "해외" 랭킹에 노출된 사례로 실측 확인됨). 제목에서 한글 비율이
+    threshold 이상이면 국내 기사로 판단한다 - langdetect 같은 언어 감지
+    라이브러리는 제목처럼 짧은 텍스트에서 신뢰도가 떨어지는 것으로 알려져
+    있어, 대신 결정론적이고 의존성 없는 한글 유니코드(가~힣, U+AC00-D7A3)
+    비율 체크로 충분하다고 판단(담당자 논의로 결정).
+    """
+    if not title:
+        return False
+    hangul_count = sum(1 for ch in title if "\uac00" <= ch <= "\ud7a3")
+    non_space_count = sum(1 for ch in title if not ch.isspace())
+    if non_space_count == 0:
+        return False
+    return (hangul_count / non_space_count) >= threshold
+
+
 def split_domestic_international(articles: list[dict]) -> tuple[list[dict], list[dict]]:
     """
     3.1 "국내/해외 개별 집계" 축 분리. 네이버 = 국내, WATT/GDELT = 해외
     (알고리즘 문서 1번 섹션 소스 표 기준).
+
+    2026-07-22 예외 추가: GDELT로 수집됐지만 제목이 한국어인 기사는 "해외"가
+    아니라 "국내"로 재분류한다(`_is_korean_title` 참고) - WATT는 원래
+    영어권 업계지라 이 문제가 없어 GDELT 소스에만 적용.
     """
-    domestic = [a for a in articles if a.get("source") == "네이버"]
-    international = [a for a in articles if a.get("source") != "네이버"]
+    domestic = []
+    international = []
+    for a in articles:
+        if a.get("source") == "네이버":
+            domestic.append(a)
+        elif a.get("source") == "GDELT" and _is_korean_title(a.get("title", "")):
+            domestic.append(a)
+        else:
+            international.append(a)
     return domestic, international
 
 

@@ -15,6 +15,11 @@
 
 name: 사료축산뉴스 파이프라인 실행
 
+permissions:
+  contents: write  # 2026-07-23 추가: 저장 레이어(5단계) 결과물(data/YYYY-WW/)을
+                    # 리포에 커밋/푸시하려면 필요. 기본 GITHUB_TOKEN은 리포 설정에
+                    # 따라 read-only일 수 있어 명시적으로 write 권한을 준다.
+
 on:
   workflow_dispatch: {}
   # schedule:
@@ -139,3 +144,24 @@ jobs:
         # 현상으로 확인됨). -u를 주면 print()가 매번 즉시 flush돼서 실행
         # 상태를 실시간으로 볼 수 있다.
         run: python -u main.py
+
+      - name: 저장 결과물(data/) 커밋 & 푸시
+        # 2026-07-23 추가: storage.py가 data/YYYY-WW/에 raw.json/scored.json/
+        # summary.md를 만들어도, 이 스텝이 없으면 GitHub-hosted 러너가 실행
+        # 끝나고 통째로 폐기되면서 파일도 같이 사라진다(러너는 매번 완전히
+        # 새 VM - "8. GitHub Actions 유의사항" 참고). data/ 폴더를 "이번 주
+        # 결과물 아카이브"이자 "다음 주 지난주 대비 증감 비교의 재료"로 쓰려면
+        # 반드시 리포에 커밋까지 해야 함(storage.py 모듈 docstring의 저장
+        # 방식 결정 참고).
+        # 변경 사항이 없으면(예: main.py가 도중에 실패해 data/ 갱신이 없는
+        # 경우) commit이 빈 커밋이 되지 않도록 diff 확인 후 조건부로 실행.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "data/ 변경 사항 없음 - 커밋 생략"
+          else
+            git commit -m "chore: 사료축산뉴스 큐레이션 결과 저장 ($(date -u +%Y-%m-%d))"
+            git push
+          fi
