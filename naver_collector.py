@@ -12,6 +12,7 @@ import requests
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+
 import keyword_source
 
 # 실행 시점에 .env 파일을 찾아서 그 안의 값들을 환경변수로 등록해준다.
@@ -66,50 +67,66 @@ def collect() -> list[dict]:
     target_keywords = keyword_source.get_keywords("ko", KEYWORDS)
 
     all_results = []
-    for keyword in target_keywords:
-        try:
+    # 2026-07-23 추가: 세션 재사용. 기존엔 search_naver_news 호출마다
+    # requests.get()이 매번 새 연결(TCP+TLS 핸드셰이크)을 맺었는데, 한 번
+    # 실행에 키워드마다 여러 페이지를 반복 호출하는 구조라(최대 10페이지 x
+    # 키워드 수) 세션을 하나만 만들어 재사용하면 커넥션이 유지돼 반복
+    # 호출의 오버헤드가 줄어든다. keyword_source.get_keywords()는 세션과
+    # 무관한 별도의 단발성 호출이라 그대로 둠.
+    with requests.Session() as session:
+        for keyword in target_keywords:
+            # 2026-07-23 수정: 기존엔 all_results.extend(keyword_results)가
+            # try 블록 "안", while 루프보다 뒤에 있어서, 페이지네이션 도중
+            # (예: 3페이지째에서 타임아웃) 예외가 나면 그 줄 자체가 실행이
+            # 안 돼 이미 모은 1~2페이지 결과까지 통째로 버려지는 문제가
+            # 있었음(담당자 지적으로 발견). try 범위를 "네트워크 호출이
+            # 실제로 일어나는 부분"으로 좁히고, extend는 항상(성공이든
+            # 부분 실패든) 실행되도록 밖으로 뺐다.
             keyword_results = []
             start = 1
-            while start <= MAX_START:
-                page = search_naver_news(keyword, client_id, client_secret, start=start)
+            try:
+                while start <= MAX_START:
+                    page = search_naver_news(keyword, client_id, client_secret, start=start, session=session)
 
-                if not page:
-                    # 더 가져올 결과 자체가 없음 (검색어에 대한 기사가 소진됨)
-                    break
+                    if not page:
+                        # 더 가져올 결과 자체가 없음 (검색어에 대한 기사가 소진됨)
+                        break
 
-                recent_in_page = [r for r in page if _is_recent(r["published_at"], DAYS_BACK)]
-                keyword_results.extend(recent_in_page)
+                    recent_in_page = [r for r in page if _is_recent(r["published_at"], DAYS_BACK)]
+                    keyword_results.extend(recent_in_page)
 
-                # 이 페이지의 마지막 항목 = 이 페이지 안에서 가장 오래된 기사
-                # (sort=date로 최신순 정렬돼 있으므로 항상 마지막이 제일 오래됨)
-                oldest_in_page = page[-1]
-                if not _is_recent(oldest_in_page["published_at"], DAYS_BACK):
-                    # 이 페이지 끝에서 이미 기간을 벗어났다 -> 다음 페이지는
-                    # 이보다 더 오래된 기사만 있을 게 뻔하므로 더 안 가져와도 됨
-                    break
+                    # 이 페이지의 마지막 항목 = 이 페이지 안에서 가장 오래된 기사
+                    # (sort=date로 최신순 정렬돼 있으므로 항상 마지막이 제일 오래됨)
+                    oldest_in_page = page[-1]
+                    if not _is_recent(oldest_in_page["published_at"], DAYS_BACK):
+                        # 이 페이지 끝에서 이미 기간을 벗어났다 -> 다음 페이지는
+                        # 이보다 더 오래된 기사만 있을 게 뻔하므로 더 안 가져와도 됨
+                        break
 
-                if len(page) < 100:
-                    # 네이버가 100건 미만을 줬다는 건 더 이상 결과가 없다는 뜻
-                    break
+                    if len(page) < 100:
+                        # 네이버가 100건 미만을 줬다는 건 더 이상 결과가 없다는 뜻
+                        break
 
-                start += 100
-                time.sleep(0.2)  # 페이지 사이에도 간격을 둠
+                    start += 100
+                    time.sleep(0.2)  # 페이지 사이에도 간격을 둠
+            except requests.exceptions.RequestException as e:
+                # 이 키워드의 나머지 페이지는 못 가져왔지만, 지금까지 모은
+                # keyword_results는 아래에서 그대로 살려서 반영한다 - 페이지
+                # 하나 실패했다고 이미 확보한 데이터까지 버릴 이유는 없음.
+                print(f"[naver] '{keyword}' 수집 중 오류 발생(지금까지 모은 "
+                      f"{len(keyword_results)}건은 보존하고 다음 키워드로 진행): {e}")
 
             all_results.extend(keyword_results)
             print(f"[naver] '{keyword}' -> 최근 {DAYS_BACK}일 이내 {len(keyword_results)}건 "
                   f"({start if start <= MAX_START else MAX_START}건째까지 확인)")
-        except requests.exceptions.RequestException as e:
-            # 키워드 하나 실패했다고 전체를 멈추지 않는다.
-            # 로그만 남기고 다음 키워드로 넘어간다.
-            print(f"[naver] '{keyword}' 수집 실패: {e}")
-            continue
 
-        time.sleep(0.2)  # 키워드 사이에도 간격을 둬서 짧은 시간에 몰아치지 않도록 함
+            time.sleep(0.2)  # 키워드 사이에도 간격을 둬서 짧은 시간에 몰아치지 않도록 함
 
     return all_results
 
 
-def search_naver_news(keyword: str, client_id: str, client_secret: str, start: int = 1) -> list[dict]:
+def search_naver_news(keyword: str, client_id: str, client_secret: str, start: int = 1,
+                       session: requests.Session | None = None) -> list[dict]:
     """
     네이버 뉴스 검색 API를 호출해서, 결과를 우리 공통 스키마 형태로 정리해 돌려준다.
 
@@ -117,6 +134,11 @@ def search_naver_news(keyword: str, client_id: str, client_secret: str, start: i
     client_id     : 네이버 개발자센터에서 발급받은 애플리케이션 ID
     client_secret : 위와 함께 발급받은 비밀키
     start         : 몇 번째 결과부터 가져올지 (1, 101, 201 ... 페이지네이션용)
+    session       : 재사용할 requests.Session (2026-07-23 추가). 안 넘기면
+                    (예: 이 함수를 단독으로 테스트할 때) requests 모듈
+                    자체를 그대로 써서 매번 새 연결을 맺는 예전 방식으로
+                    안전하게 동작함 - 세션 재사용은 순전히 성능 최적화라
+                    없어도 기능은 동일함.
     """
     # 1) 헤더: "나 누구인지" 증명하는 정보. API 키가 여기 들어간다.
     headers = {
@@ -133,7 +155,8 @@ def search_naver_news(keyword: str, client_id: str, client_secret: str, start: i
     }
 
     # 3) 실제 GET 요청. timeout은 응답이 안 올 때 무한정 기다리지 않도록 하는 안전장치
-    response = requests.get(NAVER_API_URL, headers=headers, params=params, timeout=10)
+    requester = session if session is not None else requests
+    response = requester.get(NAVER_API_URL, headers=headers, params=params, timeout=10)
     response.raise_for_status()  # 200번대가 아니면(401, 429, 500 등) 여기서 에러를 던짐
 
     data = response.json()  # 응답 body(JSON 문자열)를 파이썬 딕셔너리로 변환
