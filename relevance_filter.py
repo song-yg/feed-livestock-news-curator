@@ -147,11 +147,15 @@ def _build_user_prompt(batch: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _call_llm(batch: list[dict], api_key: str) -> list[bool] | None:
+def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> list[bool] | None:
     """
     LLM API를 한 번 호출해서 batch 각각에 대한 relevant 판정을 받아온다.
     실패(호출 에러/JSON 파싱 실패/개수 불일치)하면 None을 반환한다 - 호출부
     (filter_articles)는 None이면 그 배치를 전부 통과시킨다.
+
+    session: 2026-07-23 추가 - filter_articles가 배치마다 반복 호출하므로,
+    매번 requests.post()로 새 연결을 맺는 대신 세션 하나를 재사용해 커넥션
+    오버헤드를 줄인다.
     """
     user_prompt = _build_user_prompt(batch)
 
@@ -170,7 +174,7 @@ def _call_llm(batch: list[dict], api_key: str) -> list[bool] | None:
                     {"role": "user", "content": user_prompt},
                 ],
             }
-            resp = requests.post(LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
+            resp = session.post(LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             text = data["choices"][0]["message"]["content"].strip()
@@ -187,7 +191,7 @@ def _call_llm(batch: list[dict], api_key: str) -> list[bool] | None:
                 "system": _SYSTEM_PROMPT,
                 "messages": [{"role": "user", "content": user_prompt}],
             }
-            resp = requests.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
+            resp = session.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             text = "".join(
@@ -249,47 +253,73 @@ def filter_articles(articles: list[dict]) -> list[dict]:
     API 키가 없거나(LLM_PROVIDER에 맞는 키 환경변수 미설정) 모든 배치 호출이
     실패하면, 안전하게 원본 articles를 그대로 반환한다(필터를 그냥 안 거친
     것과 동일 - 9.4/9.5 원칙과 같은 방향의 안전한 기본값).
+
+    ** WATT 소스는 LLM 호출 없이 자동 통과 (2026-07-23 추가, 담당자 제안) **
+    WATT(WATTAgNet/Feed Strategy)는 그 자체가 사료·축산업 전문지라, 이
+    필터가 잡으려는 오매칭 유형(동음이의어, 기관명 일부로만 등장, 각주성
+    언급)은 "키워드 검색으로 긁어온" 네이버/GDELT에서만 발생하는 구조적
+    문제고 WATT엔 애초에 해당 안 됨 - 그래서 LLM 호출 없이 안전하게
+    통과시켜 호출 수를 아낀다. keyword_tagger.py가 site_category를 채울지
+    판단할 때 쓰는 것과 같은 부정 조건(source not in ("네이버", "GDELT"))을
+    재사용 - 같은 조건이라 같은 취약점도 그대로 적용됨: 나중에 새 소스가
+    추가되면 그것도 "WATT 취급"돼 자동 통과될 위험이 있음(keyword_tagger.py
+    tag_articles의 관련 주석 참고) - 현재 신규 소스 계획이 없어 그대로 둠.
+    자동 통과된 기사는 반환 리스트 앞쪽에 모이므로, 이 함수를 거치면
+    원래 수집 순서가 그대로 보존되지는 않는다 - 이후 단계(이슈 그룹핑/
+    스코어링)는 순서에 의존하지 않으므로 문제 없음.
     """
     if not articles:
         return articles
+
+    watt_articles = [a for a in articles if a.get("source") not in ("네이버", "GDELT")]
+    llm_target_articles = [a for a in articles if a.get("source") in ("네이버", "GDELT")]
+
+    if watt_articles:
+        print(f"[relevance_filter] WATT 소스 {len(watt_articles)}건은 업계 전문지 특성상 "
+              f"LLM 호출 없이 자동 통과")
+
+    if not llm_target_articles:
+        return watt_articles
 
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
         print(f"[relevance_filter] {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
-              f"관련성 필터 생략, {len(articles)}건 전부 통과")
+              f"관련성 필터 생략, {len(llm_target_articles)}건(네이버/GDELT) 전부 통과")
         return articles
 
     model_name = LLM_MODEL_OPENROUTER if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
     print(f"[relevance_filter] 관련성 필터 시작 - provider={LLM_PROVIDER}, "
-          f"model={model_name}, 대상 {len(articles)}건")
+          f"model={model_name}, 대상 {len(llm_target_articles)}건(네이버/GDELT만, "
+          f"WATT {len(watt_articles)}건 제외)")
 
-    kept = []
+    kept = list(watt_articles)
     dropped_samples = []
-    total_batches = (len(articles) + BATCH_SIZE - 1) // BATCH_SIZE
-    for batch_num, i in enumerate(range(0, len(articles), BATCH_SIZE), start=1):
-        batch = articles[i:i + BATCH_SIZE]
-        # 2026-07-22 추가: 어떤 기사가 어느 배치에 속했는지 로그로 안 남아서,
-        # 특정 기사가 "LLM이 판정했는데 놓친 것"인지 "429 등으로 애초에 판정
-        # 자체를 못 받은 것"인지 사후에 구분이 안 되는 문제가 있었음(담당자
-        # 지적). 배치 시작 시점에 포함된 기사 제목을 남겨서, 바로 다음 줄에
-        # 나오는 성공/실패 로그와 대조하면 추적 가능하게 함.
-        titles_preview = " / ".join(a.get("title", "")[:40] for a in batch)
-        print(f"[relevance_filter] 배치 {batch_num}/{total_batches} 처리 중 "
-              f"({len(batch)}건): {titles_preview}")
-        results = _call_llm(batch, api_key)
-        if results is None:
-            kept.extend(batch)  # 이 배치는 전부 통과 (안전한 기본값)
-            continue
-        for article, relevant in zip(batch, results):
-            if relevant:
-                kept.append(article)
-            else:
-                dropped_samples.append(article.get("title", ""))
+    total_batches = (len(llm_target_articles) + BATCH_SIZE - 1) // BATCH_SIZE
+    with requests.Session() as session:
+        for batch_num, i in enumerate(range(0, len(llm_target_articles), BATCH_SIZE), start=1):
+            batch = llm_target_articles[i:i + BATCH_SIZE]
+            # 2026-07-22 추가: 어떤 기사가 어느 배치에 속했는지 로그로 안 남아서,
+            # 특정 기사가 "LLM이 판정했는데 놓친 것"인지 "429 등으로 애초에 판정
+            # 자체를 못 받은 것"인지 사후에 구분이 안 되는 문제가 있었음(담당자
+            # 지적). 배치 시작 시점에 포함된 기사 제목을 남겨서, 바로 다음 줄에
+            # 나오는 성공/실패 로그와 대조하면 추적 가능하게 함.
+            titles_preview = " / ".join(a.get("title", "")[:40] for a in batch)
+            print(f"[relevance_filter] 배치 {batch_num}/{total_batches} 처리 중 "
+                  f"({len(batch)}건): {titles_preview}")
+            results = _call_llm(batch, api_key, session)
+            if results is None:
+                kept.extend(batch)  # 이 배치는 전부 통과 (안전한 기본값)
+                continue
+            for article, relevant in zip(batch, results):
+                if relevant:
+                    kept.append(article)
+                else:
+                    dropped_samples.append(article.get("title", ""))
 
     dropped_count = len(articles) - len(kept)
-    print(f"[relevance_filter] 관련성 필터 완료 - {len(articles)}건 중 "
-          f"{dropped_count}건 제외, {len(kept)}건 유지")
+    print(f"[relevance_filter] 관련성 필터 완료 - 전체 {len(articles)}건(WATT 자동통과 "
+          f"{len(watt_articles)}건 포함) 중 {dropped_count}건 제외, {len(kept)}건 유지")
     if dropped_samples:
         sample_n = min(10, len(dropped_samples))
         print(f"[relevance_filter] 제외된 기사 샘플 (최대 {sample_n}건):")

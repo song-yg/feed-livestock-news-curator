@@ -40,14 +40,39 @@ KEYWORD_SHEET_CSV_URL 환경변수가 없거나, 네트워크 실패, 시트 형
 import csv
 import io
 import os
+
 import requests
+
+# 2026-07-23 추가: 프로세스 내 캐시. get_keywords가 "ko"/"en" 각각을 위해
+# 독립적으로 호출되는데(naver_collector가 ko용, gdelt_collector가 en용),
+# 기존엔 매번 완전히 같은 CSV를 처음부터 다시 요청+파싱했음(한 실행에 총
+# 2번). 이 프로세스는 한 번 실행되고 끝나는 구조(매번 새 GitHub Actions
+# 러너)라 "캐시가 오래돼서 stale해지는" 걱정 없이, 같은 실행 안에서만
+# 재사용하면 충분함 - 실행 중간에 시트 내용이 바뀌는 경우까지 반영할
+# 필요는 이 프로젝트 성격상 없다고 판단(주 1회 실행, 실행 도중 편집
+# 반영을 요구하는 요구사항 없음).
+_cache: dict[str, list[dict] | None] = {}
 
 
 def _fetch_csv_rows(csv_url: str) -> list[dict] | None:
     """
     구글 시트 게시 CSV URL을 가져와서 dict 리스트로 파싱한다.
     실패하면(네트워크 오류, 형식 이상 등) None을 반환 - 호출부가 fallback.
+
+    같은 csv_url에 대해 이 프로세스 안에서 이미 한 번 가져온 적 있으면,
+    네트워크 요청/파싱을 다시 하지 않고 캐시된 결과를 그대로 돌려준다
+    (성공이든 실패든 캐시함 - 실패까지 캐시하는 이유는, 실패했다는 걸
+    두 번째 호출에서 다시 네트워크로 확인할 필요가 없기 때문. 어차피
+    한 실행 안에서 네트워크 상태가 그새 좋아질 걸 기대하고 재시도할
+    이유가 없음 - 재시도가 필요한 경우는 이미 gdelt_collector 등에서
+    보는 것처럼 응답이 불안정한 API에나 해당하고, 이건 정적 파일 하나
+    가져오는 것뿐이라 다름).
     """
+    if csv_url in _cache:
+        cached = _cache[csv_url]
+        print(f"[keyword_source] 캐시된 CSV 재사용 (이번 실행에서 이미 가져온 적 있음)")
+        return cached
+
     try:
         resp = requests.get(csv_url, timeout=15)
         resp.raise_for_status()
@@ -58,10 +83,13 @@ def _fetch_csv_rows(csv_url: str) -> list[dict] | None:
         rows = list(reader)
         if not rows:
             print("[keyword_source] 시트가 비어있음 - fallback 사용")
+            _cache[csv_url] = None
             return None
+        _cache[csv_url] = rows
         return rows
     except Exception as e:
         print(f"[keyword_source] 시트 읽기 실패: {type(e).__name__} - {e!r} - fallback 사용")
+        _cache[csv_url] = None
         return None
 
 
