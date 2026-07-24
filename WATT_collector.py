@@ -48,11 +48,18 @@ from playwright.sync_api import sync_playwright
 
 # 2사이트 다 같은 구조라고 확인됨 -> 도메인만 다르게 순회
 SITES = {
-    # 2026-07-22 일시 비활성화: WATTAgNet의 /latest-news가 Cloudflare 캐시에
-    # 고정된 채(며칠 연속 2026-05-04 등 같은 과거 스냅샷만 반환, cf-cache-status:
-    # HIT) 안 갱신되고 있는 게 실측 확인됨 - 우리 쪽 코드/요청 방식 문제가
-    # 아니라 사이트(혹은 그 CDN) 쪽 문제로 판단, 정상화될 때까지 소스에서 뺌.
-    # 재활성화하려면 아래 주석만 풀면 됨(다른 코드 변경 불필요).
+    # 2026-07-25 영구 제외 확정(2026-07-22엔 "Cloudflare 캐시 고정"으로
+    # 오진단했었음 - 정정): 담당자가 실제 Playwright로 재현 테스트한 결과,
+    # 원인은 캐시가 아니라 **Cloudflare의 봇 차단(사람 확인) 챌린지 화면**
+    # 이었음을 스크린샷으로 확인함("Performing security verification" +
+    # "Verify you are human" 체크박스, Ray ID 포함). 자동화 접근을
+    # 사이트가 명시적으로 막고 있는 것이라, 이걸 우회하는 시도는 하지
+    # 않기로 함(9.x 원칙과 별개로, 이런 보안장치 우회는 이 프로젝트가
+    # 하지 않을 일). 그동안 실행마다 WATTAgNet 건수가 0건/10건/360건으로
+    # 들쭉날쭉했던 것도 봇 차단이 걸릴 때/안 걸릴 때가 있었던 것으로
+    # 설명됨. RSS 피드 등 대안도 검색해봤으나 공식적으로 유지되는 피드를
+    # 못 찾음. 같은 회사(WATT Global Media)의 Feed Strategy는 이 문제가
+    # 없어 그대로 유지.
     # "WATTAgNet": "https://www.wattagnet.com",
     "Feed Strategy": "https://www.feedstrategy.com",
 }
@@ -69,15 +76,16 @@ WATT_SOURCE_TIMEZONE = ZoneInfo("America/Chicago")
 DAYS_BACK = 7
 MAX_PAGES = 30  # 이 이상이면 문제가 있음... (정상 사이트에 적용되는 기본 상한)
 
-# 2026-07-22 추가: 사이트별로 페이지네이션 가능 여부를 다르게 둔다. WATTAgNet은
-# Cloudflare 캐시가 쿼리스트링(`?page=N`)을 무시하고 고정된 스냅샷만 돌려주는
-# 게 실측 확인돼서(위 SITES 주석 참고), 페이지를 넘겨봐야 같은 콘텐츠만 반복
-# 파싱하게 됨 - 이런 사이트는 1페이지만 수집하도록 강제한다. Feed Strategy는
-# 이 문제가 없는 것으로 확인됐으므로(cf-cache-status는 HIT이지만 age가 정상
-# 갱신되고 페이지마다 다른 콘텐츠 반환 - 다만 실제로 2페이지까지 간 사례는
-# 아직 없어 완전 검증은 아님) 기본값(MAX_PAGES까지 정상 페이지네이션)을 그대로
-# 적용한다. WATTAgNet을 나중에 SITES에 다시 넣더라도, 이 목록에 남아있는 한
-# 자동으로 1페이지만 수집하도록 안전장치가 유지된다.
+# 2026-07-22 추가, 2026-07-25 원인 정정: 사이트별로 페이지네이션 가능
+# 여부를 다르게 둔다. WATTAgNet은 애초에 Cloudflare 봇 차단으로 접근
+# 자체가 막혀 있어서(위 SITES 주석 참고, 영구 제외 확정) 페이지네이션
+# 여부 자체가 무의미해졌지만, 혹시 나중에 실수로 SITES에 다시 넣더라도
+# 최소한의 안전장치가 유지되도록 이 목록은 그대로 둔다(1페이지만
+# 시도하다 봇 차단으로 실패하면 그 실행만 0건으로 끝나고, 여러 페이지에
+# 걸쳐 반복 시도하지는 않게). Feed Strategy는 이 문제가 없는 것으로
+# 확인됐으므로(cf-cache-status는 HIT이지만 age가 정상 갱신되고 페이지마다
+# 다른 콘텐츠 반환 - 다만 실제로 2페이지까지 간 사례는 아직 없어 완전
+# 검증은 아님) 기본값(MAX_PAGES까지 정상 페이지네이션)을 그대로 적용한다.
 SINGLE_PAGE_ONLY_SITES = {"WATTAgNet"}
 
 # requests의 UA만 바꿔도 403이 계속 떠서(TLS 핑거프린팅 등 추정) Playwright로 전환.
@@ -208,9 +216,9 @@ def collect() -> list[dict]:
 def _collect_site(page, source_name: str, base_url: str) -> list[dict]:
     """
     2026-07-22: 사이트별로 페이지네이션 가능 여부가 다름을 확인 - WATTAgNet은
-    Cloudflare 캐시가 `?page=N`을 무시하고 항상 같은 1페이지 스냅샷만 돌려주는
-    게 실측 확인돼(`SINGLE_PAGE_ONLY_SITES` 주석 참고) 1페이지만 수집하고,
-    나머지 사이트(Feed Strategy 등)는 정상적으로 여러 페이지를 순회한다.
+    (2026-07-25 정정: 원인은 캐시가 아니라 Cloudflare 봇 차단, `SINGLE_PAGE_ONLY_
+    SITES` 주석 참고) 1페이지만 수집하고, 나머지 사이트(Feed Strategy 등)는
+    정상적으로 여러 페이지를 순회한다.
     """
     if source_name in SINGLE_PAGE_ONLY_SITES:
         return _collect_single_page(page, source_name, base_url)
@@ -392,11 +400,11 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
         if title and link and not any(pat in link for pat in EXCLUDED_PATH_PATTERNS):
             results.append({"title": title, "url": link, "category": category})
 
-    # 2026-07-22 추가: 실행마다 WATTAgNet 건수가 크게 요동치는 원인을 못
-    # 찾아서(0건/10건/360건 실측 확인 - 담당자 지적), 우선 "그 순간 목록
-    # 페이지에서 실제로 몇 개 항목을 읽어왔는지"부터 남긴다. 이게 매번
-    # 비슷하면 문제는 상세페이지/날짜 판정 쪽에 있는 거고, 이것부터 들쭉날쭉
-    #하면 목록 페이지 자체(캐싱/봇 차단 등)가 원인일 가능성이 커진다.
+    # 2026-07-22 추가, 2026-07-25 원인 규명 완료: 실행마다 WATTAgNet 건수가
+    # 크게 요동쳤던 것(0건/10건/360건 실측 확인 - 담당자 지적)은 Cloudflare
+    # 봇 차단이 걸릴 때/안 걸릴 때가 있었기 때문으로 확인됨(SITES 주석 참고,
+    # WATTAgNet 영구 제외 확정). 이 로그 자체는 다른 사이트 진단에도 계속
+    # 유용해서 그대로 남겨둔다.
     print(f"[watt] {url} - 목록에서 {len(results)}개 항목 읽음")
     return results
 
