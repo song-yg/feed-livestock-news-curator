@@ -1,6 +1,35 @@
 [
   {
     "source": "Feed Strategy",
+    "title": "GLC Minerals names Nick Ripp vice president of sales",
+    "url": "https://www.feedstrategy.com/business-markets/company-news/news/15830762/glc-minerals-names-nick-ripp-vice-president-of-sales",
+    "published_at": "2026-07-23T05:00:00+00:00",
+    "category": "기타",
+    "site_category": "Company News",
+    "matched_keywords": []
+  },
+  {
+    "source": "Feed Strategy",
+    "title": "Novus brings global feed ingredient references together in new digital tool",
+    "url": "https://www.feedstrategy.com/animal-feed-additives-ingredients/feed-ingredients/news/15830758/novus-brings-global-feed-ingredient-references-together-in-new-digital-tool",
+    "published_at": "2026-07-23T05:00:00+00:00",
+    "category": "기타",
+    "site_category": "Feed Ingredients",
+    "matched_keywords": []
+  },
+  {
+    "source": "Feed Strategy",
+    "title": "De Heus expands aquaculture capabilities with marine and cold-water fish feed mill",
+    "url": "https://www.feedstrategy.com/animal-nutrition/aquaculture/news/15830751/de-heus-expands-aquaculture-capabilities-with-marine-and-coldwater-fish-feed-mill",
+    "published_at": "2026-07-23T05:00:00+00:00",
+    "category": "사료업계 특화 용어",
+    "site_category": "Aquaculture",
+    "matched_keywords": [
+      "feed mill"
+    ]
+  },
+  {
+    "source": "Feed Strategy",
     "title": "DSM-Firmenich survey: 85% of feed samples contain multiple mycotoxins",
     "url": "https://www.feedstrategy.com/animal-health-veterinary/mycotoxins/news/15830620/dsmfirmenich-survey-85-of-feed-samples-contain-multiple-mycotoxins",
     "published_at": "2026-07-22T05:00:00+00:00",
@@ -42,6 +71,26 @@
     "published_at": "2026-07-17T05:00:00+00:00",
     "category": "기타",
     "site_category": "Feed Additives",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "[김호이의 영화 인사이트] 수능 대신 숲을 택한 네 소녀…'산양들', 무해...",
+    "url": "https://www.abcn.kr/news/articleView.html?idxno=89739",
+    "published_at": "2026-07-23T23:38:00+09:00",
+    "category": "기타",
+    "description": "오는 29일 개봉하는 '산양들'은 수능을 앞두고 미래를 결정해야 하는 시기, 학교 사육장의 동물들이 조류독감으로 살처분될 위기에 놓였다는 사실을 알게 된 여고생 네 명이 동물들을 구출하고 숲속에 자신들만의 안식처를... ",
+    "press": "abcn.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "운동장 단짝에서 'K-치킨'의 거인이 된, 김광선 회장에게",
+    "url": "https://www.abcn.kr/news/articleView.html?idxno=89731",
+    "published_at": "2026-07-23T17:22:00+09:00",
+    "category": "기타",
+    "description": "2003년, 전국을 휩쓴 조류독감 사태로 원료 수입이 전면 중단되었던 그 절체절명의 위기 순간 말이야. 그 위기는 마치 노인의 청새치를 사정없이 뜯어먹던 굶주린 상어 떼와 같았을 거야. 그때 세상을 원망하거나... ",
+    "press": "abcn.kr",
     "matched_keywords": []
   },
   {
@@ -98,25 +147,105 @@
   },
   {
     "source": "네이버",
-    "title": "농협, 조류독감發 계란값 상승에 할인공급 총력",
-    "url": "https://www.farminsight.net/news/articleView.html?idxno=16668",
-    "published_at": "2026-07-16T16:56:00+09:00",
-    "category": "질병명",
-    "description": "농협 축산경제(대표 안병우)는 최근 조류독감 발생과 이상기후에 따른 산란율 저하 등으로 계란값의 가파른 상승이 계속되는 가운데, 소비자 장바구니 부담 완화를 위해 경제지주와 양계농협이 협력해 「농협계란」... ",
-    "press": "farminsight.net",
-    "matched_keywords": [
-      "조류독감"
-    ]
+    "title": "SGC에너지, SMP 강세에 글로벌 LNG 가격 상승 '수혜'…\"하반기 수익성 추...",
+    "url": "http://www.newsprime.co.kr/news/article.html?no=741362",
+    "published_at": "2026-07-24T07:38:00+09:00",
+    "category": "기타",
+    "description": "미국보다는 낮지만 국내 다른 DC 대비 프리미엄이 부여된 가격으로 사료된다\"며 \"매년 임대료 3% 상향 조건이 있기 때문에 이익률은 상업운전 10년차까지 지속적으로 개선될 수 있다\"고 강조했다. 끝으로 \"향후 국내... ",
+    "press": "newsprime.co.kr",
+    "matched_keywords": []
   },
   {
     "source": "네이버",
-    "title": "농식장관 \"수입 계란 2.3억개 유통…가격 안정에 효과\"",
-    "url": "https://www.newsis.com/view/NISX20260716_0003712576",
-    "published_at": "2026-07-16T15:51:00+09:00",
+    "title": "CJ제일제당, 3개 사업부로 새판…하반기 실적 회복 노린다",
+    "url": "https://www.ngetnews.com/news/articleView.html?idxno=551774",
+    "published_at": "2026-07-24T07:20:00+09:00",
     "category": "기타",
-    "description": "이에 송 장관은 \"7월 전체로 보면 전년 동기 대비 0.1% 줄었는데, 소비가 늘었다\"며 \"조류독감 피해가 컸다\"고 부연했다. 이 대통령은 \"물가 안정에 좀 더 신경써야 할 것 같다\"고 당부했다.",
-    "press": "newsis.com",
+    "description": "핵심소재사업부는 설탕·밀가루·식용유 등 식품 소재와 라이신·트립토판 등 사료용 아미노산, 알룰로스... 곡물 가격 상승 부담으로 수익성이 낮아질 우려가 있다\"고 내다봤다. 이어 \"K-푸드 해외사업 확장과 사업구조... ",
+    "press": "ngetnews.com",
     "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "안동에 잇단 주류공장…보리·쌀 농가 소득 증대",
+    "url": "https://www.nongmin.com/article/20260722500639",
+    "published_at": "2026-07-24T05:02:00+09:00",
+    "category": "기타",
+    "description": "납품가격도 시중보다 10%가량 높았다. 위스키 제조 과정에서 나온 맥아박은 다시 돌려받아 한우 사료로 활용한다. 강씨는 “맥아박을 먹인 소는 육질이 좋아져 도축 후 백화점에 납품하기로 업체와 약속했다”며... ",
+    "press": "nongmin.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "농어촌공사, K-농기자재 수출상담회 성료…373만 달러 수출협약 체결",
+    "url": "http://www.newsfarm.co.kr/news/articleView.html?idxno=101782",
+    "published_at": "2026-07-23T20:56:00+09:00",
+    "category": "기타",
+    "description": "참여 기업은 농기계·시설자재 38개사, 친환경농자재·비료·농약 22개사, 사료·동물용의약품·종자 분야... 이집트 구매기업 관계자는 \"한국 농기자재는 유럽 제품과 비교해도 품질과 가격 면에서 충분한 경쟁력을... ",
+    "press": "newsfarm.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "[주식마감] 국제유가 급등 소식에 SK이터닉스 상한가... 서울식품우, 지...",
+    "url": "https://www.ggilbo.com/news/articleView.html?idxno=1171113",
+    "published_at": "2026-07-23T19:40:00+09:00",
+    "category": "기타",
+    "description": "회사 측은 석유화학 제품의 판매량 증가와 판매가격 상승, 반도체 소재 사업 성장 등이 실적 개선을... 한일사료, 동일스틸럭스, NHN KCP, 아진엑스텍, JW신약, LK삼양, 나노엔텍, 폴라리스오피스, 미투온, 우리기술... ",
+    "press": "ggilbo.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "'참치 왕국' 동원F&B의 투트랙 펫푸드 전략",
+    "url": "http://www.sportsq.co.kr/news/articleView.html?idxno=496623",
+    "published_at": "2026-07-23T19:32:00+09:00",
+    "category": "기타",
+    "description": "사료 위에 얹어 급여하는 방식으로, 반려견의 입맛을 돋우는 데 초점을 맞췄다. 필요한 양만큼 덜어 쓸 수... 1000원대 가격을 앞세워 고물가 국면에서도 부담 없이 반려동물 간식을 즐길 수 있도록 했다. 다이소에서... ",
+    "press": "sportsq.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "[기고-장성대] 사룟값 폭등, 농협 사업구조 바꿔야",
+    "url": "https://www.imaeil.com/page/view/2026070916330881645",
+    "published_at": "2026-07-23T17:37:00+09:00",
+    "category": "기타",
+    "description": "지난 6월 11일 농협사료는 전 축종 사료 가격을 ㎏당 39원(약 7.9%) 인상했다. 포대당으로 환산하면 975원, 약 1천원이다. 얼핏 보면 큰돈이 아닌 듯하지만 축산농가에는 결코 가벼운 금액이 아니다. 한우 비육우 한 마리가... ",
+    "press": "imaeil.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "미리 쟁여둘 걸…1년 사이 가격 15.8%나 뛰었다는 '국민 식재료' 정체",
+    "url": "https://www.wikitree.co.kr/articles/1148103",
+    "published_at": "2026-07-23T17:22:00+09:00",
+    "category": "기타",
+    "description": "장보기 부담이 커지는 가운데 식탁에서 빠지기 어려운 대표 식재료의 가격이 1년 사이 두 자릿수... 껍데기 색은 주로 닭의 품종에 따라 달라지고 노른자 색은 닭이 먹은 사료의 영향을 받을 수 있다. 왕란, 특란... ",
+    "press": "wikitree.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "한국농어촌공사, 'K-농기자재'... 3,548만 달러 수출상담",
+    "url": "http://www.newsworker.co.kr/news/articleView.html?idxno=437955",
+    "published_at": "2026-07-23T16:44:00+09:00",
+    "category": "기타",
+    "description": "참여 기업은 농기계·시설자재 분야 38곳과 친환경농자재·비료·농약 분야 22곳, 사료·동물용의약품·종자... 상담회에 참여한 이집트 구매기업 관계자는 한국 농기자재가 유럽 제품과 비교해도 품질과 가격 경쟁력을... ",
+    "press": "newsworker.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "농진청, 여름철 풀사료 '사료피' 논 활용 높이고 자급기반 넓힌다",
+    "url": "https://www.kenews.co.kr/news/article.html?no=89712",
+    "published_at": "2026-07-23T15:52:00+09:00",
+    "category": "사료업계 특화 용어",
+    "description": "건물(마른 상태) 기준, 사료피 가격은 수입 건초(짚류)보다 약 31% 저렴해 축산 농가의 사료비 부담도 덜어줄 것으로 기대된다. 농촌진흥청은 이번 연구 성과의 신속한 확산에 힘쓰고 있다. 올해 전국 50곳(279헥타르 규모)... ",
+    "press": "kenews.co.kr",
+    "matched_keywords": [
+      "사료"
+    ]
   },
   {
     "source": "네이버",
@@ -142,22 +271,22 @@
   },
   {
     "source": "네이버",
-    "title": "윤준병 의원, 법률소비자연맹 선정 '대한민국 헌정대상' 6년 연속 수상",
-    "url": "https://www.eroun.net/news/articleView.html?idxno=86097",
-    "published_at": "2026-07-23T14:28:00+09:00",
-    "category": "기타",
-    "description": "이 법안은 국제 공급망 불안이나 원자재 가격 급등 등으로 비료·농약·사료 등 필수 농자재 가격이 급등할 경우 국가가 지원할 수 있는 근거를 마련하는 내용을 담고 있다. 또 농촌지역 신재생에너지 확대와 농가 소득... ",
-    "press": "eroun.net",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "농어촌공사, K-농기자재 수출상담회서 373만 달러 규모 협약 성과",
     "url": "https://daily.hankooki.com/news/articleView.html?idxno=1388632",
     "published_at": "2026-07-23T14:28:00+09:00",
     "category": "기타",
     "description": "이번 행사에는 해외 23개국 51개 구매기업과 국내 농기계·비료·사료 등 관련 기업 71개사가 참여했다.... 이집트의 한 구매기업 관계자는 \"한국산 제품은 유럽산과 견주어도 품질과 가격 측면에서 충분한 경쟁력을... ",
     "press": "daily.hankooki.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "윤준병 의원, 법률소비자연맹 선정 '대한민국 헌정대상' 6년 연속 수상",
+    "url": "https://www.eroun.net/news/articleView.html?idxno=86097",
+    "published_at": "2026-07-23T14:28:00+09:00",
+    "category": "기타",
+    "description": "이 법안은 국제 공급망 불안이나 원자재 가격 급등 등으로 비료·농약·사료 등 필수 농자재 가격이 급등할 경우 국가가 지원할 수 있는 근거를 마련하는 내용을 담고 있다. 또 농촌지역 신재생에너지 확대와 농가 소득... ",
+    "press": "eroun.net",
     "matched_keywords": []
   },
   {
@@ -550,24 +679,24 @@
   },
   {
     "source": "네이버",
-    "title": "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
-    "url": "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
-    "published_at": "2026-07-22T14:00:00+09:00",
-    "category": "사료업계 특화 용어",
-    "description": "마른 상태를 기준으로 한 사료피 가격은 수입 건초보다 약 31% 저렴하다. 농진청은 올해 전국 50곳, 279㏊에서 사료피 현장 실증을 진행하고 있다. 조온과 다온은 민간 종자업체 5곳에 기술이전을 마쳤으며 만온도... ",
-    "press": "dailian.co.kr",
-    "matched_keywords": [
-      "사료"
-    ]
-  },
-  {
-    "source": "네이버",
     "title": "논에 벼 대신 풀 심는다…'사료피'가 전략작물 새 카드로",
     "url": "https://www.mt.co.kr/economy/2026/07/23/2026072213341472182",
     "published_at": "2026-07-22T14:00:00+09:00",
     "category": "사료업계 특화 용어",
     "description": "기존 동계 조사료 생산에 사용하던 예취기와 원형베일러 등 수확장비를 그대로 활용할 수 있어 별도 장비 투자 부담이 없고, 생산한 건초 가격도 수입 건초보다 약 31% 저렴해 사료비 절감 효과를 기대할 수 있다.... ",
     "press": "mt.co.kr",
+    "matched_keywords": [
+      "사료"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
+    "url": "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
+    "published_at": "2026-07-22T14:00:00+09:00",
+    "category": "사료업계 특화 용어",
+    "description": "마른 상태를 기준으로 한 사료피 가격은 수입 건초보다 약 31% 저렴하다. 농진청은 올해 전국 50곳, 279㏊에서 사료피 현장 실증을 진행하고 있다. 조온과 다온은 민간 종자업체 5곳에 기술이전을 마쳤으며 만온도... ",
+    "press": "dailian.co.kr",
     "matched_keywords": [
       "사료"
     ]
@@ -874,16 +1003,6 @@
   },
   {
     "source": "네이버",
-    "title": "\"로켓 계란 등장, 달걀 가격 40% 폭등했다\"…대입 시험 때문이라는 나라",
-    "url": "https://view.asiae.co.kr/article/2026072114024977056",
-    "published_at": "2026-07-21T14:08:00+09:00",
-    "category": "기타",
-    "description": "이후 사료 가격을 감당할 수 없게 된 농가들은 과도한 수준의 암탉 살처분을 단행했고, 이번에는 생산량이 급감하면서 계란 가격도 폭등한 것이다. 대입 시험 땐 튀김 빵에 계란 2개 먹어야 매년 6월 치르는 중국 대입... ",
-    "press": "view.asiae.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "부여군, 염소 사육 농가 FTA 직불금 지원",
     "url": "https://www.newstnt.com/news/articleView.html?idxno=711004",
     "published_at": "2026-07-21T14:08:00+09:00",
@@ -893,6 +1012,16 @@
     "matched_keywords": [
       "FTA"
     ]
+  },
+  {
+    "source": "네이버",
+    "title": "\"로켓 계란 등장, 달걀 가격 40% 폭등했다\"…대입 시험 때문이라는 나라",
+    "url": "https://view.asiae.co.kr/article/2026072114024977056",
+    "published_at": "2026-07-21T14:08:00+09:00",
+    "category": "기타",
+    "description": "이후 사료 가격을 감당할 수 없게 된 농가들은 과도한 수준의 암탉 살처분을 단행했고, 이번에는 생산량이 급감하면서 계란 가격도 폭등한 것이다. 대입 시험 땐 튀김 빵에 계란 2개 먹어야 매년 6월 치르는 중국 대입... ",
+    "press": "view.asiae.co.kr",
+    "matched_keywords": []
   },
   {
     "source": "네이버",
@@ -1340,6 +1469,16 @@
   },
   {
     "source": "네이버",
+    "title": "크라운제과 동원F&B 롯데GRS 外(새로나왔어요!)",
+    "url": "https://www.newsclaim.co.kr/news/articleView.html?idxno=3069753",
+    "published_at": "2026-07-20T13:50:00+09:00",
+    "category": "기타",
+    "description": "밥 위에 토핑처럼 올려 사료의 기호성을 높이는 제품으로, 동결건조 과일칩, 요거트큐브, 저칼로리 쌀과자 등 다양한 구성이 특징입니다. HACCP 인증 시설에서 생산된 소용량 제품으로 가격은 1000원입니다. 동원F&B... ",
+    "press": "newsclaim.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
     "title": "한일사료 주가, 7월 20일 장중 2,785원 15.56% 상승",
     "url": "https://www.joongangenews.com/news/articleView.html?idxno=533871",
     "published_at": "2026-07-20T13:50:00+09:00",
@@ -1352,12 +1491,12 @@
   },
   {
     "source": "네이버",
-    "title": "크라운제과 동원F&B 롯데GRS 外(새로나왔어요!)",
-    "url": "https://www.newsclaim.co.kr/news/articleView.html?idxno=3069753",
-    "published_at": "2026-07-20T13:50:00+09:00",
+    "title": "동원F&B 아르르, 다이소서 반려견 간식 16종 출시",
+    "url": "http://www.econonews.co.kr/news/articleView.html?idxno=441433",
+    "published_at": "2026-07-20T13:12:00+09:00",
     "category": "기타",
-    "description": "밥 위에 토핑처럼 올려 사료의 기호성을 높이는 제품으로, 동결건조 과일칩, 요거트큐브, 저칼로리 쌀과자 등 다양한 구성이 특징입니다. HACCP 인증 시설에서 생산된 소용량 제품으로 가격은 1000원입니다. 동원F&B... ",
-    "press": "newsclaim.co.kr",
+    "description": "제품으로, 사료의 기호성을 높일 수 있도록 개발됐다. 동원F&B에 따르면 식품안전관리인증기준(HACCP·해썹) 인증을 받은 국내 제조시설에서 생산됐으며 판매 가격은 1000원이다. 최근 반려동물을 가족처럼 여기는 '펫팸족... ",
+    "press": "econonews.co.kr",
     "matched_keywords": []
   },
   {
@@ -1368,16 +1507,6 @@
     "category": "기타",
     "description": "아프리카돼지열병(ASF) 관련 사료주로도 분류되는 만큼 방역 이슈와 곡물 가격 변동성이 동시에 부각되면서 매수세가 집중되고 있다. 한탑도 5.97% 상승한 2575원에 거래되고 있으며 곡물 유통과 제분 사업 기대감이 주가를... ",
     "press": "pinpointnews.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "동원F&B 아르르, 다이소서 반려견 간식 16종 출시",
-    "url": "http://www.econonews.co.kr/news/articleView.html?idxno=441433",
-    "published_at": "2026-07-20T13:12:00+09:00",
-    "category": "기타",
-    "description": "제품으로, 사료의 기호성을 높일 수 있도록 개발됐다. 동원F&B에 따르면 식품안전관리인증기준(HACCP·해썹) 인증을 받은 국내 제조시설에서 생산됐으며 판매 가격은 1000원이다. 최근 반려동물을 가족처럼 여기는 '펫팸족... ",
-    "press": "econonews.co.kr",
     "matched_keywords": []
   },
   {
@@ -1776,216 +1905,6 @@
   },
   {
     "source": "네이버",
-    "title": "하루 한 끼 빈농에서 푸아그라 거물로…리펑산의 차이나드림",
-    "url": "https://www.mt.co.kr/world/2026/07/17/2026071612102193297",
-    "published_at": "2026-07-17T08:00:00+09:00",
-    "category": "기타",
-    "description": "1980년대 말 산둥성 린취현은 프랑스에서 랑드거위 품종을 들여와 부화, 사료배합, 질병관리, 도축, 가공 등... 규모가 작아 품질을 일정하게 유지하기 어려웠고 판로 확보와 가격 협상력도 떨어졌다. 방역과 질병 대응... ",
-    "press": "mt.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "30구 5890원→4980원…이마트서 7월 16일부터 '이것' 가격 인하",
-    "url": "https://www.wikitree.co.kr/articles/1146321",
-    "published_at": "2026-07-17T07:00:00+09:00",
-    "category": "기타",
-    "description": "7월 16일부터 전국 이마트에서 수입 신선란 30구 기준의 가격이 기존 5890원에서 4980원으로 내려간다.... 갈색란과 백색란의 차이는 주로 닭의 품종에서 비롯되며 노른자 색은 사료의 영향을 많이 받기 때문이다. 국내에서... ",
-    "press": "wikitree.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "함양산청축협, 이수식 신임 상임이사 선출",
-    "url": "https://www.aflnews.co.kr/news/articleView.html?idxno=324673",
-    "published_at": "2026-07-16T20:12:00+09:00",
-    "category": "기타",
-    "description": "그는 축산업이 시세 하락, 사료가격 상승, 생산비 증가, 각종 규제, 농가 고령화 등 어려운 환경에 놓여 있다며 합리적인 경영과 효율적인 조직 운영, 수익구조 개선의 필요성을 강조했다. 경영 비전으로는 '혁신과... ",
-    "press": "aflnews.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "\"한우산업, 생산·유통·개량 아우르는 체질 개선 필요\"",
-    "url": "https://www.agrinet.co.kr/news/articleView.html?idxno=405720",
-    "published_at": "2026-07-16T19:35:00+09:00",
-    "category": "축종별 용어",
-    "description": "사료 급여의 현장 사례를 소개했고, 유송원 축산물품질평가원 전북지원장과 이용건 한국농촌경제연구원 축산경제연구실장은 품질 향상과 산업 경쟁력 확보 방안을 제시했다. 현장에 참석한 한 농가는 \"예전에는 가격... ",
-    "press": "agrinet.co.kr",
-    "matched_keywords": [
-      "한우"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "피자·파스타 이젠 못 먹을 수도?…유럽 덮친 40도 폭염에 ‘이것’ 생...",
-    "url": "https://www.sedaily.com/article/20068772?ref=naver",
-    "published_at": "2026-07-16T19:24:00+09:00",
-    "category": "기타",
-    "description": "고온과 가뭄으로 젖소의 우유 생산량이 감소하고 사료용 건초 확보마저 어려워지면서 파스타와 피자 가격에도 영향을 줄 수 있다는 우려가 나온다. 기후변화에 엘니뇨까지 겹치면서 치즈뿐 아니라 쌀과 커피, 코코아 등... ",
-    "press": "sedaily.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "[오늘의 ABC 뉴스룸] 권성동 징역 2년 확정…통일교 불법 정치자금 1억,...",
-    "url": "https://www.ajunews.com/view/20260716170410225",
-    "published_at": "2026-07-16T17:16:00+09:00",
-    "category": "기타",
-    "description": "국제 곡물가 상승은 라면과 빵, 과자 가격은 물론 사료비를 거쳐 돼지고기와 닭고기, 달걀 가격에도 영향을 줄 수 있습니다. 더 큰 문제는 식량 수출국의 수출 제한입니다. 공급 부족이 심화하면 각국은 자국민 식량... ",
-    "press": "ajunews.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "[대통령 업무보고] 농식품부, AI 기반 농업 전환 가속…유통 혁신·수출...",
-    "url": "https://www.ziksir.com/news/articleView.html?idxno=140326",
-    "published_at": "2026-07-16T16:16:00+09:00",
-    "category": "기타",
-    "description": "소비자는 주변 마트와 유통업체의 판매가격을 한 번에 비교할 수 있어 보다 합리적인 구매가 가능해질 전망이다. 생산 현장에도 AI 기반 자동화가 본격 도입된다. 농작물 수확·선별 로봇과 무인 사료급이 시스템 등 25개... ",
-    "press": "ziksir.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "한돈협회장 \"물가 잡겠다고 돼지고기 수입만 늘려선 안 돼\"",
-    "url": "https://www.newsis.com/view/NISX20260716_0003712373",
-    "published_at": "2026-07-16T16:00:00+09:00",
-    "category": "기타",
-    "description": "대표 성과로는 돼지 거래가격 보고제와 관련한 축산물 유통법 대응을 꼽았다. 그는 \"정부가 돼지 생산과... 이 회장은 올해 초 야생멧돼지와 직접적인 연관성이 뚜렷하지 않은 농장 발생이 잇따르자 사료 원료와 폐사체... ",
-    "press": "newsis.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "논산계룡축협 '본바듬' 사료 호평",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82045",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "사료업계 특화 용어",
-    "description": "이는 일반 한우사료 및 본바듬 한우사료의 단가(2024년 6월부터 2026년 6월 평균가격)를 비교 분석한 자료에 따른 것이다. 한편 축협은 이같이 본바듬 한우사료가 출시 2주년을 맞아 양축가 조합원에게 실익 증진을... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": [
-      "사료"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "곡물가격 다시 상승 국면 사료원료 수급 불안 확대",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82026",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "시장/가격 용어",
-    "description": "유럽 시장에서 거래되는 곡물 선물가격이 폭등해 옥수수 가격은 2024년 5월 수준의 고점까지 치솟았다. 유럽을 강타하고 있는 폭염으로 인해 대표적인 생산국인 프랑스의 옥수수 작황이 나빠졌으며 생산량이 30%가량... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": [
-      "곡물가격"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "[기획] AI가 바꾸는 세계 낙농, 새로운 해법 제시",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82020",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "축종별 용어",
-    "description": "수취 가격도 함께 올랐다는 점에서, 데이터 기반 관리가 수익 구조 개선으로 직결되고 있음을 확인할 수 있다. AI 플랫폼은 개체별 영양 상태와 당일 산유량을 종합해 사료통에서 그램 단위 맞춤 배합사료를 배정... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": [
-      "낙농"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "70% 조사했더니 불법 의심 농지 27.6%…농협 개혁도 속도",
-    "url": "http://www.wowtv.co.kr/NewsCenter/News/Read?articleId=A202607160321&t=NN",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "농축산물 수급과 가격 안정을 위해 첨단기술을 활용한 정밀 예측·관측 시스템을 구축하고 가격안정제... 농작물 수확·선별과 착유, 무인 사료 급이 등 25개 AI 모델은 2027년까지 상용화하고 무안 K-AI 농업 선도지구에 AI... ",
-    "press": "wowtv.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "농식품부, 하반기 국민체감 농정 속도",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82080",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "또 중동 전쟁에 따른 농가 부담을 줄이기 위해 비료·사료 등 농자재 지원을 확대하고, 농지 활용 규제 개선과... 수입 안정 보험 대상 품목을 확대하고 가격안정제와 재해복구 지원을 시행한다. 필수 농자재 가격 상승 시... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "폭염에 계란 생산 회복 '빨간불'",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82078",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "여기에 방학·휴가철이 겹치며 7월 말 이후 가격도 점차 안정될 것으로 분석했다. 그러나 마릿수 증가가 곧... 계사 온도가 오르면 사료 섭취량이 줄고 생산성도 함께 낮아진다. 그 영향은 국립축산과학원 시험 결과에서... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "농식품부, AI 농업·농협개혁 속도…하반기 '국민 체감 농정' 추진",
-    "url": "https://www.m-i.kr/news/articleView.html?idxno=1392398",
-    "published_at": "2026-07-16T15:46:00+09:00",
-    "category": "기타",
-    "description": "웹 정보와 할인 전단 등을 AI가 분석해 가격 정보를 제공하며 약 1년간 시범 운영한 뒤 확대 여부를 검토한다. 농업 분야 AI 전환도 본격화한다. AI 수확·선별 로봇과 무인 사료급이 등 25개 AI 적용 모델을 조기 상용화하고... ",
-    "press": "m-i.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "충남 양식어가 사료비 부담 던다…구매자금 저금리 융자 지원",
-    "url": "https://www.aflnews.co.kr/news/articleView.html?idxno=324537",
-    "published_at": "2026-07-16T15:36:00+09:00",
-    "category": "사료업계 특화 용어",
-    "description": "충남도 수산자원연구소가 사료가격 상승으로 어려움을 겪는 양식어가의 경영 안정을 위해 배합사료 구매자금 융자 지원에 나선다. 사료비는 양식어가 경영비에서 큰 비중을 차지하는 만큼, 저금리 자금 지원이 현장... ",
-    "press": "aflnews.co.kr",
-    "matched_keywords": [
-      "사료"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "설탕 할당관세 추천대상 실수요자 중심으로 전환한다",
-    "url": "http://www.foodnews.co.kr/news/articleView.html?idxno=119419",
-    "published_at": "2026-07-16T15:18:00+09:00",
-    "category": "기타",
-    "description": "국민에게 안정적인 가격에 농축산물을 공급하기 위해 적정 생산ㆍ공급체계를 확립하고, 유통구조 개혁... 개선 △사료 원료 대마씨유의 THC, CBD 성분 허용기준 등 마련 △배달앱 등 통신판매 제공시 원산지 표시 규제 개선... ",
-    "press": "foodnews.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "올해 조사대상 농지 절반 이상 심층조사…4필지 중 1필지 ‘위반 가능성...",
-    "url": "https://www.etoday.co.kr/news/view/2604466",
-    "published_at": "2026-07-16T15:06:00+09:00",
-    "category": "기타",
-    "description": "6% 포착…수도권·토지거래허가구역 등 포함 9월 5개 지역서 AI 농축산물 가격 비교…가격안정제 8월 시행... 작물 수확·선별과 착유, 무인 사료 급이 등 25개 AI 적용 모델은 조기에 상용화한다. 농촌에서는 주민 이용... ",
-    "press": "etoday.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "농지 27.6% 무단 휴경·불법 전용 의심…8월 심층조사",
-    "url": "https://www.dailian.co.kr/news/view/1667636/?sc=Naver",
-    "published_at": "2026-07-16T15:05:00+09:00",
-    "category": "기타",
-    "description": "웹과 할인 전단 정보를 분석해 판매가격을 비교·제공하는 방식이다. 농업 분야 AI 활용도 확대한다. 농작물 수확·선별과 착유, 무인 사료 급이 등 25개 AI 모델을 2027년까지 상용화하고 무안 K-AI 농업 선도지구에 AI 농장과... ",
-    "press": "dailian.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "비즈니스맨이 선택할 수 있는 가장 화려한 사양, 핑크 골드 케이스 ‘이...",
-    "url": "https://www.gqkorea.co.kr/2026/07/16/%eb%b9%84%ec%a6%88%eb%8b%88%ec%8a%a4%eb%a7%a8%ec%9d%b4-%ec%84%a0%ed%83%9d%ed%95%a0-%ec%88%98-%ec%9e%88%eb%8a%94-%ea%b0%80%ec%9e%a5-%ed%99%94%eb%a0%a4%ed%95%9c-%ec%82%ac%ec%96%91-%ed%95%91%ed%81%ac/?utm_source=naver&utm_medium=partnership",
-    "published_at": "2026-07-16T15:05:00+09:00",
-    "category": "기타",
-    "description": "지금까지 바쉐론 콘스탄틴을 차고 고양이 사료를 먹은 사람이 또 있었을까? 아니, 그 정도의 고가 시계를... 41mm의 큰 케이스와 묵직한 존재감, 가격은 약 1억4,200만 원. 핑크 골드 케이스는 비즈니스맨이 선택할 수 있는... ",
-    "press": "gqkorea.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "42년 동안 같은 골목으로, 대구 남구 '주민 방역대'의 여름",
     "url": "https://www.dkilbo.com/news/articleView.html?idxno=549159",
     "published_at": "2026-07-21T15:56:00+09:00",
@@ -2034,92 +1953,14 @@
   },
   {
     "source": "네이버",
-    "title": "한돈협회 \"ASF 방역체계 손질해야\"…현장 중심 정책 촉구",
-    "url": "https://www.m-i.kr/news/articleView.html?idxno=1392386",
-    "published_at": "2026-07-16T18:00:00+09:00",
-    "category": "질병명",
-    "description": "협회는 정부가 지난 5월 구제역 SOP를 개정해 방역대 내 생축 이동 허용과 부분 살처분 확대, 이동 제한 완화 등을 반영했으며, 살처분 보상금도 상향 조정됐다고 설명했다. 앞으로는 살처분 보상금 100% 지급과 재입식 전... ",
-    "press": "m-i.kr",
-    "matched_keywords": [
-      "ASF"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "한돈협회장 \"방역순치돈사 제도화로 생산성·경쟁력 강화해야\"",
-    "url": "https://biz.newdaily.co.kr/site/data/html/2026/07/16/2026071600300.html",
-    "published_at": "2026-07-16T17:40:00+09:00",
+    "title": "3종 가축전염병 ‘일률적 이동제한’ 합리화 추진",
+    "url": "https://www.nongmin.com/article/20260722500532",
+    "published_at": "2026-07-24T05:01:00+09:00",
     "category": "정부·제도 용어",
-    "description": "이 회장은 주요 성과를 설명하면서 \"정부는 협회 측의 건의 등을 수렴해 지난 5월 구제역 긴급행동지침(SOP)을 개정했다\"며 \"시군 최초 발생 기준 조정, 방역대 내 생축 이동 허용, 경작지 액비 살포 허용, 항원·NSP 항체 양성... ",
-    "press": "biz.newdaily.co.kr",
+    "description": "돼지생식기호흡기증후군(PRRS)·돼지유행성설사병(PED) 같은 제3종 가축전염병 발생 때 일률적으로 적용되는 이동제한 조치를 질병 위험도에 따라 선택적으로 시행할 수 있게 하는 법률안이 국회에 제출돼 주목된다. 이들... ",
+    "press": "nongmin.com",
     "matched_keywords": [
-      "방역"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "이기홍 한돈협 회장 \"8개월간 44건 제도개선\"…ASF 조기종식 성과",
-    "url": "https://www.newspim.com/news/view/20260716000984",
-    "published_at": "2026-07-16T16:15:00+09:00",
-    "category": "질병명",
-    "description": "정부는 올해 5월 구제역 긴급행동지침(SOP)을 개정해 시·군 최초 발생 기준을 조정하고, 방역대 내 생축 이동과 경작지 액비 살포를 허용했다. 항원·NSP 항체 양성 시 이동제한을 완화하고 부분 살처분 농장의 출하를... ",
-    "press": "newspim.com",
-    "matched_keywords": [
-      "ASF"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "이기홍 한돈협회장 \"정부 정책, 현장서 작동해야\"…한돈산업 제도개선 ...",
-    "url": "https://www.ajunews.com/view/20260716150744962",
-    "published_at": "2026-07-16T16:02:00+09:00",
-    "category": "기타",
-    "description": "최근 구제역 SOP 개정으로 시군 최초 발생 기준 조정, 방역대 내 생축 이동 허용, 부분 살처분 농장 출하 허용 등이 반영됐다는 점도 소개했다. 살처분 보상체계도 개선 과제로 제시됐다. 협회는 최초 신고 시 살처분... ",
-    "press": "ajunews.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "이기홍 한돈협회장 \"현장 목소리 반영한 정책으로 지속가능한 한돈산업...",
-    "url": "https://www.industrynews.co.kr/news/articleView.html?idxno=83398",
-    "published_at": "2026-07-16T16:02:00+09:00",
-    "category": "기타",
-    "description": "대한한돈협회는 그동안의 방역 대응 과정에서 축적된 경험을 바탕으로 실효성 있는 방역체계를 구축하고... 주요 개정 내용은 시·군 최초 발생 기준 조정, 방역대 내 생축 이동 허용, 경작지 액비 살포 허용, 항원·NSP 항체... ",
-    "press": "industrynews.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "[선임기자 칼럼]이기홍 한돈자조금 위원장 \"정책은 현장의 목소리 반영...",
-    "url": "https://news.bbsi.co.kr/news/articleView.html?idxno=4095527",
-    "published_at": "2026-07-16T16:02:00+09:00",
-    "category": "기타",
-    "description": "이 회장은 지침 개정을 통해 시군 최초 발생 기준 조정, 방역대 내 생축 이동 허용, 경작지 액비 살포 허용, 항원·NSP 항체 양성 시 이동제한 완화, 부분 살처분 농장 출하 허용 등이 도입됐다고 설명했다. 또 살처분 보상금... ",
-    "press": "news.bbsi.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "이기홍 한돈협회장 \"ASF 방역, 현장 중심으로 전환해야\"",
-    "url": "https://www.news1.kr/economy/trend/6230653",
-    "published_at": "2026-07-16T16:00:00+09:00",
-    "category": "질병명",
-    "description": "시·군 최초 발생 기준을 조정하고 방역대 내 생축 이동을 허용했다. 경작지 액비 살포와 항원·NSP 항체 양성... 합동 방역대책위원회를 중심으로 과학적이고 현장 친화적인 방역체계를 구축해야 한다고 제안했다. 이 밖에... ",
-    "press": "news1.kr",
-    "matched_keywords": [
-      "ASF"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "한돈협회 \"현장 중심 정책 필요\"…ASF 방역·분뇨 규제 개선 촉구",
-    "url": "https://news.tf.co.kr/read/economy/2344237.htm",
-    "published_at": "2026-07-16T16:00:00+09:00",
-    "category": "질병명",
-    "description": "실제로 정부는 지난 5월 구제역 긴급행동지침(SOP)을 개정해 방역대 내 생축 이동 허용, 경작지 액비 살포 허용, 항원·NSP 항체 양성 시 이동제한 완화 등을 반영했다. 살처분 보상금 역시 가축전염병예방법 개정안 발의를... ",
-    "press": "news.tf.co.kr",
-    "matched_keywords": [
-      "ASF"
+      "이동제한"
     ]
   },
   {
@@ -2321,79 +2162,187 @@
   },
   {
     "source": "네이버",
-    "title": "방역당국, 오염우려물품 '사용중지' 권한 추진",
-    "url": "https://www.agrinet.co.kr/news/articleView.html?idxno=405763",
-    "published_at": "2026-07-16T19:34:00+09:00",
-    "category": "정부·제도 용어",
-    "description": "이와 더불어 농식품부 장관과 시·도지사, 시장·군수·구청장이 가축전염병 발생 및 확산 방지 필요성이 인정되면 가축 소유자에게 오염우려물품의 사용중지와 이동 제한 등의 조치를 내릴 수 있게 했다. 서삼석 의원은... ",
-    "press": "agrinet.co.kr",
-    "matched_keywords": [
-      "방역"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "한돈협회·한돈자조금, 농식품부 출입기자 간담회 성료",
-    "url": "https://www.farminsight.net/news/articleView.html?idxno=16670",
-    "published_at": "2026-07-16T17:16:00+09:00",
+    "title": "충남도의회 농수산해양위, 기후변화 대응·농어익 소득 증대 주문",
+    "url": "http://www.breaknews.com/1224078",
+    "published_at": "2026-07-24T08:28:00+09:00",
     "category": "기타",
-    "description": "마련과 이동제한 기준 완화를 주문했다. 협회 관계자는 \"정부가 최근 협회의 건의를 수렴해 구제역... 가축분뇨를 폐기물이 아닌 순환자원으로 활용하기 위한 환경 규제 패러다임 전환도 논의되었다. 협회는 액비의 관할... ",
-    "press": "farminsight.net",
+    "description": "또한 전국 최대 양돈 생산지라는 지역 특성을 고려해 축산 악취 및 암모니아 저감 기술 개발에 역량을 집중하고 검증된 우수 사례의 도 차원 지원을 건의했다.... ",
+    "press": "breaknews.com",
     "matched_keywords": []
   },
   {
     "source": "네이버",
-    "title": "한돈협회 \"살처분 보상금 100%로 상향, 현실화해야\"",
-    "url": "http://www.wowtv.co.kr/NewsCenter/News/Read?articleId=A202607160350&t=NN",
-    "published_at": "2026-07-16T17:07:00+09:00",
+    "title": "[의정소식]강릉시의회 2026년 7월 23일",
+    "url": "https://www.kwnews.co.kr/article/20260723500915",
+    "published_at": "2026-07-24T00:08:00+09:00",
+    "category": "기타",
+    "description": "김태완 의원은 “양돈농장은 물론 우사의 악취 피해 또한 심각하므로 지속적인 모니터링 및 악취저감 기술 지원으로 주민 피해가 없도록 세심하게 살펴 달라”고 요청했다.",
+    "press": "kwnews.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "충남도의회 농수산해양위, 축산·수산 현장 점검…“도민 체감 정책 추...",
+    "url": "http://www.sisanews24.co.kr/19092",
+    "published_at": "2026-07-23T20:06:00+09:00",
+    "category": "기타",
+    "description": "유해중 위원(서산1·더불어민주당)은 전국 최대 양돈 생산지인 충남의 여건을 고려해 생산성 향상과 악취 저감 기술 개발은 물론 현장 적용이 중요하다고 강조했다. 연구 결과는 충분한 검증을 거쳐 신뢰성을 확보하고... ",
+    "press": "sisanews24.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "당진시 “빗물 타고 유입될라”, 장마철 아프리카돼지열병 차단 총력",
+    "url": "http://www.breaknews.com/1224047",
+    "published_at": "2026-07-23T19:52:00+09:00",
     "category": "질병명",
-    "description": "보상 수준과 이동제한, 살처분 범위 등을 실제 방역에 맞춰 탄력적으로 적용해야 한다는 것이다. 농가 귀책 사유가 없는 경우 가축전염병 피해에 대해서는 보상 수준을 현재 80%에서 100%까지 높이고, 추가 발생 시에는 80... ",
-    "press": "wowtv.co.kr",
+    "description": "관내 양돈농가를 대상으로 고강도 차단방역망을 가동한다. 당진시는 장마철... 시는 지역 양돈농가를 대상으로 8대 방역시설 운영 실태를 정밀 점검하는 한편... ",
+    "press": "breaknews.com",
     "matched_keywords": [
-      "살처분"
+      "아프리카돼지열병"
     ]
   },
   {
     "source": "네이버",
-    "title": "서삼석 국회 농해수위원장, 가축전염병 예방법 개정안 대표 발의",
-    "url": "https://www.aflnews.co.kr/news/articleView.html?idxno=324620",
-    "published_at": "2026-07-16T16:00:00+09:00",
+    "title": "충남도의회 농해수위, 축산기술연구소·수산자원연구소 점검... 기후대응...",
+    "url": "http://www.newsworker.co.kr/news/articleView.html?idxno=438017",
+    "published_at": "2026-07-23T18:30:00+09:00",
     "category": "기타",
-    "description": "또한 농림축산식품부장관과 시·도지사, 시장·군수·구청장이 가축전염병 발생과 확산 방지를 위해 필요하다고 인정하는 경우 가축 소유자 등에게 사료 등 오염우려물품의 사용중지와 이동 제한 등 필요한 조치를 명할 수... ",
-    "press": "aflnews.co.kr",
+    "description": "유해중 위원(서산1·더불어민주당)은 충남이 전국 최대 양돈 생산지인 만큼 생산성 향상과 악취 저감 기술 개발, 현장 적용이 시급하다고 밝혔고, 장재석 위원(홍성2·국민의힘)은 축산악취의 주요 원인 가운데 하나인... ",
+    "press": "newsworker.co.kr",
     "matched_keywords": []
   },
   {
     "source": "네이버",
-    "title": "한돈협회 “살처분 보상 100%로…재입식까지 경영손실도 보전해야”",
-    "url": "https://www.etoday.co.kr/news/view/2604574",
-    "published_at": "2026-07-16T16:00:00+09:00",
+    "title": "농수산해양위원회 \"도민 체감형 정책 추진 강력 당부\"",
+    "url": "https://www.ccdailynews.com/news/articleView.html?idxno=2429860",
+    "published_at": "2026-07-23T18:26:00+09:00",
+    "category": "기타",
+    "description": "유해중 위원(서산1·더불어민주당)은 \"충남은 전국 돼지고기 생산량의 22% 이상을 담당하는 전국 최대 양돈 생산지인 만큼 생산성 향상과 악취저감 기술개발은 물론 현장 적용이 절실하다\"며 \"축산기술연구소에서 검증... ",
+    "press": "ccdailynews.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "[위클리오늘] 영천 양돈농가·市, 악취 갈등 봉합…\"단속보다 자정노력...",
+    "url": "http://www.weeklytoday.com/news/articleView.html?idxno=786944",
+    "published_at": "2026-07-23T18:20:00+09:00",
+    "category": "축종별 용어",
+    "description": "영천시 양돈협회는 23일 영천시 농업인회관 2층에서 돈사 악취 저감을 위한 간담회를 개최하고, 농가 자정... (장지수 기자) 경북 영천지역 양돈농가들이 악취 민원 대응과 저감 대책 마련을 위해 긴급 간담회를 열고 농가... ",
+    "press": "weeklytoday.com",
+    "matched_keywords": [
+      "양돈"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "충남도의회 농수산해양위원회, 제370회 임시회 제5차 회의 개최",
+    "url": "https://www.newstnt.com/news/articleView.html?idxno=711435",
+    "published_at": "2026-07-23T17:56:00+09:00",
+    "category": "기타",
+    "description": "더불어민주당 유해중(초선, 서산1) 의원은 \"충남은 전국 돼지고기 생산량의 22% 이상을 담당하는 전국 최대 양돈 생산지인 만큼 생산성 향상과 악취저감 기술개발은 물론 현장 적용이 절실하다\"면서 \"축산기술연구소에서... ",
+    "press": "newstnt.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "당진시, 장마철 ASF 방역 수칙 홍보 강화",
+    "url": "https://www.newstnt.com/news/articleView.html?idxno=711433",
+    "published_at": "2026-07-23T17:36:00+09:00",
     "category": "질병명",
-    "description": "농가의 귀책 사유가 없는 가축전염병 피해에 대해서는 살처분 보상 수준을 높이고, 이동제한과 살처분 범위도 실제 방역 위험에 맞춰 탄력적으로 적용해야 한다는 것이다. 발의된 가축전염병예방법 개정안에는 최초 신고... ",
-    "press": "etoday.co.kr",
+    "description": "내 양돈농가를 대상으로 차단방역을 대폭 강화한다. 당진시는 장마철 하천 범람과 오염된 빗물 등을 통한 ASF... 이에 시는 양돈농가를 대상으로 8대 방역시설 설치 여부와 운영 실태를 점검하고 있다. 주요 조치... ",
+    "press": "newstnt.com",
     "matched_keywords": [
-      "살처분"
+      "ASF"
     ]
   },
   {
     "source": "네이버",
-    "title": "이기홍 한돈회장 \"경쟁력 강화위한 '순치돈사·시설 현대화' 지원 필요...",
-    "url": "https://view.asiae.co.kr/article/2026071615390380004",
-    "published_at": "2026-07-16T16:00:00+09:00",
+    "title": "충남도의회 농수산해양위원회 \"도민 체감형 정책 추진 강력 당부\"",
+    "url": "http://www.dtnews24.com/news/articleView.html?idxno=813563",
+    "published_at": "2026-07-23T16:54:00+09:00",
     "category": "기타",
-    "description": "그는 \"농가 귀책 사유가 없는 피해에 대한 합리적인 보상체계 마련, 이동제한 기준 완화 등 방역정책의... 환경 분야와 관련해서는 가축분뇨를 폐기물이 아닌 순환자원으로 활용하기 위한 정책 지원과 저탄소 분뇨처리시설... ",
-    "press": "view.asiae.co.kr",
+    "description": "유해중 위원(서산1·더불어민주당)은 \"충남은 전국 돼지고기 생산량의 22% 이상을 담당하는 전국 최대 양돈 생산지인 만큼 생산성 향상과 악취저감 기술개발은 물론 현장 적용이 절실하다\"며 \"축산기술연구소에서 검증... ",
+    "press": "dtnews24.com",
     "matched_keywords": []
   },
   {
     "source": "네이버",
-    "title": "이기홍 한돈협회장 “한돈산업 다양한 과제 직면…정부와 적극 협력할 ...",
-    "url": "https://www.dnews.co.kr/uhtml/view.jsp?idxno=202607161517319340460",
-    "published_at": "2026-07-16T15:20:00+09:00",
+    "title": "서울경기양돈농협, 노인복지관 생수 기부",
+    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82086",
+    "published_at": "2026-07-23T16:54:00+09:00",
+    "category": "축종별 용어",
+    "description": "서울경기양돈농협(조합장 이정배)은 7월 13일 대한사회복지회 강동구립해공노인복지관을 방문해 관내... 바란다\"며 \"서울경기양돈농협은 앞으로도 지역사회와 긴밀히 협력하며 사회적 책임을 실천하고, 관내 어르신들의... ",
+    "press": "chukkyung.co.kr",
+    "matched_keywords": [
+      "양돈"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "충남 당진시, 장마철 ASF 위험주의보 발령 양돈농가 차단방역 총력",
+    "url": "https://www.ccdn.co.kr/news/articleView.html?idxno=1089799",
+    "published_at": "2026-07-23T16:16:00+09:00",
+    "category": "질병명",
+    "description": "내 양돈농가를 대상으로 차단방역 강화에 나섰다고 23일 밝혔다. 아프리카돼지열병(ASF)은 야생 멧돼지의... 이에 당진시는 양돈농가를 대상으로 장마철 ASF 차단방역 수칙을 집중 홍보하고, 8대 방역시설 설치 여부와 방역... ",
+    "press": "ccdn.co.kr",
+    "matched_keywords": [
+      "ASF"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "충남도의회 농수산해양委 \"축산·수산 현장 점검…기후변화·소득정책 ...",
+    "url": "https://www.gukjenews.com/news/articleView.html?idxno=3644324",
+    "published_at": "2026-07-23T16:10:00+09:00",
     "category": "기타",
-    "description": "마련, 이동제한 기준 완화 등 방역정책의 현실화가 필요하다”고 주문했다. 최근 정부가 협회 측의 건의 등을 수렴해 지난 5월 구제역 긴급행동지침(SOP)을 개정했고, 살처분 보상금 역시 가축전염병예방법 개정안 발의를... ",
-    "press": "dnews.co.kr",
+    "description": "유해중 위원은 충남이 전국 최대 양돈 생산지임을 언급하며, 생산성 향상과 악취저감 기술개발 및 현장 적용의 필요성을 강조했다. 축산기술연구소의 연구 결과 평가와 우수사례 도 차원의 지원 검토도 요청했다. 장재석... ",
+    "press": "gukjenews.com",
     "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "충남도의회 농수해위, 도민 체감형 정책 추진 당부",
+    "url": "https://www.kukinews.com/article/view/kuk202607230164",
+    "published_at": "2026-07-23T16:08:00+09:00",
+    "category": "기타",
+    "description": "유해중 위원(서산1·더불어민주당)은 “충남은 전국 돼지고기 생산량의 22% 이상을 담당하는 전국 최대 양돈 생산지인 만큼 생산성 향상과 악취저감 기술개발은 물론 현장 적용이 절실하다”며 “축산기술연구소에서 검증... ",
+    "press": "kukinews.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "도드람, 매출 1조 634억·자산 1조 7,137억 ‘역대급 실적’ 큰 자랑",
+    "url": "https://www.kenews.co.kr/news/article.html?no=89718",
+    "published_at": "2026-07-23T16:04:00+09:00",
+    "category": "기타",
+    "description": "- 도드람양돈농협, 올해도 5조원 실적 순항...신용·경제사업 ‘쌍끌이 성장’ 협동조합 귀감 - 도드람양돈농협, 9년 만에 전국 농축협 종합업적평가 1위 차지 - 상호금융대출 1조 달성...도드람, 신용·경제사업... ",
+    "press": "kenews.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "당진시, 장마철 ASF 위험주의보 발령",
+    "url": "https://www.dynews.co.kr/news/articleView.html?idxno=858985",
+    "published_at": "2026-07-23T15:42:00+09:00",
+    "category": "질병명",
+    "description": "당진시는 최근 장마철 집중호우와 태풍으로 인한 아프리카돼지열병 유입 위험이 커짐에 따라 지역 내 양돈농가를 대상으로 차단방역 강화에 나섰다. 아프리카돼지열병(ASF)은 야생 멧돼지의 폐사체와 분변, 오염된 토양... ",
+    "press": "dynews.co.kr",
+    "matched_keywords": [
+      "ASF"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "도드람양돈농협, ‘2026년 동물병원 연구사례집’ 눈길",
+    "url": "https://www.kenews.co.kr/news/article.html?no=89717",
+    "published_at": "2026-07-23T15:38:00+09:00",
+    "category": "축종별 용어",
+    "description": "도드람양돈농협(조합장 박광욱)은 ‘2026년 동물병원 연구사례집’을 발간하고 조합원에 이를 배포했다고 밝혔다. 올해로 12년째를 맞은 이번 사례집은 도드람양돈농협 동물병원 수의사 8명이 수행한 현장 기반의... ",
+    "press": "kenews.co.kr",
+    "matched_keywords": [
+      "양돈"
+    ]
   },
   {
     "source": "네이버",
@@ -3092,163 +3041,42 @@
   },
   {
     "source": "네이버",
-    "title": "제주, 금악마을 축산악취 해법 찾기 민·관 힘 합친다",
-    "url": "https://www.headlinejeju.co.kr/news/articleView.html?idxno=596076",
-    "published_at": "2026-07-17T09:00:00+09:00",
+    "title": "돼지 기침부터 중고차 흠집까지…AI, 이제 '명장의 감각' 배운다",
+    "url": "https://www.insightkorea.co.kr/news/articleView.html?idxno=250386",
+    "published_at": "2026-07-24T08:32:00+09:00",
     "category": "기타",
-    "description": "지역주민과 양돈농가, 행정, 전문가가 함께 참여해 마을 축산악취 문제의 실질적인 해결에 나선다.... 확대 △양돈장 시설 현대화 △현장 점검 시 주민 참여 △가축분뇨 운송차량 및 관련 시설 개선 △농가의 자발적 악취... ",
-    "press": "headlinejeju.co.kr",
+    "description": "인공지능(AI)이 공장 자동화를 넘어 숙련된 전문가의 눈과 귀, 감각을 대신하는 '일꾼'으로 진화하고 있다.... 돼지가 사료를 먹거나 움직일 때 발생하는 소리와 기침에서 나오는 주파수 특성이 다르다는 점을 AI에게... ",
+    "press": "insightkorea.co.kr",
     "matched_keywords": []
   },
   {
     "source": "네이버",
-    "title": "동원팜스, 전 축종 하절기 사료 강화",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82082",
-    "published_at": "2026-07-16T23:10:00+09:00",
-    "category": "사료업계 특화 용어",
-    "description": "동원팜스가 여름철 고온 스트레스에 대응하기 위한 '하절기 특별강화 사료'를 오는 9월까지 양돈·낙농·비육... 동원팜스는 이러한 발효과학 기술을 양돈·낙농·비육·산란 전 축종에 적용해 축종별 맞춤형 하절기... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": [
-      "사료"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "동원팜스, 혹서기 생산성 지킨다",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82083",
-    "published_at": "2026-07-16T23:10:00+09:00",
+    "title": "수령이 동식물 이름도 짓는 북한 성인 남성에 '뚱뚱한'은 왜 못쓸까",
+    "url": "https://www.m-joongang.com/news/articleView.html?idxno=402829",
+    "published_at": "2026-07-23T16:50:00+09:00",
     "category": "기타",
-    "description": "이번 캠페인은 양돈, 낙농, 비육 농가를 대상으로 한다. 기존처럼 혹서기 대응 방안을 일괄적으로 전달하는... # 양돈, 돈사 유속·모돈 영양까지 점검 동원팜스 양돈 전문가와 지점 직원들은 대상 농장을 찾아 돈사 내부... ",
-    "press": "chukkyung.co.kr",
+    "description": "김정은은 2015년 한 농장을 찾아서 사료용 풀 하나를 '애국풀'이라고 이름 지었다. '강성대국'(김강국, 김성국... 2022년에는 김정은 지시로 '대성산아이스크림공장'을 세우기도 했다. '키스'의 북한말이 '주둥이박치기' 또는... ",
+    "press": "m-joongang.com",
     "matched_keywords": []
   },
   {
     "source": "네이버",
-    "title": "[분석]한우·한돈·낙농, 시장개방 20년 자급기반 어떻게 바뀌었나",
-    "url": "https://www.farminsight.net/news/articleView.html?idxno=16671",
-    "published_at": "2026-07-16T18:40:00+09:00",
-    "category": "축종별 용어",
-    "description": "국내 양돈농가는 1970년 88만호에서 2000년 2만4천호, 2024년 기준 3천호 이하로 줄었는데, 이는 FTA와 맞물려 규모화·기업화가 가속화된 결과로 풀이된다. 낙농, 관세는 가장 늦었지만 자급률은 이미 반토막... ",
-    "press": "farminsight.net",
-    "matched_keywords": [
-      "한우",
-      "낙농"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "생산성 높이는 순치돈사…한돈협회 \"제도 개선 필요\"",
-    "url": "https://www.dailian.co.kr/news/view/1667973/?sc=Naver",
-    "published_at": "2026-07-16T16:01:00+09:00",
+    "title": "[ER현장] 전국 어디서나 같은 맛의 비결…투썸플레이스 'APP'를 가다",
+    "url": "https://www.econovill.com/news/articleView.html?idxno=745948",
+    "published_at": "2026-07-23T16:50:00+09:00",
     "category": "기타",
-    "description": "대한한돈협회가 양돈 생산성 향상을 위해 방역순치돈사 제도화가 필요하다고 주장했다. 건폐율과 배출시설 기준 등 규제를 개선해 생산비를 낮추고 안정적인 생산 기반을 마련해야 한다는 것이다. 이기홍 대한한돈협회... ",
-    "press": "dailian.co.kr",
+    "description": "'커피 로스팅 플랜트'는 처음부터 일반적인 원두 생산 공장을 넘어 로스팅에 최적화된 생산시설을 목표로... 이때 로스팅 과정에서 발생하는 생두의 얇은 껍질인 채프(Chaff)는 타블렛 형태로 압착해 퇴비나 사료 원료... ",
+    "press": "econovill.com",
     "matched_keywords": []
   },
   {
     "source": "네이버",
-    "title": "팜스코, 글로벌 종돈 개량 전략 점검",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82056",
-    "published_at": "2026-07-16T15:58:00+09:00",
+    "title": "커지는 K펫푸드 시장…식품업계 해외 공략 잰걸음",
+    "url": "https://www.asiatime.co.kr/article/20260723500314",
+    "published_at": "2026-07-23T15:14:00+09:00",
     "category": "기타",
-    "description": "번식성적과 강건성, 포유능력 등을 함께 고려하는 균형 개량을 통해 글로벌 양돈 시장에서 영향력을... 팜스코도 참석해 글로벌 양돈산업의 변화 방향을 확인했다. 행사에서는 생산성과 강건성을 함께 추구하는 액시옴의... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "한돈자조금, 몽골서 한돈 소비시장 공략",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82066",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "이번 제품은 지난해 제주양돈농협과 GS25가 한돈 공급 업무협약을 체결한 이후 몽골 현지 FF(Fresh Food) 공장에서 처음 생산·공급되는 한돈 신선 간편식이다. 행사에는 이기홍 위원장을 비롯해 송미령 농림축산식품부 장관... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "제주양돈농협, 몽골 편의점 공략",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82021",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "축종별 용어",
-    "description": "제주양돈농협(조합장 고권진)이 청정 제주산 돼지고기를 활용한 K-간편식으로 몽골 편의점 도시락 시장 공략에 나섰다. 제주양돈농협은 7월 9일 몽골 울란바토르 GS25 트윈시티점에서 '우리쌀×한돈 K-편의점 도시락 시식... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": [
-      "양돈"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "[엄길운 한국돼지수의사회장 기자 간담] \"유입 경로 규명 없인 질병 못...",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82068",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "한국돼지수의사회는 7월 14일 경기 성남 수의과학회관에서 기자간담회를 열고 최근 국내외 양돈 질병 발생... 아울러 최근 폭염으로 양돈 현장이 어려움을 겪고 있다며, 이 여파가 내년 생산성에까지 영향을 미칠 수 있다고... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "천하제일, 7·8월 현장 지원 활동 강화",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82057",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "양계는 니플 유속 점검과 분변검사, 양돈은 체크리스트와 분변검사, 축우는 THI(온습도지수)와 한우·카우 시그널 체크리스트를 활용해 농장별 하절기 위험 요인을 진단하고 개선 방안을 제시한다. 고객 농장의... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "케민, 장 건강관리 해법 제시",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82055",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "케민이 IPVS 2026 개막을 앞두고, 베트남 호치민에서 개최한 장 건강 세미나에서는 항생제 저감 시대 양돈... 특히 양돈의 경우 이유 후 설사(Po st-weaning diarrhoea)를 유발하는 ETEC가 주요 위험 요인으로 부상하고... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "제주양돈농협, 돼지고기 나눔 실시",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82052",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "축종별 용어",
-    "description": "제주양돈농협(조합장 고권진)은 7월 7일 사회복지법인 인효원을 찾아 제주산 돼지고기를 전달하며... 제주양돈농협은 임직원들의 따뜻한 마음을 담아 제주산 돼지고기를 전달하며 온정을 전했다. 인효원 관계자는 \"정성이... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": [
-      "양돈"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "대구경북양돈농협 우수조합원 수상",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82074",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "축종별 용어",
-    "description": "대구경북양돈농협(조합장 이상용)은 7월 3일 경북농협에서 열린 '사업전이용 우수조합원 시상식'에서... 이기현 조합원은 대구경북양돈농협 조합원으로서 경북 영주에서 거북농장을 운영하며 각종 사업을 성실히 이용해... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": [
-      "양돈"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "[월요칼럼] 폭우와 폭염 대비에 만전을",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82028",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "특히 양돈농가에서는 아프리카돼지열병(AS F) 차단방역이 무엇보다 중요하다. ASF는 치사율이 사실상 100%에 이르는 제1종 가축전염병으로 아직 치료제와 상용화된 백신이 없다. 결국 철저한 예방만이 유일한 대응책이다.... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "이재식 축산정책관, 제주 현장 목소리 청취",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82022",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "이재식 농림축산식품부 축산정책관은 7월 8일 제주양돈농협 축산물종합유통센터와... 제주양돈농협은 정부의 선진 축산 정책에 발맞춰 앞으로도 철저한 위생 관리로 고품질 축산물을 공급하고, 친환경 자원화 프로세스를... ",
-    "press": "chukkyung.co.kr",
+    "description": "동원F&B의 뉴트리플랜 제품과 하림펫푸드의 더리얼 강아지 사료 제품. (자료=각사) 23일 펫푸드 업계에 따르면... 현재 주요 국가 바이어들과 제품 공급을 협의하고 있으며 국가별 수입 규정에 맞춰 공장과 제품 등록... ",
+    "press": "asiatime.co.kr",
     "matched_keywords": []
   },
   {
@@ -3491,28 +3319,6 @@
   },
   {
     "source": "네이버",
-    "title": "미야옹철·설쌤 \"맞춤 영양 중요\"…로얄캐닌 '건강한 한끼' 기부",
-    "url": "https://www.news1.kr/industry/general-industry/6230769",
-    "published_at": "2026-07-16T17:35:00+09:00",
-    "category": "기타",
-    "description": "공장 외 2개의 펫혁신연구센터(펫센터), 1개의 연구개발센터, 모기업 마즈 네트워크 내 7개 연구소를 운영하고 있다. '펫센터'는 로얄캐닌 사료의 기호성, 소화율 등을 감별하는 소믈리에 반려견과 반려묘가 상주하는... ",
-    "press": "news1.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "'버려지는 농산부산물' 곤충 사료·비료로 환골탈태",
-    "url": "http://www.amnews.co.kr/news/articleView.html?idxno=73576",
-    "published_at": "2026-07-16T16:54:00+09:00",
-    "category": "사료업계 특화 용어",
-    "description": "한 해 동안 버려지는 막대한 농산 가공 부산물을 유익 곤충의 사료와 고부가가치 천연 영농 자재로 환원하는... 이번 연구 사업의 핵심 목표는 공장이나 가공 농가에서 분출되는 미활용 부산물을 수집해 안전하게 정제한 뒤... ",
-    "press": "amnews.co.kr",
-    "matched_keywords": [
-      "사료"
-    ]
-  },
-  {
-    "source": "네이버",
     "title": "미국내 도축되는 비육우의 20%에서 발견되는 간농양 발생의 새로운 원인...",
     "url": "https://www.farminsight.net/news/articleView.html?idxno=16678",
     "published_at": "2026-07-22T11:56:00+09:00",
@@ -3609,22 +3415,72 @@
   },
   {
     "source": "네이버",
-    "title": "농식품부, 국산 메탄저감제 개발 지원",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82064",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "모집 대상은 반추동물용 메탄저감 사료첨가제 또는 관련 기술을 개발 중인 국내 기업이며, 제품 단위로 신청받는다. 특히 중소기업과 벤처기업을 우선 지원해 기술력은 있지만 실증비용 부담이 큰 기업의 참여를 확대할... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "[블루오션 동물 의료기기] ①정병곤 동물약품협회장 “인체용에서 확장...",
     "url": "https://www.edaily.co.kr/news/newspath.asp?newsid=02378006645516816",
     "published_at": "2026-07-21T07:03:00+09:00",
     "category": "기타",
     "description": "과거 축산업 중심의 질병 관리·방역에서 출발한 국내 동물용 의료기기 시장의 무게중심이 정밀진단·치료... 수직계열화한 사례다. 이 방식은 수익은 극대화하면서 개발 리스크는 줄일 수 있다는 점에서 많은 기업들이... ",
     "press": "edaily.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "한국 조선, 220조원 들고 미국 재건 나선다...러트닉 상무장관 \"미국서 ...",
+    "url": "https://www.asiatoday.co.kr/kn/view.php?key=20260724010008789",
+    "published_at": "2026-07-24T04:24:00+09:00",
+    "category": "기타",
+    "description": "◇ 러트닉 미 상무장관, 회의·MOU 아닌 미국 내 선박 건조 척수로 평가러트닉 장관은 축사에서 \"센터... 김 장관은 향후 5년간 인공지능(AI) 기반 스마트 조선과 자율운항 선박 등 8개 핵심 기술을 다루는 한·미... ",
+    "press": "asiatoday.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "[ICT 종합] 엔에이치엔 및 AMD 소식 외",
+    "url": "https://www.gamevu.co.kr/news/articleView.html?idxno=59506",
+    "published_at": "2026-07-23T18:10:00+09:00",
+    "category": "기타",
+    "description": "스냅드래곤은 신규 갤럭시 제품군에 탑재돼 스마트폰, 웨어러블, 인텔리전트 아이웨어 전반에 걸쳐... 안도걸 의원 역시 축사에서 기관투자자 진입의 순기능을 역설했다. 본 행사에서는 금융당국과 학계, 법조계... ",
+    "press": "gamevu.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "K-농업의 미래…6차산업 국제박람회 '푸파페 제주' 개막",
+    "url": "https://www.headlinejeju.co.kr/news/articleView.html?idxno=596386",
+    "published_at": "2026-07-23T16:54:00+09:00",
+    "category": "기타",
+    "description": "강승진 이사장의 개막선언과 송미령 농림축산식품부 장관 및 문대림 국회의원의 영상 축사에 이어 박천수 행정부지사는 환영사를 통해 \"이번 박람회는 농촌융복합산업과 푸드테크, 스마트 농업의 미래를 만나고 기업과... ",
+    "press": "headlinejeju.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "국제박람회 '푸파페 제주' 개막… \"섬에서 세계로\"",
+    "url": "https://www.kmaeil.com/news/articleView.html?idxno=646408",
+    "published_at": "2026-07-23T16:42:00+09:00",
+    "category": "기타",
+    "description": "강승진 (사)제주농업농촌진흥원 이사장의 개막선언과 송미령 농림축산식품부 장관 및 문대림 국회의원의 영상 축사에 이어 박천수 행정부지사는 환영사를 통해 \"이번 박람회는 농촌융복합산업과 푸드테크, 스마트... ",
+    "press": "kmaeil.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "\"제주 농업의 미래를 열다\"…제8회 푸파페 제주 개막",
+    "url": "https://www.nocutnews.co.kr/news/6552427?utm_source=naver&utm_medium=article&utm_campaign=20260723035913",
+    "published_at": "2026-07-23T16:00:00+09:00",
+    "category": "기타",
+    "description": "푸파페 제주는 제주도와 농림축산식품부가 주최하고 ㈔제주농업농촌진흥원이 주관한다. 박람회 기간을... 박천수 제주도 행정부지사는 환영사를 통해 \"이번 박람회는 인공지능과 푸드테크, 스마트팜 연계 기업들이... ",
+    "press": "nocutnews.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "K-농업의 미래…6차산업 국제박람회 '푸파페 제주' 개막",
+    "url": "https://www.jejusori.net/news/articleView.html?idxno=504992",
+    "published_at": "2026-07-23T15:28:00+09:00",
+    "category": "기타",
+    "description": "강승진 이사장의 개막선언과 송미령 농림축산식품부 장관 및 문대림 국회의원의 영상 축사에 이어 박천수 행정부지사는 \"이번 박람회는 농촌융복합산업과 푸드테크, 스마트 농업의 미래를 만나고 기업과 바이어가... ",
+    "press": "jejusori.net",
     "matched_keywords": []
   },
   {
@@ -4103,22 +3959,22 @@
   },
   {
     "source": "네이버",
-    "title": "창녕군, 축산악취 저감 위해 29억 투입 17개 사업 추진",
-    "url": "https://www.gukjenews.com/news/articleView.html?idxno=3641457",
-    "published_at": "2026-07-21T10:40:00+09:00",
-    "category": "기타",
-    "description": "성낙인 군수는 \"축산악취 저감은 주민 생활환경 보호를 위해 지속적인 관리와 노력이 필요한 중요한 과제\"라며 \"앞으로도 재정 지원과 스마트 기술 도입 등 다각적인 지원책을 유기적으로 추진하고, 철저한 현장 지도와... ",
-    "press": "gukjenews.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "창녕군, 축산악취는 덜고 쾌적함은 더한다",
     "url": "https://www.newsgn.com/news/articleView.html?idxno=563240",
     "published_at": "2026-07-21T10:40:00+09:00",
     "category": "기타",
     "description": "군은 축산악취를 선제적으로 예방하기 위해 스마트 기술도 도입했다. 악취 민원이 자주 발생하는 지역 등 3곳에 6,000만 원을 투입해 '악취 측정 ICT 기계·장비' 설치를 완료했으며, 실시간 모니터링을 통해 농가가... ",
     "press": "newsgn.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "창녕군, 축산악취 저감 위해 29억 투입 17개 사업 추진",
+    "url": "https://www.gukjenews.com/news/articleView.html?idxno=3641457",
+    "published_at": "2026-07-21T10:40:00+09:00",
+    "category": "기타",
+    "description": "성낙인 군수는 \"축산악취 저감은 주민 생활환경 보호를 위해 지속적인 관리와 노력이 필요한 중요한 과제\"라며 \"앞으로도 재정 지원과 스마트 기술 도입 등 다각적인 지원책을 유기적으로 추진하고, 철저한 현장 지도와... ",
+    "press": "gukjenews.com",
     "matched_keywords": []
   },
   {
@@ -4384,196 +4240,6 @@
     "matched_keywords": []
   },
   {
-    "source": "네이버",
-    "title": "이상호 태백시장 “일자리 창출·정주 여건 개선 추진”",
-    "url": "https://news.kbs.co.kr/news/pc/view/view.do?ncd=8613414&ref=A",
-    "published_at": "2026-07-17T08:06:00+09:00",
-    "category": "기타",
-    "description": "\"] 민선 9기의 또 다른 주요 사업으로는 '정주 여건 개선'과 '축산 스마트화'를 꼽았습니다. 특히, 지은 지 40년이 넘어 낡은 데다 관리 주체 문제까지 겹친 대한석탄공사 사택에 주목합니다. 이상호 시장은 석공 사택... ",
-    "press": "news.kbs.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "이상호 태백시장 “일자리 창출·정주 여건 개선 추진”",
-    "url": "https://news.kbs.co.kr/news/pc/view/view.do?ncd=8613195&ref=A",
-    "published_at": "2026-07-16T22:15:00+09:00",
-    "category": "기타",
-    "description": "\"] 민선 9기의 또 다른 주요 사업으로는 '정주 여건 개선'과 '축산 스마트화'를 꼽았습니다. 특히, 지은 지 40년이 넘어 낡은 데다 관리 주체 문제까지 겹친 대한석탄공사 사택에 주목합니다. 이상호 시장은 석공 사택... ",
-    "press": "news.kbs.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "이상호 태백시장 “일자리 창출·정주 여건 개선 추진”",
-    "url": "https://news.kbs.co.kr/news/pc/view/view.do?ncd=8612915&ref=A",
-    "published_at": "2026-07-16T19:37:00+09:00",
-    "category": "기타",
-    "description": "\"] 민선 9기의 또 다른 주요 사업으로는 '정주 여건 개선'과 '축산 스마트화'를 꼽았습니다. 특히, 지은 지 40년이 넘어 낡은 데다 관리 주체 문제까지 겹친 대한석탄공사 사택에 주목합니다. 이상호 시장은 석공 사택... ",
-    "press": "news.kbs.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "농식품부, 하반기 '국민의 삶을 바꾸는 농정' 선언",
-    "url": "http://www.ikpnews.net/news/articleView.html?idxno=70971",
-    "published_at": "2026-07-16T18:12:00+09:00",
-    "category": "기타",
-    "description": "농림축산식품부(장관 송미령)가 지난 16일 하반기 업무계획을 발표했다. '국민의 삶을 바꾸는 농정'을 구호... 농업·농촌 인공지능(AI) 확산: 농작물 수확·선별 로봇 등 25개 AI 모델을 빠르게 상용화하고 스마트농업 보급을... ",
-    "press": "ikpnews.net",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "[현장] \"생산성 12% 늘고, 매출 20억 증가\"… 협력사가 증명한 포스코 '...",
-    "url": "https://www.newscj.com/news/articleView.html?idxno=3417647",
-    "published_at": "2026-07-16T17:30:00+09:00",
-    "category": "기타",
-    "description": "포스코 2차 협력사 광우의 김창섭 경영지원본부장은 포스코의 스마트공장 구축 지원이 기업 경쟁력... 주병기 공정거래위원장은 축사를 통해 상생협력이 산업 경쟁력의 기반이라고 평가했다. 주 위원장은 \"대기업과... ",
-    "press": "newscj.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "“‘수급조절용 벼’ 전략작물 도입”…농식품부, 하반기 6대 역점과제...",
-    "url": "https://www.nongmin.com/article/20260715500659",
-    "published_at": "2026-07-16T17:01:00+09:00",
-    "category": "기타",
-    "description": "원예작물은 스마트 과수원을 4곳에서 16곳으로 확대해 생산능력을 강화하고, 7월부터 농림위성을 통해 과학적 수급관리를 고도화한다. 축산물은 10월부터 달걀 비축 시범 지원 등 비축사업을 추진하고 축사 증개축 등... ",
-    "press": "nongmin.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "오뚜기 '제4회 식품안전과학 심포지엄' 성료",
-    "url": "http://www.bokuennews.com/news/article.html?no=281455",
-    "published_at": "2026-07-16T16:56:00+09:00",
-    "category": "기타",
-    "description": "한국식품연구원 임정호 스마트제조사업단장은 '디지털 기반 품질 모니터링 및 이물 검출 기술 개발'을... 오뚜기 황성만 대표이사는 심포지엄 축사를 통해 \"'글로벌 식품안전 규제 및 정책 동향', 'HACCP 국제 동등성... ",
-    "press": "bokuennews.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "\"기본소득 주니 지역 살더라\"... 이 대통령·송미령 '농촌 살리기' 통했...",
-    "url": "https://www.ohmynews.com/NWS_Web/View/at_pg.aspx?CNTN_CD=A0003251766&CMPT_CD=P0010&utm_source=naver&utm_medium=newsearch&utm_campaign=naver_news",
-    "published_at": "2026-07-16T16:31:00+09:00",
-    "category": "기타",
-    "description": "이를 위해 AI 스마트 농축산업 거점을 올해 하반기 23곳까지 확대하고, 중소농도 쉽게 활용할 수 있는 보급형 AI 스마트팜 모델을 연내 개발한다. 농작물 수확·선별 로봇 등 국산 농업용 AI 기술의 상용화를 지원하고, 전남... ",
-    "press": "ohmynews.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "“협력사가 곧 포스코의 경쟁력”… 포스코그룹, 5300개 협력사 상생 확...",
-    "url": "https://www.donga.com/news/Economy/article/all/20260716/134312956/1",
-    "published_at": "2026-07-16T16:21:00+09:00",
-    "category": "기타",
-    "description": "주병기 공정거래위원장은 축사에서 상생협약을 단순한 협력사 지원책이 아니라 시장 시스템과 산업... 산업용 특수윤활유 등을 생산하는 광우는 스마트공장 구축을 통한 생산성 개선 사례를 발표했다. 광우는 1989년... ",
-    "press": "donga.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "“포스코 덕에 생산성 ‘쑥’”…포스코그룹, 협력사 상생으로 지속가...",
-    "url": "https://biz.heraldcorp.com/article/10811469?ref=naver",
-    "published_at": "2026-07-16T16:15:00+09:00",
-    "category": "기타",
-    "description": "‘포스코그룹 상생협약 체결식’ 무대에 오른 김창섭 광우 경영지원본부장은 포스코의 스마트공장 지원... 공정위원장도 주목한 ‘대금 지급 10일’의 의미 주병기 공정거래위원장도 축사를 통해 상생협력의 의미를... ",
-    "press": "biz.heraldcorp.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "[뉴스분석] 국방부 \"대전 자운대 통합 국군사관학교, 인구절벽·미래전...",
-    "url": "https://www.newspim.com/news/view/20260716001031",
-    "published_at": "2026-07-16T16:15:00+09:00",
-    "category": "기타",
-    "description": "참석해 축사를 하고 있다. [사진=청와대] 2026.07.16 gomsi@newspim.com 그는 \"미군 합동성 수준은 5단계 중 통합... 하나의 스마트캠퍼스에서 AI·전영역 작전 교육과 군별 특성화 교육을 함께 받는 구상을 반영했다. [사진=국방부... ",
-    "press": "newspim.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "가격안정·농가 안전망 강화…하반기 국민 체감 농정 본격화",
-    "url": "https://www.korea.kr/news/policyNewsView.do?newsId=148968275&call_from=naver_news",
-    "published_at": "2026-07-16T16:11:00+09:00",
-    "category": "기타",
-    "description": "스마트생산단지와 재해예방시설, 에너지저감시설 투자, 축사 신축·증축 지원도 확대한다. 유통구조 개선도 속도를 낸다. 도매법인 평가체계를 강화해 경쟁을 촉진하고 온라인 도매거래를 확대하는 한편, 인근 마트의... ",
-    "press": "korea.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "전북대 연구팀, 초고감도 암모니아 가스센서 개발…국제학술지 게재",
-    "url": "https://www.newsis.com/view/NISX20260716_0003712136",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "전북대는 이번 기술이 저전력 구동과 반도체 공정 기반 제작이 가능해 차세대 센서반도체 산업은 물론 축산악취 관리, 스마트 축사, 환경 모니터링, 산업안전, 사물인터넷(IoT) 환경센서 등 다양한 분야에 활용될... ",
-    "press": "newsis.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "[기고] 토종닭, 산업 자원으로 키워야 한다",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82030",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "여기에 스마트 축사와 질병에 강한 우량 계통 개발까지 더해진다면 생산 안정성도 한층 높아질 수 있다. 유통 구조 역시 달라져야 한다. 지금까지 토종닭은 '한 마리 통닭' 중심 소비가 일반적이었다. 하지만 1~2인 가구가... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "피지컬 AI·인간형 로봇, 가족 축산의 미래를 다시 쓰다 (2)",
-    "url": "https://www.chukkyung.co.kr/news/articleView.html?idxno=82025",
-    "published_at": "2026-07-16T15:58:00+09:00",
-    "category": "기타",
-    "description": "교육계 역시 이에 발맞추어 데이터 기반 사양관리와 스마트축산 운영을 핵심 과정으로 확대하고, 차세대 청년 인재를 시급히 양성해야 한다. 국가가 나설 때, 공공 데이터 인프라와 제도적 안전망 농가들의 노력이 결실을... ",
-    "press": "chukkyung.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "AI·가격안정제·농협개혁…농식품부, 하반기 '국민 체감형 농정' 속도 ...",
-    "url": "http://www.youngnong.co.kr/news/articleView.html?idxno=60989",
-    "published_at": "2026-07-16T15:28:00+09:00",
-    "category": "기타",
-    "description": "농림축산식품부가 하반기 농정의 초점을 인공지능(AI) 확산과 농산물 수급 안정, 농업 경영안전망 강화... 시설원예 스마트농업 보급률을 현재 20% 수준에서 2030년 35%까지 확대하고, 수확ㆍ선별 로봇 등 25개 AI 모델을... ",
-    "press": "youngnong.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "AI 가격앱 띄우고 농협 개혁 속도…농지 심층조사 내달 돌입",
-    "url": "https://www.mt.co.kr/economy/2026/07/16/2026071610381494745",
-    "published_at": "2026-07-16T15:19:00+09:00",
-    "category": "기타",
-    "description": "농작물 수확·선별로봇 등 25개 AI 모델을 연내 상용화하고 스마트 농축산업 거점을 현재 10곳에서 23곳으로 확대한다. 수입안정보험 대상 품목을 기존 15개에서 20개로 확대하고 가격안정제와 재해복구 지원을 시행한다.... ",
-    "press": "mt.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "AI 농업부터 농협개혁까지…농식품부 하반기 '국민 체감 농정' 추진",
-    "url": "https://www.news1.kr/economy/trend/6228932",
-    "published_at": "2026-07-16T15:06:00+09:00",
-    "category": "기타",
-    "description": "농림위성과 AI를 활용한 수급 예측을 고도화하고 스마트 생산단지와 재해예방시설을 확대하는 한편, 9월에는 소비자가 주변 마트 농축산물 가격을 비교할 수 있는 AI 기반 가격 비교 앱을 5개 지역에서 시범 운영한다. 또... ",
-    "press": "news1.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "전북대 서은지 석사 고성능 암모니아 가스센서 개발.. 상온 초저농도 검...",
-    "url": "https://www.veritas-a.com/news/articleView.html?idxno=619566",
-    "published_at": "2026-07-16T14:50:00+09:00",
-    "category": "기타",
-    "description": "이에 따라 이번 센서는 축산악취 저감과 스마트 축사, 환경 모니터링 시스템의 실시간 암모니아 감지 기술로 활용될 가능성이 크며, IoT 환경센서와 스마트팩토리, 산업안전 모니터링, 전자코 시스템 등 다양한... ",
-    "press": "veritas-a.com",
-    "matched_keywords": []
-  },
-  {
     "source": "GDELT",
     "title": "  쯔양 협박  구제역 , 2심서 배상액 증액 ... 8000만원 판결",
     "url": "https://www.insight.co.kr/news/564074",
@@ -4666,27 +4332,25 @@
   },
   {
     "source": "GDELT",
-    "title": "Se va la segunda contra la fiebre aftosa : se ahorrarán 14 millones de dosis de vacunas por US$ 22 millones",
-    "url": "https://www.clarin.com/rural/va-segunda-fiebre-aftosa-ahorraran-14-millones-dosis-vacunas-us-22-millones_0_qMCDHIxLLK.html",
-    "published_at": "2026-07-16T19:30:00+00:00",
+    "title": "Plan de desarrollo postsismos de Fedenaga se concentra en contalibizar el rebaño nacional",
+    "url": "https://www.eluniversal.com/economia/237873/plan-de-desarrollo-postsismos-de-fedenaga-se-concentra-en-contalibizar-el-rebano-nacional",
+    "published_at": "2026-07-23T21:00:00+00:00",
     "category": "기타",
-    "press": "clarin.com",
+    "press": "eluniversal.com",
     "language": "Spanish",
-    "sourcecountry": "Argentina",
+    "sourcecountry": "Venezuela",
     "matched_keywords": []
   },
   {
     "source": "GDELT",
-    "title": "Gauteng pork industry loses more than R10m to African swine fever",
-    "url": "https://www.timeslive.co.za/news/south-africa/2026-07-16-gauteng-pork-industry-loses-more-than-r10m-to-african-swine-fever/",
-    "published_at": "2026-07-16T22:15:00+00:00",
-    "category": "질병명",
-    "press": "timeslive.co.za",
-    "language": "English",
-    "sourcecountry": "South Africa",
-    "matched_keywords": [
-      "African swine fever"
-    ]
+    "title": "Las rurales del sudeste bonaerense reiteraron su rechazo a la nueva resolución del Senasa sobre la vacunación antiaftosa",
+    "url": "https://www.eleco.com.ar/campo/las-rurales-del-sudeste-bonaerense-reiteraron-su-rechazo-a-la-nueva-resolucion-del-senasa-sobre-la-vacunacion-antiaftosa",
+    "published_at": "2026-07-23T20:00:00+00:00",
+    "category": "기타",
+    "press": "eleco.com.ar",
+    "language": "Spanish",
+    "sourcecountry": "Argentina",
+    "matched_keywords": []
   },
   {
     "source": "GDELT",
@@ -4699,6 +4363,19 @@
     "sourcecountry": "South Korea",
     "matched_keywords": [
       "구제역"
+    ]
+  },
+  {
+    "source": "GDELT",
+    "title": "Karamoja Veterinary Lab Boosts Disease Surveillance for Safer Livestock Trade",
+    "url": "https://chimpreports.com/karamoja-veterinary-lab-boosts-disease-surveillance-for-safer-livestock-trade/",
+    "published_at": "2026-07-23T11:45:00+00:00",
+    "category": "시장/가격 용어",
+    "press": "chimpreports.com",
+    "language": "English",
+    "sourcecountry": "Uganda",
+    "matched_keywords": [
+      "livestock trade"
     ]
   },
   {
@@ -4769,17 +4446,6 @@
   },
   {
     "source": "GDELT",
-    "title": "Elevage : lancement de la campagne nationale dinsémination artificielle animale et de la vaccination du cheptel contre la fièvre aphteuse – SIG – Service dInformation du Gouvernement du Burkina Faso",
-    "url": "https://gouvernement.gov.bf/actualites/elevage-lancement-de-la-campagne-nationale-dinsemination-artificielle-animale-et-de-la-vaccination-du-cheptel-contre-la-fievre-aphteuse/",
-    "published_at": "2026-07-16T12:00:00+00:00",
-    "category": "기타",
-    "press": "gouvernement.gov.bf",
-    "language": "French",
-    "sourcecountry": "Burkina Faso",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "Cattle Vaccination In Chattogram After Floods | Govt to vaccinate cattle in 5 flood - hit districts of Chattogram : minister",
     "url": "https://www.thedailystar.net/business/news/govt-vaccinate-cattle-5-flood-hit-districts-chattogram-minister-4226101",
     "published_at": "2026-07-17T14:00:00+00:00",
@@ -4787,6 +4453,17 @@
     "press": "thedailystar.net",
     "language": "English",
     "sourcecountry": "Bangladesh",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "Gobierno y gremios ganaderos articulan acciones por la certificación del país libre de fiebre de aftosa",
+    "url": "https://rnv.gob.ve/gobierno-y-gremios-ganaderos-articulan-acciones-por-la-certificacion-del-pais-libre-de-fiebre-de-aftosa/",
+    "published_at": "2026-07-23T23:30:00+00:00",
+    "category": "기타",
+    "press": "rnv.gob.ve",
+    "language": "Spanish",
+    "sourcecountry": "Venezuela",
     "matched_keywords": []
   },
   {
@@ -4800,19 +4477,6 @@
     "sourcecountry": "India",
     "matched_keywords": [
       "FMD"
-    ]
-  },
-  {
-    "source": "GDELT",
-    "title": "Philippines lifts import ban on Hungarian livestock products",
-    "url": "http://www.philippinetimes.com/news/279191646/philippines-lifts-import-ban-on-hungarian-livestock-products",
-    "published_at": "2026-07-16T23:30:00+00:00",
-    "category": "무역/관세 이슈",
-    "press": "philippinetimes.com",
-    "language": "English",
-    "sourcecountry": "Philippines",
-    "matched_keywords": [
-      "import ban"
     ]
   },
   {
@@ -4863,13 +4527,13 @@
   },
   {
     "source": "GDELT",
-    "title": "El punto ciego de la sanidad animal en Entre Ríos : el SENASA no posee controles efectivos para la zoonosis",
-    "url": "https://www.analisisdigital.com.ar/provinciales/2026/07/18/el-punto-ciego-de-la-sanidad-animal-en-entre-rios-el-senasa-no-posee-controles-efectivos-para-la-zoonosis",
-    "published_at": "2026-07-18T19:00:00+00:00",
+    "title": "Bumper summer crops push SA food inflation down to 1 . 4 % in June",
+    "url": "https://www.bizcommunity.com/article/bumper-summer-crops-push-sa-food-inflation-down-to-14-in-june-856863a",
+    "published_at": "2026-07-23T15:30:00+00:00",
     "category": "기타",
-    "press": "analisisdigital.com.ar",
-    "language": "Spanish",
-    "sourcecountry": "Argentina",
+    "press": "bizcommunity.com",
+    "language": "English",
+    "sourcecountry": "South Africa",
     "matched_keywords": []
   },
   {
@@ -4881,6 +4545,17 @@
     "press": "laopcion.com.mx",
     "language": "Spanish",
     "sourcecountry": "Mexico",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "El punto ciego de la sanidad animal en Entre Ríos : el SENASA no posee controles efectivos para la zoonosis",
+    "url": "https://www.analisisdigital.com.ar/provinciales/2026/07/18/el-punto-ciego-de-la-sanidad-animal-en-entre-rios-el-senasa-no-posee-controles-efectivos-para-la-zoonosis",
+    "published_at": "2026-07-18T19:00:00+00:00",
+    "category": "기타",
+    "press": "analisisdigital.com.ar",
+    "language": "Spanish",
+    "sourcecountry": "Argentina",
     "matched_keywords": []
   },
   {
@@ -4907,13 +4582,13 @@
   },
   {
     "source": "GDELT",
-    "title": "Rabiu to Tinubu : BUA will cut food prices through expansion",
-    "url": "https://thenationonlineng.net/rabiu-to-tinubu-bua-will-cut-food-prices-through-expansion/",
-    "published_at": "2026-07-16T06:15:00+00:00",
+    "title": "SA Reserve Bank surprises by keeping rates on hold",
+    "url": "https://www.jacarandafm.com/news/news/sa-reserve-bank-surprises-by-keeping-rates-on-hold/",
+    "published_at": "2026-07-23T15:30:00+00:00",
     "category": "기타",
-    "press": "thenationonlineng.net",
+    "press": "jacarandafm.com",
     "language": "English",
-    "sourcecountry": "Nigeria",
+    "sourcecountry": "South Africa",
     "matched_keywords": []
   },
   {
@@ -4925,30 +4600,6 @@
     "press": "elpais.com.uy",
     "language": "Spanish",
     "sourcecountry": "Uruguay",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "ICAR to cap rice , wheat area under crop diversification plan ; forms 52 task teams for 2047 roadmap",
-    "url": "https://economictimes.indiatimes.com/news/economy/agriculture/icar-to-cap-rice-wheat-area-under-crop-diversification-plan-forms-52-task-teams-for-2047-roadmap/articleshow/132433338.cms",
-    "published_at": "2026-07-16T08:30:00+00:00",
-    "category": "시장/가격 용어",
-    "press": "economictimes.indiatimes.com",
-    "language": "English",
-    "sourcecountry": "India",
-    "matched_keywords": [
-      "wheat"
-    ]
-  },
-  {
-    "source": "GDELT",
-    "title": "  Should develop at least 100 Climate Smart Villages :  Union Minister Shivraj Singh asks ICAR ahead of its 100th Foundation Year",
-    "url": "https://aninews.in/news/national/general-news/should-develop-at-least-100-climate-smart-villages-union-minister-shivraj-singh-asks-icar-ahead-of-its-100th-foundation-year20260716183450/",
-    "published_at": "2026-07-16T14:15:00+00:00",
-    "category": "기타",
-    "press": "aninews.in",
-    "language": "English",
-    "sourcecountry": "India",
     "matched_keywords": []
   },
   {
@@ -4986,6 +4637,28 @@
   },
   {
     "source": "GDELT",
+    "title": "Rurales del sudeste bonaerense reclaman consensos para definir el futuro de la política sanitaria ganadera",
+    "url": "https://www.diariojunin.com/public/noticias/101851_rurales-del-sudeste-bonaerense-reclaman-consensos-para-definir-el-futuro-de-la-politica-sanitaria-ganadera.html",
+    "published_at": "2026-07-22T00:00:00+00:00",
+    "category": "기타",
+    "press": "diariojunin.com",
+    "language": "Spanish",
+    "sourcecountry": "Argentina",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "Government of India outlines major steps to strengthen veterinary services , expand dairy cooperatives , and manage stray dogs",
+    "url": "https://orissadiary.com/government-of-india-outlines-major-steps-to-strengthen-veterinary-services-expand-dairy-cooperatives-and-manage-stray-dogs/",
+    "published_at": "2026-07-23T08:00:00+00:00",
+    "category": "기타",
+    "press": "orissadiary.com",
+    "language": "English",
+    "sourcecountry": "India",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
     "title": "Waco Girl Survived Rare Deadly Complication from Typhus",
     "url": "https://myb106.com/ixp/513/p/fleaborne-typhus-central-texas/",
     "published_at": "2026-07-17T18:00:00+00:00",
@@ -4997,13 +4670,13 @@
   },
   {
     "source": "GDELT",
-    "title": "Rurales del sudeste bonaerense reclaman consensos para definir el futuro de la política sanitaria ganadera",
-    "url": "https://www.diariojunin.com/public/noticias/101851_rurales-del-sudeste-bonaerense-reclaman-consensos-para-definir-el-futuro-de-la-politica-sanitaria-ganadera.html",
-    "published_at": "2026-07-22T00:00:00+00:00",
+    "title": "Farmer associations plan round - table meet on July 28 to discuss aqua crisis",
+    "url": "https://www.thehindu.com/news/national/andhra-pradesh/farmers-associations-plan-round-table-meet-on-july-28-to-discuss-aqua-crisis/article71257726.ece",
+    "published_at": "2026-07-23T13:15:00+00:00",
     "category": "기타",
-    "press": "diariojunin.com",
-    "language": "Spanish",
-    "sourcecountry": "Argentina",
+    "press": "thehindu.com",
+    "language": "English",
+    "sourcecountry": "India",
     "matched_keywords": []
   },
   {
@@ -5019,6 +4692,28 @@
   },
   {
     "source": "GDELT",
+    "title": "HEALTHY HERDS , STRONGER TIES : KDF EXTENDS FREE VETERINARY CARE TO KAJIADO – Ministry of Defence – Kenya",
+    "url": "https://www.mod.go.ke/news/healthy-herds-stronger-ties-kdf-extends-free-veterinary-care-to-kajiado/",
+    "published_at": "2026-07-23T09:45:00+00:00",
+    "category": "기타",
+    "press": "mod.go.ke",
+    "language": "English",
+    "sourcecountry": "Kenya",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "Gusano barrenador del ganado no es plaga exclusiva de establos : Especialista",
+    "url": "https://nortedigital.mx/gusano-barrenador-del-ganado-no-es-plaga-exclusiva-de-establos-especialista/",
+    "published_at": "2026-07-23T23:45:00+00:00",
+    "category": "기타",
+    "press": "nortedigital.mx",
+    "language": "Spanish",
+    "sourcecountry": "Mexico",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
     "title": "RDB Consulting pioneers AI - driven infrastructure optimisation tools for SA Stud Book",
     "url": "https://www.itweb.co.za/article/rdb-consulting-pioneers-ai-driven-infrastructure-optimisation-tools-for-sa-stud-book/dgp45qaB8m5vX9l8",
     "published_at": "2026-07-20T08:00:00+00:00",
@@ -5026,28 +4721,6 @@
     "press": "itweb.co.za",
     "language": "English",
     "sourcecountry": "South Africa",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Relief Package Announced for Five Flood - Hit Districts in Chattogram",
-    "url": "https://energybangla.com/relief-package-announced-for-five-flood-hit-districts-in-chattogram/",
-    "published_at": "2026-07-16T19:15:00+00:00",
-    "category": "기타",
-    "press": "energybangla.com",
-    "language": "English",
-    "sourcecountry": "Bangladesh",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Nigeria : Bua Foods Plans Major Expansion to Support Nigeria Economic Growth , Food Security",
-    "url": "https://allafrica.com/stories/202607160423.html",
-    "published_at": "2026-07-16T15:30:00+00:00",
-    "category": "기타",
-    "press": "allafrica.com",
-    "language": "English",
-    "sourcecountry": "Nigeria",
     "matched_keywords": []
   },
   {
@@ -5085,17 +4758,6 @@
   },
   {
     "source": "GDELT",
-    "title": "Economic pressure reshapes fruit and veg consumption in South Africa",
-    "url": "https://www.freshplaza.com/north-america/article/9857551/economic-pressure-reshapes-fruit-and-veg-consumption-in-south-africa/",
-    "published_at": "2026-07-16T13:15:00+00:00",
-    "category": "기타",
-    "press": "freshplaza.com",
-    "language": "English",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "El Niño set to bring global agricultural markets to the boil",
     "url": "https://www.dailymaverick.co.za/article/2026-07-22-commodity-markets-at-boiling-point-how-unprecedented-el-nino-threatens-agriculture-food-security/",
     "published_at": "2026-07-22T00:15:00+00:00",
@@ -5114,6 +4776,17 @@
     "press": "tv2fyn.dk",
     "language": "Danish",
     "sourcecountry": "Denmark",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "Expo 2026 : ARP reclama seguridad y reglas claras para fortalecer al campo paraguayo",
+    "url": "https://www.adndigital.com.py/expo-2026-arp-reclama-seguridad-y-reglas-claras-para-fortalecer-al-campo-paraguayo/",
+    "published_at": "2026-07-21T02:15:00+00:00",
+    "category": "기타",
+    "press": "adndigital.com.py",
+    "language": "Spanish",
+    "sourcecountry": "Paraguay",
     "matched_keywords": []
   },
   {
@@ -5162,17 +4835,6 @@
   },
   {
     "source": "GDELT",
-    "title": "Expo 2026 : ARP reclama seguridad y reglas claras para fortalecer al campo paraguayo",
-    "url": "https://www.adndigital.com.py/expo-2026-arp-reclama-seguridad-y-reglas-claras-para-fortalecer-al-campo-paraguayo/",
-    "published_at": "2026-07-21T02:15:00+00:00",
-    "category": "기타",
-    "press": "adndigital.com.py",
-    "language": "Spanish",
-    "sourcecountry": "Paraguay",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "Foot - and - Mouth confirmed in Nelson Mandela Bay , but public health MMC disagrees",
     "url": "https://www.dailymaverick.co.za/article/2026-07-21-foot-and-mouth-disease-confirmed-in-nelson-mandela-bay-but-public-health-mmc-disagrees/",
     "published_at": "2026-07-22T00:15:00+00:00",
@@ -5184,13 +4846,13 @@
   },
   {
     "source": "GDELT",
-    "title": "Bridgwater Docks set to reclaim  former glory  after £5 . 2m regeneration plan approved",
-    "url": "https://www.somersetlive.co.uk/news/somerset-news/bridgwater-docks-set-reclaim-former-11066399",
-    "published_at": "2026-07-20T08:30:00+00:00",
+    "title": "Campo , crecimiento y mercados : Peña marca la ruta productiva del Paraguay en la Expo 2026",
+    "url": "https://www.adndigital.com.py/campo-crecimiento-y-mercados-pena-marca-la-ruta-productiva-del-paraguay-en-la-expo-2026/",
+    "published_at": "2026-07-21T02:15:00+00:00",
     "category": "기타",
-    "press": "somersetlive.co.uk",
-    "language": "English",
-    "sourcecountry": "United Kingdom",
+    "press": "adndigital.com.py",
+    "language": "Spanish",
+    "sourcecountry": "Paraguay",
     "matched_keywords": []
   },
   {
@@ -5217,13 +4879,13 @@
   },
   {
     "source": "GDELT",
-    "title": "Campo , crecimiento y mercados : Peña marca la ruta productiva del Paraguay en la Expo 2026",
-    "url": "https://www.adndigital.com.py/campo-crecimiento-y-mercados-pena-marca-la-ruta-productiva-del-paraguay-en-la-expo-2026/",
-    "published_at": "2026-07-21T02:15:00+00:00",
+    "title": "Bridgwater Docks set to reclaim  former glory  after £5 . 2m regeneration plan approved",
+    "url": "https://www.somersetlive.co.uk/news/somerset-news/bridgwater-docks-set-reclaim-former-11066399",
+    "published_at": "2026-07-20T08:30:00+00:00",
     "category": "기타",
-    "press": "adndigital.com.py",
-    "language": "Spanish",
-    "sourcecountry": "Paraguay",
+    "press": "somersetlive.co.uk",
+    "language": "English",
+    "sourcecountry": "United Kingdom",
     "matched_keywords": []
   },
   {
@@ -5244,17 +4906,6 @@
     "published_at": "2026-07-17T15:15:00+00:00",
     "category": "기타",
     "press": "allafrica.com",
-    "language": "English",
-    "sourcecountry": "Nigeria",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Abdul Samad Rabiu : BUA Food Expansion Drive Fuelled By Need to Support Nigeria Long - term Growth Agenda – THISDAYLIVE",
-    "url": "https://www.thisdaylive.com/2026/07/16/abdul-samad-rabiu-bua-foods-expansion-drive-fuelled-by-need-to-support-nigerias-long-term-growth-agenda/",
-    "published_at": "2026-07-16T07:15:00+00:00",
-    "category": "기타",
-    "press": "thisdaylive.com",
     "language": "English",
     "sourcecountry": "Nigeria",
     "matched_keywords": []
@@ -5284,17 +4935,6 @@
   {
     "source": "GDELT",
     "title": "Gusano barrenador llega al principal estado exportador de ganado - Siete24 Noticias con proposito y sentido humano",
-    "url": "https://siete24.mx/mexico/gusano-barrenador-llega-al-principal-estado-exportador-de-ganado/",
-    "published_at": "2026-07-16T21:00:00+00:00",
-    "category": "기타",
-    "press": "siete24.mx",
-    "language": "Spanish",
-    "sourcecountry": "Mexico",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Gusano barrenador llega al principal estado exportador de ganado - Siete24 Noticias con proposito y sentido humano",
     "url": "https://siete24.mx/negocios/gusano-barrenador-llega-al-principal-estado-exportador-de-ganado/",
     "published_at": "2026-07-17T01:45:00+00:00",
     "category": "기타",
@@ -5316,13 +4956,13 @@
   },
   {
     "source": "GDELT",
-    "title": "  Should develop at least 100 Climate Smart Villages :  Union Minister Shivraj Singh asks ICAR ahead of its 100th Foundation Year",
-    "url": "http://www.bignewsnetwork.com/news/279191906/should-develop-at-least-100-climate-smart-villages-union-minister-shivraj-singh-asks-icar-ahead-of-its-100th-foundation-year",
-    "published_at": "2026-07-16T18:15:00+00:00",
+    "title": "蛋价刚歇口气又  起飞  _ 东方财富网",
+    "url": "https://finance.eastmoney.com/a/202607233818898296.html",
+    "published_at": "2026-07-23T08:30:00+00:00",
     "category": "기타",
-    "press": "bignewsnetwork.com",
-    "language": "English",
-    "sourcecountry": "United States",
+    "press": "finance.eastmoney.com",
+    "language": "Chinese",
+    "sourcecountry": "China",
     "matched_keywords": []
   },
   {
@@ -5338,17 +4978,6 @@
   },
   {
     "source": "GDELT",
-    "title": "观察 | 从  受益者  到  共建者  看川渝民企如何向新攀高 - 华龙网 - 重庆市委市政府官方新闻门户",
-    "url": "https://www.cqnews.net/web/content_1529211211101659136.html",
-    "published_at": "2026-07-22T01:30:00+00:00",
-    "category": "기타",
-    "press": "cqnews.net",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "Vesicular stomatitis virus confirmed in Archuleta County equine",
     "url": "http://www.pagosasun.com/stories/vesicular-stomatitis-virus-confirmed-in-archuleta-county-equine,145582",
     "published_at": "2026-07-23T03:15:00+00:00",
@@ -5356,6 +4985,17 @@
     "press": "pagosasun.com",
     "language": "English",
     "sourcecountry": "United States",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "观察 | 从  受益者  到  共建者  看川渝民企如何向新攀高 - 华龙网 - 重庆市委市政府官方新闻门户",
+    "url": "https://www.cqnews.net/web/content_1529211211101659136.html",
+    "published_at": "2026-07-22T01:30:00+00:00",
+    "category": "기타",
+    "press": "cqnews.net",
+    "language": "Chinese",
+    "sourcecountry": "China",
     "matched_keywords": []
   },
   {
@@ -5382,13 +5022,13 @@
   },
   {
     "source": "GDELT",
-    "title": "6000 konsultāciju visā Latvijā :  Purina ONE  uztura akadēmija noslēdz otro sezonu",
-    "url": "https://www.delfi.lv/56419845/purina-one-uztura-akademija/120126102/6000-konsultaciju-visa-latvija-purina-one-uztura-akademija-nosledz-otro-sezonu",
-    "published_at": "2026-07-16T09:00:00+00:00",
+    "title": "牛肉太贵想用鸡肉替代 ？ 可现在鸡肉也成奢侈品了 ， 单月涨价8 . 2 %- 华侨网",
+    "url": "https://www.chinesepress.com/archives/185940",
+    "published_at": "2026-07-23T22:30:00+00:00",
     "category": "기타",
-    "press": "delfi.lv",
-    "language": "Latvian",
-    "sourcecountry": "Latvia",
+    "press": "chinesepress.com",
+    "language": "Chinese",
+    "sourcecountry": "China",
     "matched_keywords": []
   },
   {
@@ -5415,13 +5055,13 @@
   },
   {
     "source": "GDELT",
-    "title": "Bridgwater docks to be regenerated as £5 . 2m plans approved",
-    "url": "https://www.bridgwatermercury.co.uk/news/26281809.bridgwater-docks-regenerated-5-2m-plans-approved/",
-    "published_at": "2026-07-16T09:00:00+00:00",
+    "title": "Λαγκάρντ : Οι επιπτώσεις του ενεργειακού σοκ δεν έχουν ακόμη φανεί",
+    "url": "https://www.voria.gr/article/lagkarnt-oi-epiptoseis-toy-energeiakoy-sok-den-ehoyn-akomi-fanei",
+    "published_at": "2026-07-23T16:00:00+00:00",
     "category": "기타",
-    "press": "bridgwatermercury.co.uk",
-    "language": "English",
-    "sourcecountry": "United Kingdom",
+    "press": "voria.gr",
+    "language": "Greek",
+    "sourcecountry": "Greece",
     "matched_keywords": []
   },
   {
@@ -5437,6 +5077,17 @@
   },
   {
     "source": "GDELT",
+    "title": "Λαγκάρντ : Ο ενεργειακός λογαριασμός δεν έχει φανεί ακόμη",
+    "url": "https://www.kathimerini.gr/economy/564362011/lagkarnt-o-energeiakos-logariasmos-den-echei-fanei-akomi/",
+    "published_at": "2026-07-23T15:00:00+00:00",
+    "category": "기타",
+    "press": "kathimerini.gr",
+    "language": "Greek",
+    "sourcecountry": "Greece",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
     "title": "Israel cedează controlul în Liban : Riscuri pentru energie",
     "url": "https://financiarul.ro/externe/israel-a-cedat-trei-sate-armatei-libaneze-noul-program-pilot-muta/",
     "published_at": "2026-07-21T16:30:00+00:00",
@@ -5444,17 +5095,6 @@
     "press": "financiarul.ro",
     "language": "Romanian",
     "sourcecountry": "Romania",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Why Record Grain Harvests Wont Guarantee Cheaper Feed",
-    "url": "https://www.dairyreporter.com/Article/2026/07/13/why-record-grain-harvests-wont-guarantee-cheaper-feed/",
-    "published_at": "2026-07-16T08:15:00+00:00",
-    "category": "기타",
-    "press": "dairyreporter.com",
-    "language": "English",
-    "sourcecountry": "China",
     "matched_keywords": []
   },
   {
@@ -5493,17 +5133,6 @@
   {
     "source": "GDELT",
     "title": "Todo lo que tenés que saber antes de salir de casa ... ",
-    "url": "https://www.lv12.com.ar/julio/todo-lo-que-tenes-que-saber-antes-salir-casa-n200816",
-    "published_at": "2026-07-16T14:45:00+00:00",
-    "category": "기타",
-    "press": "lv12.com.ar",
-    "language": "Spanish",
-    "sourcecountry": "Argentina",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Todo lo que tenés que saber antes de salir de casa ... ",
     "url": "https://www.lv12.com.ar/julio/todo-lo-que-tenes-que-saber-antes-salir-casa-n200868",
     "published_at": "2026-07-17T14:45:00+00:00",
     "category": "기타",
@@ -5525,17 +5154,6 @@
   },
   {
     "source": "GDELT",
-    "title": "CAR - T领域连获突破 ， 生物科技ETF易方达 （ 159837 ） 景气度上行",
-    "url": "https://fund.jrj.com.cn/2026/07/16133257827556.shtml",
-    "published_at": "2026-07-16T06:30:00+00:00",
-    "category": "기타",
-    "press": "fund.jrj.com.cn",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "  阿克苏 宁波舟山港  海铁联运出口班列首发",
     "url": "https://baijiahao.baidu.com/s?id=1871210557115092406",
     "published_at": "2026-07-21T06:00:00+00:00",
@@ -5547,138 +5165,6 @@
   },
   {
     "source": "GDELT",
-    "title": "Mulberry branch biochar offers a greener feed strategy for healthier largemouth bass aquaculture",
-    "url": "https://www.newswise.com/articles/mulberry-branch-biochar-offers-a-greener-feed-strategy-for-healthier-largemouth-bass-aquaculture",
-    "published_at": "2026-07-18T18:00:00+00:00",
-    "category": "기타",
-    "press": "newswise.com",
-    "language": "English",
-    "sourcecountry": "United States",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "AgriZeroNZ backs methane - cutting tools to boost farm productivity",
-    "url": "https://www.nzherald.co.nz/business/business-reports/agribusiness-report/agrizeronz-backs-methane-cutting-tools-to-boost-farm-productivity/X6CUW7IARBDGNB2EAVAF6WC3LU/",
-    "published_at": "2026-07-22T18:15:00+00:00",
-    "category": "기타",
-    "press": "nzherald.co.nz",
-    "language": "English",
-    "sourcecountry": "New Zealand",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": " [ 担保 ] 播恩集团 ( 001366 ): 为全资子公司提供担保的进展公告 - CFi . CN 中财网",
-    "url": "http://www.cfi.net.cn/p20260717001142.html",
-    "published_at": "2026-07-17T10:30:00+00:00",
-    "category": "기타",
-    "press": "cfi.net.cn",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "宠物零食里竟添加木糖醇 ？- 江西新闻网",
-    "url": "https://jiangxi.jxnews.com.cn/system/2026/07/15/031189685.shtml",
-    "published_at": "2026-07-16T06:30:00+00:00",
-    "category": "기타",
-    "press": "jiangxi.jxnews.com.cn",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "攀高④丨从  没跑  到  领跑  印遇龙院士团队把  被低估的微量元素  做成国际领先",
-    "url": "http://news.cnwest.com/tianxia/a/2026/07/22/23398187.html",
-    "published_at": "2026-07-22T01:45:00+00:00",
-    "category": "기타",
-    "press": "news.cnwest.com",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "新闻发布｜六大行动助推黑龙江省农产品精深加工业高质量发展",
-    "url": "https://www.hljnews.cn/ljxw/content/2026-07/21/content_901137.html",
-    "published_at": "2026-07-21T15:00:00+00:00",
-    "category": "기타",
-    "press": "hljnews.cn",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "云南能投 ( 002053 ): 云南能源投资股份有限公司关于全资子公司云南省盐业有限公司向云南省绿色能源产业集团有限公司转让云南省盐业怒江有限公司100 % 股权暨关联交易 - CFi . CN 中财网",
-    "url": "http://www.cfi.net.cn/p20260717001725.html",
-    "published_at": "2026-07-17T11:45:00+00:00",
-    "category": "기타",
-    "press": "cfi.net.cn",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "2026 中国驼奶产业源头工厂与标杆品牌价值蓝皮书 _ 中华网",
-    "url": "https://m.tech.china.com/redian/2026/0717/072026_1919325.html",
-    "published_at": "2026-07-17T03:00:00+00:00",
-    "category": "기타",
-    "press": "m.tech.china.com",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "广济药业 ( 000952 ): 湖北广济药业股份有限公司2026年向特定对象发行A股股票预案 （ 修订稿 ）- CFi . CN 中财网",
-    "url": "http://www.cfi.net.cn/p20260720001809.html",
-    "published_at": "2026-07-20T11:00:00+00:00",
-    "category": "기타",
-    "press": "cfi.net.cn",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Commercial Whaling in Iceland | An Industry at a Crossroads",
-    "url": "https://www.icelandreview.com/opinions-columns/commercial-whaling-in-iceland-an-industry-at-a-crossroads/",
-    "published_at": "2026-07-16T16:00:00+00:00",
-    "category": "기타",
-    "press": "icelandreview.com",
-    "language": "English",
-    "sourcecountry": "Iceland",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Weekly protein report : New World Screwworm hits turning point as cases resolve",
-    "url": "https://www.thecattlesite.com/articles/trade-barriers-highlight-ongoing-export-risks-for-poultry-producers",
-    "published_at": "2026-07-17T03:00:00+00:00",
-    "category": "기타",
-    "press": "thecattlesite.com",
-    "language": "English",
-    "sourcecountry": "United Kingdom",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Commercial Whaling in Iceland | An Industry at a Crossroads",
-    "url": "https://www.icelandreview.com/in-focus/commercial-whaling-in-iceland-an-industry-at-a-crossroads/",
-    "published_at": "2026-07-17T15:30:00+00:00",
-    "category": "기타",
-    "press": "icelandreview.com",
-    "language": "English",
-    "sourcecountry": "Iceland",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "Smart Tribal Farming : How Digital Innovation Can Empower India Tribal Communities",
     "url": "https://dailypioneer.com/news/the-helix-and-the-harvest-why-tribal-indias-future-lies-in-digital-sovereignty",
     "published_at": "2026-07-20T21:45:00+00:00",
@@ -5686,6 +5172,17 @@
     "press": "dailypioneer.com",
     "language": "English",
     "sourcecountry": "India",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "Mulberry branch biochar offers a greener feed strategy for healthier largemouth bass aquaculture",
+    "url": "https://www.newswise.com/articles/mulberry-branch-biochar-offers-a-greener-feed-strategy-for-healthier-largemouth-bass-aquaculture",
+    "published_at": "2026-07-18T18:00:00+00:00",
+    "category": "기타",
+    "press": "newswise.com",
+    "language": "English",
+    "sourcecountry": "United States",
     "matched_keywords": []
   },
   {
@@ -5723,6 +5220,28 @@
   },
   {
     "source": "GDELT",
+    "title": "South Korea prepares for 2027 world strawberry expo",
+    "url": "https://www.freshplaza.com/north-america/article/9860155/south-korea-prepares-for-2027-world-strawberry-expo/",
+    "published_at": "2026-07-23T12:45:00+00:00",
+    "category": "기타",
+    "press": "freshplaza.com",
+    "language": "English",
+    "sourcecountry": "China",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "AgriZeroNZ backs methane - cutting tools to boost farm productivity",
+    "url": "https://www.nzherald.co.nz/business/business-reports/agribusiness-report/agrizeronz-backs-methane-cutting-tools-to-boost-farm-productivity/X6CUW7IARBDGNB2EAVAF6WC3LU/",
+    "published_at": "2026-07-22T18:15:00+00:00",
+    "category": "기타",
+    "press": "nzherald.co.nz",
+    "language": "English",
+    "sourcecountry": "New Zealand",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
     "title": "Minister Shivraj Singh Chauhan bats for non - GM research to increase pulses , oilseeds productivity",
     "url": "https://www.newindianexpress.com/india/2026/Jul/17/minister-shivraj-singh-chauhan-bats-for-non-gm-research-to-increase-pulses-oilseeds-productivity",
     "published_at": "2026-07-17T06:45:00+00:00",
@@ -5756,17 +5275,6 @@
   },
   {
     "source": "GDELT",
-    "title": "FAO ： 2026年世界渔业和水产养殖状况报告",
-    "url": "https://finance.sina.com.cn/tech/roll/2026-07-17/doc-iniiaair8143249.shtml",
-    "published_at": "2026-07-17T00:00:00+00:00",
-    "category": "기타",
-    "press": "finance.sina.com.cn",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "FAO Committee on Agriculture opens with strong call for science , innovation and technical solutions",
     "url": "https://www.fao.org/newsroom/detail/fao-committee-on-agriculture-opens-with-strong-call-for-science--innovation-and-technical-solutions/en",
     "published_at": "2026-07-20T23:00:00+00:00",
@@ -5785,6 +5293,17 @@
     "press": "thenationonlineng.net",
     "language": "English",
     "sourcecountry": "Nigeria",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "ITC agri business becomes India largest private - sector agri enterprise , doubles revenue in five years",
+    "url": "https://www.thehindubusinessline.com/economy/agri-business/itcs-agri-business-becomes-indias-largest-private-sector-agri-enterprise-doubles-revenue-in-five-years/article71259041.ece",
+    "published_at": "2026-07-23T17:00:00+00:00",
+    "category": "기타",
+    "press": "thehindubusinessline.com",
+    "language": "English",
+    "sourcecountry": "India",
     "matched_keywords": []
   },
   {
@@ -5818,6 +5337,17 @@
     "press": "dailypolitical.com",
     "language": "English",
     "sourcecountry": "United States",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": " [ 担保 ] 播恩集团 ( 001366 ): 为全资子公司提供担保的进展公告 - CFi . CN 中财网",
+    "url": "http://www.cfi.net.cn/p20260717001142.html",
+    "published_at": "2026-07-17T10:30:00+00:00",
+    "category": "기타",
+    "press": "cfi.net.cn",
+    "language": "Chinese",
+    "sourcecountry": "China",
     "matched_keywords": []
   },
   {
@@ -5912,13 +5442,13 @@
   },
   {
     "source": "GDELT",
-    "title": "Dhahirah offers 58 acre investment opportunities",
-    "url": "https://www.muscatdaily.com/2026/07/19/dhahirah-offers-58-acre-investment-opportunities/",
-    "published_at": "2026-07-19T19:45:00+00:00",
+    "title": "攀高④丨从  没跑  到  领跑  印遇龙院士团队把  被低估的微量元素  做成国际领先",
+    "url": "http://news.cnwest.com/tianxia/a/2026/07/22/23398187.html",
+    "published_at": "2026-07-22T01:45:00+00:00",
     "category": "기타",
-    "press": "muscatdaily.com",
-    "language": "English",
-    "sourcecountry": "Oman",
+    "press": "news.cnwest.com",
+    "language": "Chinese",
+    "sourcecountry": "China",
     "matched_keywords": []
   },
   {
@@ -5934,6 +5464,28 @@
   },
   {
     "source": "GDELT",
+    "title": "Dhahirah offers 58 acre investment opportunities",
+    "url": "https://www.muscatdaily.com/2026/07/19/dhahirah-offers-58-acre-investment-opportunities/",
+    "published_at": "2026-07-19T19:45:00+00:00",
+    "category": "기타",
+    "press": "muscatdaily.com",
+    "language": "English",
+    "sourcecountry": "Oman",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "扎根南吴绘振兴 机电青年践初心 烟台科技学院机械电子工程学院圆满完成2026暑期  三下乡  社会实践 _ 中华网",
+    "url": "https://hea.china.com/articles/20260723/202607231924495.html",
+    "published_at": "2026-07-23T10:00:00+00:00",
+    "category": "기타",
+    "press": "hea.china.com",
+    "language": "Chinese",
+    "sourcecountry": "China",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
     "title": "FAO Agri Meet Urges Science , Innovation , Tech Solutions",
     "url": "https://www.miragenews.com/fao-agri-meet-urges-science-innovation-tech-1712962/",
     "published_at": "2026-07-20T16:15:00+00:00",
@@ -5945,35 +5497,46 @@
   },
   {
     "source": "GDELT",
-    "title": "China Agricultural University dean on 120 years of growing solutions with farmers",
-    "url": "https://thepoint.gm/africa/gambia/feature/china-agricultural-university-dean-on-120-years-of-growing-solutions-with-farmers",
-    "published_at": "2026-07-16T08:45:00+00:00",
+    "title": "新闻发布｜六大行动助推黑龙江省农产品精深加工业高质量发展",
+    "url": "https://www.hljnews.cn/ljxw/content/2026-07/21/content_901137.html",
+    "published_at": "2026-07-21T15:00:00+00:00",
     "category": "기타",
-    "press": "thepoint.gm",
-    "language": "English",
-    "sourcecountry": "Gambia",
+    "press": "hljnews.cn",
+    "language": "Chinese",
+    "sourcecountry": "China",
     "matched_keywords": []
   },
   {
     "source": "GDELT",
-    "title": "Modern agriculture faces new challenges as farmers adapt",
-    "url": "https://www.wahpetondailynews.com/news/local/modern-agriculture-faces-new-challenges-as-farmers-adapt",
-    "published_at": "2026-07-16T23:30:00+00:00",
+    "title": "云南能投 ( 002053 ): 云南能源投资股份有限公司关于全资子公司云南省盐业有限公司向云南省绿色能源产业集团有限公司转让云南省盐业怒江有限公司100 % 股权暨关联交易 - CFi . CN 中财网",
+    "url": "http://www.cfi.net.cn/p20260717001725.html",
+    "published_at": "2026-07-17T11:45:00+00:00",
     "category": "기타",
-    "press": "wahpetondailynews.com",
-    "language": "English",
-    "sourcecountry": "United States",
+    "press": "cfi.net.cn",
+    "language": "Chinese",
+    "sourcecountry": "China",
     "matched_keywords": []
   },
   {
     "source": "GDELT",
-    "title": "Regional cooperation key to unlocking smart agriculture and green growth",
-    "url": "https://vietnamnews.vn/economy/1785546/regional-cooperation-key-to-unlocking-smart-agriculture-and-green-growth.html",
-    "published_at": "2026-07-16T08:45:00+00:00",
+    "title": "2026 中国驼奶产业源头工厂与标杆品牌价值蓝皮书 _ 中华网",
+    "url": "https://m.tech.china.com/redian/2026/0717/072026_1919325.html",
+    "published_at": "2026-07-17T03:00:00+00:00",
     "category": "기타",
-    "press": "vietnamnews.vn",
-    "language": "English",
-    "sourcecountry": "Vietnam",
+    "press": "m.tech.china.com",
+    "language": "Chinese",
+    "sourcecountry": "China",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "广济药业 ( 000952 ): 湖北广济药业股份有限公司2026年向特定对象发行A股股票预案 （ 修订稿 ）- CFi . CN 中财网",
+    "url": "http://www.cfi.net.cn/p20260720001809.html",
+    "published_at": "2026-07-20T11:00:00+00:00",
+    "category": "기타",
+    "press": "cfi.net.cn",
+    "language": "Chinese",
+    "sourcecountry": "China",
     "matched_keywords": []
   },
   {
@@ -5996,6 +5559,28 @@
     "press": "fjnews.fjsen.com",
     "language": "Chinese",
     "sourcecountry": "China",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "Weekly protein report : New World Screwworm hits turning point as cases resolve",
+    "url": "https://www.thecattlesite.com/articles/trade-barriers-highlight-ongoing-export-risks-for-poultry-producers",
+    "published_at": "2026-07-17T03:00:00+00:00",
+    "category": "기타",
+    "press": "thecattlesite.com",
+    "language": "English",
+    "sourcecountry": "United Kingdom",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "Commercial Whaling in Iceland | An Industry at a Crossroads",
+    "url": "https://www.icelandreview.com/in-focus/commercial-whaling-in-iceland-an-industry-at-a-crossroads/",
+    "published_at": "2026-07-17T15:30:00+00:00",
+    "category": "기타",
+    "press": "icelandreview.com",
+    "language": "English",
+    "sourcecountry": "Iceland",
     "matched_keywords": []
   }
 ]

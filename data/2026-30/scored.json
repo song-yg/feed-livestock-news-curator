@@ -1,8 +1,69 @@
 {
-  "generated_at": "2026-07-23T06:58:54.987529+00:00",
+  "generated_at": "2026-07-24T00:28:59.672634+00:00",
   "domestic": [
     {
-      "issue_score": 16.4,
+      "issue_score": 16.0,
+      "mention_count": 16,
+      "raw_mention_count": 16,
+      "titles": [
+        "농진청, 여름철 풀사료 '사료피' 논 활용 높이고 자급기반 넓힌다",
+        "논에서 키우는 여름 풀사료…'사료피' 주목",
+        "여름철 풀사료 '사료피' 주목…논 활용 높이고 자급기반 넓힌다",
+        "여름철 풀사료 ‘사료피’ 논 활용도 높이고 자급기반 넓힌다",
+        "농진청, 논 재배용 '사료피' 신품종 개발",
+        "논에서도 잘 자라는 ‘사료피’ 육종…여름철 풀사료 자급기반 넓힌다",
+        "경제성·생산성 높인 논 재배용 '사료피' 개발 … 풀사료 자급 확대",
+        "논에서 잘 자라는 '사료피'…풀사료 자급 확대 나선다",
+        "농촌진흥청, 장마에도 논에서 재배할 수 있는 풀사료 작물 개발",
+        "농진청, 논에서 잘 자라는 하계 사료피 개발…\"벼 대신 재배시 농가소득...",
+        "수입 조사료 의존 낮춘다…농진청, 사료피 신품종 개발",
+        "논에서도 잘 자라는 여름철 풀사료 ‘사료피’…“경제성·생산성 효과...",
+        "농진청, 논 풀사료 '사료피' 신품종 개발…자급률 제고",
+        "논에 벼 대신 풀 심는다…'사료피'가 전략작물 새 카드로",
+        "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
+        "논에서도 잘 자라는 ‘사료피’ 나왔다…여름철 풀사료 자급 확대 기대"
+      ],
+      "urls": [
+        "https://www.kenews.co.kr/news/article.html?no=89712",
+        "https://news.skbroadband.com/news/articleView.html?idxno=232969",
+        "https://www.farmnmarket.com/news/article.html?no=27195",
+        "https://www.newsam.co.kr/news/article.html?no=43554",
+        "https://www.asiatoday.co.kr/kn/view.php?key=20260722010007983",
+        "https://www.munhwa.com/article/11604324?ref=naver",
+        "https://biz.newdaily.co.kr/site/data/html/2026/07/22/2026072200209.html",
+        "https://news.tf.co.kr/read/economy/2345859.htm",
+        "https://biz.chosun.com/policy/policy_sub/2026/07/22/C4PAL2A65RDF5EYYIVCKXHG6CA/?utm_source=naver&utm_medium=original&utm_campaign=biz",
+        "https://view.asiae.co.kr/article/2026072214075694660",
+        "https://www.etnews.com/20260722000220",
+        "https://www.mediapen.com/news/view/1111503",
+        "https://www.newsis.com/view/NISX20260722_0003718640",
+        "https://www.mt.co.kr/economy/2026/07/23/2026072213341472182",
+        "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
+        "https://biz.heraldcorp.com/article/10815810?ref=naver"
+      ],
+      "press_list": [
+        "asiatoday.co.kr",
+        "biz.chosun.com",
+        "biz.heraldcorp.com",
+        "biz.newdaily.co.kr",
+        "dailian.co.kr",
+        "etnews.com",
+        "farmnmarket.com",
+        "kenews.co.kr",
+        "mediapen.com",
+        "mt.co.kr",
+        "munhwa.com",
+        "news.skbroadband.com",
+        "news.tf.co.kr",
+        "newsam.co.kr",
+        "newsis.com",
+        "view.asiae.co.kr"
+      ],
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 14.0,
       "mention_count": 20,
       "raw_mention_count": 20,
       "titles": [
@@ -75,53 +136,92 @@
       "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
     },
     {
-      "issue_score": 13.0,
-      "mention_count": 13,
+      "issue_score": 11.4,
+      "mention_count": 12,
       "raw_mention_count": 13,
       "titles": [
-        "논에서 키우는 여름 풀사료…'사료피' 주목",
-        "여름철 풀사료 '사료피' 주목…논 활용 높이고 자급기반 넓힌다",
-        "여름철 풀사료 ‘사료피’ 논 활용도 높이고 자급기반 넓힌다",
-        "농진청, 논 재배용 '사료피' 신품종 개발",
-        "논에서도 잘 자라는 ‘사료피’ 육종…여름철 풀사료 자급기반 넓힌다",
-        "경제성·생산성 높인 논 재배용 '사료피' 개발 … 풀사료 자급 확대",
-        "논에서 잘 자라는 '사료피'…풀사료 자급 확대 나선다",
-        "농진청, 논에서 잘 자라는 하계 사료피 개발…\"벼 대신 재배시 농가소득...",
-        "수입 조사료 의존 낮춘다…농진청, 사료피 신품종 개발",
-        "논에서도 잘 자라는 여름철 풀사료 ‘사료피’…“경제성·생산성 효과...",
-        "농진청, 논 풀사료 '사료피' 신품종 개발…자급률 제고",
-        "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
-        "논에서도 잘 자라는 ‘사료피’ 나왔다…여름철 풀사료 자급 확대 기대"
+        "연일 폭염에 축산농가 ‘비상’…가축 관리 총력",
+        "폭염에 가축 사육 비상…냉방비 부담 '눈덩이'",
+        "폭염에 가축도 고통…양돈농가 냉방비 부담 '시름'",
+        "폭염에 지친 돼지들…가축 관리도 '비상'",
+        "연일 폭염에… 가축 집단폐사 · 조선소 열사병 비상",
+        "밤낮없는 폭염에 가축 1만 5000여 마리 폐사…전남 축산농가 \"하루하루...",
+        "서귀포시, 폭염 대응 재해 취약 축산농가 현장점검",
+        "서귀포시, 폭염 대응 축산농가 현장점검",
+        "서귀포시, 폭염 취약 축산농가 현장점검",
+        "폭염에 가축도 기진맥진... 돼지 폐사 피해 시작",
+        "[자막뉴스] 벌써 300여 마리 폐사.. 폭염에 가축도 \"헥헥\"",
+        "울산시농업기술센터, 폭염 가축 피해 예방 관리 요령 안내",
+        "폭염 길어지면 가축 생산성 ‘뚝’… 울산시, 여름철 축사 관리 당부"
       ],
       "urls": [
-        "https://news.skbroadband.com/news/articleView.html?idxno=232969",
-        "https://www.farmnmarket.com/news/article.html?no=27195",
-        "https://www.newsam.co.kr/news/article.html?no=43554",
-        "https://www.asiatoday.co.kr/kn/view.php?key=20260722010007983",
-        "https://www.munhwa.com/article/11604324?ref=naver",
-        "https://biz.newdaily.co.kr/site/data/html/2026/07/22/2026072200209.html",
-        "https://news.tf.co.kr/read/economy/2345859.htm",
-        "https://view.asiae.co.kr/article/2026072214075694660",
-        "https://www.etnews.com/20260722000220",
-        "https://www.mediapen.com/news/view/1111503",
-        "https://www.newsis.com/view/NISX20260722_0003718640",
-        "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
-        "https://biz.heraldcorp.com/article/10815810?ref=naver"
+        "http://www.yonhapnewstv.co.kr/news/MYH20260722054209zWm",
+        "http://www.yonhapnewstv.co.kr/news/MYH20260721134426Uyc",
+        "http://www.yonhapnewstv.co.kr/news/MYH202607211148010Ux",
+        "http://www.yonhapnewstv.co.kr/news/MYH20260721110950aqk",
+        "https://www.munhwa.com/article/11604209?ref=naver",
+        "https://www.pressian.com/pages/articles/2026072217575165884?utm_source=naver&utm_medium=search",
+        "https://www.jemin.com/news/articleView.html?idxno=840550",
+        "https://www.yna.co.kr/view/AKR20260722114300056?input=1195m",
+        "http://www.samdailbo.com/news/articleView.html?idxno=267880",
+        "https://www.jibs.co.kr/news/replay/viewNewsReplayDetail/2026072118072377690?feed=na",
+        "https://www.jibs.co.kr/news/articles/articlesDetail/63702?feed=na",
+        "https://www.newspim.com/news/view/20260720000998",
+        "https://www.viva100.com/article/20260720500654"
       ],
       "press_list": [
-        "asiatoday.co.kr",
-        "biz.heraldcorp.com",
-        "biz.newdaily.co.kr",
-        "dailian.co.kr",
-        "etnews.com",
-        "farmnmarket.com",
-        "mediapen.com",
+        "jemin.com",
+        "jibs.co.kr",
         "munhwa.com",
-        "news.skbroadband.com",
-        "news.tf.co.kr",
-        "newsam.co.kr",
-        "newsis.com",
-        "view.asiae.co.kr"
+        "newspim.com",
+        "pressian.com",
+        "samdailbo.com",
+        "viva100.com",
+        "yna.co.kr",
+        "yonhapnewstv.co.kr"
+      ],
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 10.0,
+      "mention_count": 10,
+      "raw_mention_count": 10,
+      "titles": [
+        "당진시 “빗물 타고 유입될라”, 장마철 아프리카돼지열병 차단 총력",
+        "당진시, 장마철 ASF 방역 수칙 홍보 강화",
+        "충남 당진시, 장마철 ASF 위험주의보 발령 양돈농가 차단방역 총력",
+        "당진시, 장마철 ASF 위험주의보 발령",
+        "당진시, 장마철 ASF 차단방역 강화…양돈농가 예찰·점검 확대",
+        "당진시, 폭우·태풍에 ASF 비상... '양돈농가 방역' 총력 대응",
+        "당진시, 장마철 ASF 위험주의보 발령 ··· 양돈농가 차단방역 총력",
+        "장마철 ASF 위험 커져…당진시 차단방역 나서",
+        "장마철 빗물·토양 타고 ASF 유입 위험..당진시, 양돈농가 차단방역 총력",
+        "당진시, 장마철 ASF 위험주의보 발령…양돈농가 차단방역 총력"
+      ],
+      "urls": [
+        "http://www.breaknews.com/1224047",
+        "https://www.newstnt.com/news/articleView.html?idxno=711433",
+        "https://www.ccdn.co.kr/news/articleView.html?idxno=1089799",
+        "https://www.dynews.co.kr/news/articleView.html?idxno=858985",
+        "https://www.m-i.kr/news/articleView.html?idxno=1394512",
+        "http://www.newsworker.co.kr/news/articleView.html?idxno=437859",
+        "https://www.ggilbo.com/news/articleView.html?idxno=1170916",
+        "http://www.djtimes.co.kr/news/articleView.html?idxno=112787",
+        "https://www.idjnews.kr/news/articleView.html?idxno=301769",
+        "http://www.chungnamilbo.co.kr/news/articleView.html?idxno=900071"
+      ],
+      "press_list": [
+        "breaknews.com",
+        "ccdn.co.kr",
+        "chungnamilbo.co.kr",
+        "djtimes.co.kr",
+        "dynews.co.kr",
+        "ggilbo.com",
+        "idjnews.kr",
+        "m-i.kr",
+        "newstnt.com",
+        "newsworker.co.kr"
       ],
       "summary": null,
       "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
@@ -165,74 +265,6 @@
       ],
       "summary": null,
       "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
-    },
-    {
-      "issue_score": 8.0,
-      "mention_count": 8,
-      "raw_mention_count": 8,
-      "titles": [
-        "창녕군, 축산악취 줄이고 주민 쾌적함 더한다",
-        "창녕군, 축산악취 저감에 29억원 투입",
-        "창녕군, 스마트 기술 도입 축산환경 개선 박차",
-        "창녕군, 축산악취 NO! 쾌적함 OK!",
-        "창녕군, 축산악취 저감시설·환경 개선으로 친환경 축산 기반 다져",
-        "창녕군, 축산악취 감소에 29억원 투입해 '쾌적함을 더하다'",
-        "창녕군, 축산악취 저감 위해 29억 투입 17개 사업 추진",
-        "창녕군, 축산악취는 덜고 쾌적함은 더한다"
-      ],
-      "urls": [
-        "http://www.gnmaeil.com/news/articleView.html?idxno=591178",
-        "http://www.gndomin.com/news/articleView.html?idxno=482845",
-        "http://www.enewstoday.co.kr/news/articleView.html?idxno=2450736",
-        "https://www.imaeil.com/page/view/2026072112364893230",
-        "https://view.asiae.co.kr/article/2026072112165560765",
-        "https://www.pennmike.com/news/articleView.html?idxno=124055",
-        "https://www.gukjenews.com/news/articleView.html?idxno=3641457",
-        "https://www.newsgn.com/news/articleView.html?idxno=563240"
-      ],
-      "press_list": [
-        "enewstoday.co.kr",
-        "gndomin.com",
-        "gnmaeil.com",
-        "gukjenews.com",
-        "imaeil.com",
-        "newsgn.com",
-        "pennmike.com",
-        "view.asiae.co.kr"
-      ],
-      "summary": null,
-      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
-    },
-    {
-      "issue_score": 6.0,
-      "mention_count": 6,
-      "raw_mention_count": 6,
-      "titles": [
-        "당진시, 장마철 ASF 차단방역 강화…양돈농가 예찰·점검 확대",
-        "당진시, 폭우·태풍에 ASF 비상... '양돈농가 방역' 총력 대응",
-        "당진시, 장마철 ASF 위험주의보 발령 ··· 양돈농가 차단방역 총력",
-        "장마철 ASF 위험 커져…당진시 차단방역 나서",
-        "장마철 빗물·토양 타고 ASF 유입 위험..당진시, 양돈농가 차단방역 총력",
-        "당진시, 장마철 ASF 위험주의보 발령…양돈농가 차단방역 총력"
-      ],
-      "urls": [
-        "https://www.m-i.kr/news/articleView.html?idxno=1394512",
-        "http://www.newsworker.co.kr/news/articleView.html?idxno=437859",
-        "https://www.ggilbo.com/news/articleView.html?idxno=1170916",
-        "http://www.djtimes.co.kr/news/articleView.html?idxno=112787",
-        "https://www.idjnews.kr/news/articleView.html?idxno=301769",
-        "http://www.chungnamilbo.co.kr/news/articleView.html?idxno=900071"
-      ],
-      "press_list": [
-        "chungnamilbo.co.kr",
-        "djtimes.co.kr",
-        "ggilbo.com",
-        "idjnews.kr",
-        "m-i.kr",
-        "newsworker.co.kr"
-      ],
-      "summary": null,
-      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
     }
   ],
   "international": [
@@ -262,7 +294,7 @@
       "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
     },
     {
-      "issue_score": 3.0,
+      "issue_score": 2.1,
       "mention_count": 3,
       "raw_mention_count": 3,
       "titles": [
@@ -307,22 +339,22 @@
       "mention_count": 2,
       "raw_mention_count": 2,
       "titles": [
-        "FAO Committee on Agriculture opens with strong call for science , innovation and technical solutions",
-        "FAO Agri Meet Urges Science , Innovation , Tech Solutions"
+        "Λαγκάρντ : Οι επιπτώσεις του ενεργειακού σοκ δεν έχουν ακόμη φανεί",
+        "Λαγκάρντ : Ο ενεργειακός λογαριασμός δεν έχει φανεί ακόμη"
       ],
       "urls": [
-        "https://www.fao.org/newsroom/detail/fao-committee-on-agriculture-opens-with-strong-call-for-science--innovation-and-technical-solutions/en",
-        "https://www.miragenews.com/fao-agri-meet-urges-science-innovation-tech-1712962/"
+        "https://www.voria.gr/article/lagkarnt-oi-epiptoseis-toy-energeiakoy-sok-den-ehoyn-akomi-fanei",
+        "https://www.kathimerini.gr/economy/564362011/lagkarnt-o-energeiakos-logariasmos-den-echei-fanei-akomi/"
       ],
       "press_list": [
-        "fao.org",
-        "miragenews.com"
+        "kathimerini.gr",
+        "voria.gr"
       ],
       "summary": null,
       "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
     },
     {
-      "issue_score": 1.7,
+      "issue_score": 1.4,
       "mention_count": 2,
       "raw_mention_count": 2,
       "titles": [
@@ -343,10 +375,11 @@
   "domestic_by_category": {
     "사료업계 특화 용어": [
       {
-        "issue_score": 13.0,
-        "mention_count": 13,
-        "raw_mention_count": 13,
+        "issue_score": 16.0,
+        "mention_count": 16,
+        "raw_mention_count": 16,
         "titles": [
+          "농진청, 여름철 풀사료 '사료피' 논 활용 높이고 자급기반 넓힌다",
           "논에서 키우는 여름 풀사료…'사료피' 주목",
           "여름철 풀사료 '사료피' 주목…논 활용 높이고 자급기반 넓힌다",
           "여름철 풀사료 ‘사료피’ 논 활용도 높이고 자급기반 넓힌다",
@@ -354,14 +387,17 @@
           "논에서도 잘 자라는 ‘사료피’ 육종…여름철 풀사료 자급기반 넓힌다",
           "경제성·생산성 높인 논 재배용 '사료피' 개발 … 풀사료 자급 확대",
           "논에서 잘 자라는 '사료피'…풀사료 자급 확대 나선다",
+          "농촌진흥청, 장마에도 논에서 재배할 수 있는 풀사료 작물 개발",
           "농진청, 논에서 잘 자라는 하계 사료피 개발…\"벼 대신 재배시 농가소득...",
           "수입 조사료 의존 낮춘다…농진청, 사료피 신품종 개발",
           "논에서도 잘 자라는 여름철 풀사료 ‘사료피’…“경제성·생산성 효과...",
           "농진청, 논 풀사료 '사료피' 신품종 개발…자급률 제고",
+          "논에 벼 대신 풀 심는다…'사료피'가 전략작물 새 카드로",
           "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
           "논에서도 잘 자라는 ‘사료피’ 나왔다…여름철 풀사료 자급 확대 기대"
         ],
         "urls": [
+          "https://www.kenews.co.kr/news/article.html?no=89712",
           "https://news.skbroadband.com/news/articleView.html?idxno=232969",
           "https://www.farmnmarket.com/news/article.html?no=27195",
           "https://www.newsam.co.kr/news/article.html?no=43554",
@@ -369,21 +405,26 @@
           "https://www.munhwa.com/article/11604324?ref=naver",
           "https://biz.newdaily.co.kr/site/data/html/2026/07/22/2026072200209.html",
           "https://news.tf.co.kr/read/economy/2345859.htm",
+          "https://biz.chosun.com/policy/policy_sub/2026/07/22/C4PAL2A65RDF5EYYIVCKXHG6CA/?utm_source=naver&utm_medium=original&utm_campaign=biz",
           "https://view.asiae.co.kr/article/2026072214075694660",
           "https://www.etnews.com/20260722000220",
           "https://www.mediapen.com/news/view/1111503",
           "https://www.newsis.com/view/NISX20260722_0003718640",
+          "https://www.mt.co.kr/economy/2026/07/23/2026072213341472182",
           "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
           "https://biz.heraldcorp.com/article/10815810?ref=naver"
         ],
         "press_list": [
           "asiatoday.co.kr",
+          "biz.chosun.com",
           "biz.heraldcorp.com",
           "biz.newdaily.co.kr",
           "dailian.co.kr",
           "etnews.com",
           "farmnmarket.com",
+          "kenews.co.kr",
           "mediapen.com",
+          "mt.co.kr",
           "munhwa.com",
           "news.skbroadband.com",
           "news.tf.co.kr",
@@ -441,19 +482,22 @@
     ],
     "축종별 용어": [
       {
-        "issue_score": 2.0,
-        "mention_count": 2,
-        "raw_mention_count": 2,
+        "issue_score": 3.0,
+        "mention_count": 3,
+        "raw_mention_count": 3,
         "titles": [
           "제주양돈농협, 소길리 어르신 건강한 여름나기 응원",
-          "제주양돈농협, 소길리 어르신 건강한 여름나기 응원"
+          "제주양돈농협, 소길리 어르신 건강한 여름나기 응원",
+          "제주양돈농협, 소길리 경로당에 제주산 돼지고기 전달"
         ],
         "urls": [
           "https://www.aflnews.co.kr/news/articleView.html?idxno=325025",
-          "https://www.newsjeju.net/news/articleView.html?idxno=423574"
+          "https://www.newsjeju.net/news/articleView.html?idxno=423574",
+          "https://www.jejudomin.co.kr/news/articleView.html?idxno=320777"
         ],
         "press_list": [
           "aflnews.co.kr",
+          "jejudomin.co.kr",
           "newsjeju.net"
         ],
         "category": "축종별 용어",
@@ -463,10 +507,14 @@
     ],
     "질병명": [
       {
-        "issue_score": 6.0,
-        "mention_count": 6,
-        "raw_mention_count": 6,
+        "issue_score": 10.0,
+        "mention_count": 10,
+        "raw_mention_count": 10,
         "titles": [
+          "당진시 “빗물 타고 유입될라”, 장마철 아프리카돼지열병 차단 총력",
+          "당진시, 장마철 ASF 방역 수칙 홍보 강화",
+          "충남 당진시, 장마철 ASF 위험주의보 발령 양돈농가 차단방역 총력",
+          "당진시, 장마철 ASF 위험주의보 발령",
           "당진시, 장마철 ASF 차단방역 강화…양돈농가 예찰·점검 확대",
           "당진시, 폭우·태풍에 ASF 비상... '양돈농가 방역' 총력 대응",
           "당진시, 장마철 ASF 위험주의보 발령 ··· 양돈농가 차단방역 총력",
@@ -475,6 +523,10 @@
           "당진시, 장마철 ASF 위험주의보 발령…양돈농가 차단방역 총력"
         ],
         "urls": [
+          "http://www.breaknews.com/1224047",
+          "https://www.newstnt.com/news/articleView.html?idxno=711433",
+          "https://www.ccdn.co.kr/news/articleView.html?idxno=1089799",
+          "https://www.dynews.co.kr/news/articleView.html?idxno=858985",
           "https://www.m-i.kr/news/articleView.html?idxno=1394512",
           "http://www.newsworker.co.kr/news/articleView.html?idxno=437859",
           "https://www.ggilbo.com/news/articleView.html?idxno=1170916",
@@ -483,11 +535,15 @@
           "http://www.chungnamilbo.co.kr/news/articleView.html?idxno=900071"
         ],
         "press_list": [
+          "breaknews.com",
+          "ccdn.co.kr",
           "chungnamilbo.co.kr",
           "djtimes.co.kr",
+          "dynews.co.kr",
           "ggilbo.com",
           "idjnews.kr",
           "m-i.kr",
+          "newstnt.com",
           "newsworker.co.kr"
         ],
         "category": "질병명",
@@ -497,7 +553,7 @@
     ],
     "정부·제도 용어": [
       {
-        "issue_score": 4.0,
+        "issue_score": 3.4,
         "mention_count": 4,
         "raw_mention_count": 4,
         "titles": [
@@ -544,6 +600,44 @@
     ]
   },
   "international_by_category": {
+    "사료업계 특화 용어": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "De Heus expands aquaculture capabilities with marine and cold-water fish feed mill"
+        ],
+        "urls": [
+          "https://www.feedstrategy.com/animal-nutrition/aquaculture/news/15830751/de-heus-expands-aquaculture-capabilities-with-marine-and-coldwater-fish-feed-mill"
+        ],
+        "press_list": [
+          "Feed Strategy"
+        ],
+        "category": "사료업계 특화 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ],
+    "시장/가격 용어": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "Karamoja Veterinary Lab Boosts Disease Surveillance for Safer Livestock Trade"
+        ],
+        "urls": [
+          "https://chimpreports.com/karamoja-veterinary-lab-boosts-disease-surveillance-for-safer-livestock-trade/"
+        ],
+        "press_list": [
+          "chimpreports.com"
+        ],
+        "category": "시장/가격 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ],
     "질병명": [
       {
         "issue_score": 1.0,
@@ -562,61 +656,23 @@
         "summary": null,
         "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
       }
-    ],
-    "무역/관세 이슈": [
-      {
-        "issue_score": 0.4,
-        "mention_count": 1,
-        "raw_mention_count": 1,
-        "titles": [
-          "Philippines lifts import ban on Hungarian livestock products"
-        ],
-        "urls": [
-          "http://www.philippinetimes.com/news/279191646/philippines-lifts-import-ban-on-hungarian-livestock-products"
-        ],
-        "press_list": [
-          "philippinetimes.com"
-        ],
-        "category": "무역/관세 이슈",
-        "summary": null,
-        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
-      }
-    ],
-    "시장/가격 용어": [
-      {
-        "issue_score": 1.0,
-        "mention_count": 1,
-        "raw_mention_count": 1,
-        "titles": [
-          "Zimbabwe Emergency Food Production Project Delivers Transformative Results , Boosts Climate - Smart Agriculture and Record Wheat Harvest"
-        ],
-        "urls": [
-          "https://allafrica.com/stories/202607220010.html"
-        ],
-        "press_list": [
-          "allafrica.com"
-        ],
-        "category": "시장/가격 용어",
-        "summary": null,
-        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
-      }
     ]
   },
   "category_distribution": {
     "국내": {
-      "기타": 311,
-      "질병명": 33,
-      "사료업계 특화 용어": 37,
-      "축종별 용어": 26,
-      "시장/가격 용어": 6,
+      "기타": 288,
+      "질병명": 30,
+      "사료업계 특화 용어": 34,
+      "축종별 용어": 23,
+      "시장/가격 용어": 5,
       "무역/관세 이슈": 9,
-      "정부·제도 용어": 15
+      "정부·제도 용어": 14
     },
     "해외": {
-      "기타": 118,
-      "질병명": 3,
-      "무역/관세 이슈": 1,
-      "시장/가격 용어": 2
+      "기타": 115,
+      "사료업계 특화 용어": 1,
+      "시장/가격 용어": 2,
+      "질병명": 2
     }
   },
   "gdelt_timeline": {},
