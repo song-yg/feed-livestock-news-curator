@@ -47,14 +47,19 @@ main.py
                     body는 저작권상 raw.json에서도 제외(storage.py docstring
                     참고). git 커밋/푸시는 워크플로(run-pipline.yml) 책임 -
                     이 단계는 파일 생성까지만.
-  6) 배포        -> 미구현 (TODO)
+  6) 배포        -> 구현 완료 (2026-07-24, deploy.py) - Gmail SMTP로 국내/해외
+                    Top N + 카테고리별 Top N을 HTML 이메일로 발송. 인증정보
+                    (SMTP_USER/SMTP_APP_PASSWORD/EMAIL_RECIPIENTS)는 GitHub
+                    Secrets에서 읽고, 미설정 시 안전하게 발송만 생략(파이프라인
+                    안 죽음). Gmail SMTP를 고른 이유는 deploy.py docstring 참고
+                    (무료 이메일 API의 스팸함 분류 위험 회피).
 
-main.py를 6단계 전부 완성형으로 만들지 않고, 위 범위까지만 실제로 동작하는
-파이프라인으로 잇는다. 6은 다음 세션에서 채울 자리를 함수 스텁으로만
-남겨둔다 (아래 _step6_deploy_todo).
+main.py를 6단계 전부 실제로 동작하는 파이프라인으로 잇는다.
 """
 
+import os
 from collections import defaultdict
+from datetime import datetime, timezone
 
 import gdelt_collector
 import naver_collector
@@ -66,6 +71,7 @@ import keyword_tagger
 import category_aggregator
 import relevance_filter
 import storage
+import deploy
 
 # 2026-07-23 신규: 카테고리별 Top N (국내/해외 축과 별개로, 카테고리 축에서도
 # Top N을 뽑는 기능 - 최종 목표인 "주간 Top N + 카테고리별 Top N" 중 카테고리
@@ -346,10 +352,6 @@ def step4_llm_summary(domestic_ranked: list[dict],
     return domestic_summarized, international_summarized
 
 
-def _step6_deploy_todo() -> None:
-    """TODO (섹션 6, 7번 섹션): 1단계는 이메일 본문(HTML) 배포로 확정돼 있음."""
-
-
 # ---------------------------------------------------------------------------
 # 오케스트레이션 진입점
 # ---------------------------------------------------------------------------
@@ -419,7 +421,20 @@ def run() -> None:
         print(f"[main] 저장 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
               f"{type(e).__name__} - {e!r}")
         saved_dir = None
-    _step6_deploy_todo()
+    print("\n=== [6] 배포 (Gmail SMTP HTML 이메일) ===")
+    # 2026-07-24 신규: deploy.py 구현 완료. storage.py와 같은 방향으로
+    # 마지막 방어선을 둔다 - 배포 실패가 이미 끝난 나머지 단계 결과에
+    # 영향을 주면 안 됨. week_label은 저장이 성공했으면 그 디렉토리 이름을
+    # 그대로 쓰고(주차 계산 로직 중복 방지), 저장 자체가 실패한 드문
+    # 경우에만 직접 계산한다.
+    try:
+        week_label = os.path.basename(saved_dir) if saved_dir else datetime.now(timezone.utc).strftime("%G-%V")
+        deploy.send_weekly_email(week_label, domestic_summarized, international_summarized,
+                                  domestic_category_summarized, international_category_summarized,
+                                  failed_sources)
+    except Exception as e:
+        print(f"[main] 배포 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
+              f"{type(e).__name__} - {e!r}")
 
     if failed_sources:
         saved_dir_note = f"{saved_dir}/scored.json에도" if saved_dir else "(저장 실패로 파일에는 못 남았지만)"

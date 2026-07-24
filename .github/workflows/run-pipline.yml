@@ -147,6 +147,15 @@ jobs:
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+          # 2026-07-24 추가: 6단계(deploy.py) 이메일 발송용. SMTP_USER/
+          # SMTP_APP_PASSWORD는 민감정보라 Secrets로, EMAIL_RECIPIENTS는
+          # 수신자 목록이라 마찬가지로 Secrets에 등록(이메일 주소도 개인정보로
+          # 취급 - Variables는 리포 권한 있는 사람 누구나 값이 노출되니 이쪽이
+          # 더 안전). 셋 다 미등록이어도 deploy.py가 안전하게 발송만 생략하므로
+          # 파이프라인 자체는 안 죽음.
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
         # -u: 파이썬 stdout 버퍼링 비활성화 (2026-07-17 추가).
         # 이게 없으면 print()가 터미널이 아닌 곳(이 로그 파이프)에 출력될 때
         # 기본적으로 블록 단위로 버퍼링돼서, 실제로는 진행 중인데 로그에
