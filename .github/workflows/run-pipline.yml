@@ -204,10 +204,22 @@ jobs:
         # 반영해서 최신 위에 이 커밋을 얹도록 수정. rebase 자체가 충돌나면
         # (예: 같은 주차 파일을 동시에 건드린 경우) 사람이 봐야 하므로
         # 자동 해결은 시도하지 않고 그대로 실패시킨다.
+        # 2026-07-24 재수정: 방금 고친 `[ -d data/ ] && git add data/` 방식도
+        # 이 workflow가 `bash -e`로 도는 이상 같은 함정이 남아있음 -
+        # `cmd1 && cmd2`를 단독 문장으로 쓰면, cmd1(`[ -d data/ ]`)이
+        # 실패했을 때 그 실패가 그대로 전체 목록의 실패로 취급돼 `set -e`가
+        # 스크립트를 즉시 중단시킴(`if` 조건절 안에서 실패하는 것과 달리,
+        # `&&`/`||` 목록은 set -e의 예외 대상이 아님). `if` 문으로 명확하게
+        # 감싸야 조건이 거짓이어도 스크립트가 안 죽는다.
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/ state/
+          if [ -d data/ ]; then
+            git add data/
+          fi
+          if [ -d state/ ]; then
+            git add state/
+          fi
           if git diff --cached --quiet; then
             echo "data/, state/ 변경 사항 없음 - 커밋 생략"
           else
