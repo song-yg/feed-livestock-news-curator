@@ -65,13 +65,16 @@
     "matched_keywords": []
   },
   {
-    "source": "Feed Strategy",
-    "title": "Evonik completes backward integration of its global MetAMINO production network",
-    "url": "https://www.feedstrategy.com/animal-feed-additives-ingredients/feed-additives/news/15830302/evonik-completes-backward-integration-of-its-global-metamino-production-network",
-    "published_at": "2026-07-17T05:00:00+00:00",
-    "category": "기타",
-    "site_category": "Feed Additives",
-    "matched_keywords": []
+    "source": "네이버",
+    "title": "멸종위기 앵무새 어쩌나… 뉴질랜드 조류독감 비상",
+    "url": "https://www.munhwa.com/article/11604805?ref=naver",
+    "published_at": "2026-07-24T12:01:00+09:00",
+    "category": "질병명",
+    "description": "세계적으로 조류 인플루엔자 바이러스가 확산하고 있는 가운데 최근 뉴질랜드에서도 첫 감염사례가 발생, 희귀 조류 보호에 비상이 걸렸다. CNN은 23일(현지시간) “세계적으로 수백만 마리의 새들이 H5N1 조류 인플루엔자... ",
+    "press": "munhwa.com",
+    "matched_keywords": [
+      "조류독감"
+    ]
   },
   {
     "source": "네이버",
@@ -143,6 +146,104 @@
     "category": "기타",
     "description": "호주서 H5N1 조류독감 첫 확인…바이러스 확산에 당국 비상'조류독감으로 섬 전체 물범의 75%가 폐사' 충격에 빠진 호주'식용 목적'으로 납치된 고양이 수백 마리... 구조돼 주인 품으로 우리는 동물의 말을 이해하게 될 수... ",
     "press": "bbc.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "제2회 대한민국 중소기업박람회 참가한 충북 기업들",
+    "url": "https://www.inews365.com/news/article.html?no=929047",
+    "published_at": "2026-07-24T15:32:00+09:00",
+    "category": "기타",
+    "description": "온라인보다 저렴한 가격으로 시음 행사까지 진행해 현장 구매가 이어졌다. 수출 산업 기반의 2차 전지 제조사... 사료첨가제, 화분 관리제 뿐아니라 비누, 소금, 화장품 등으로 활용하는 원리와 제품군을 소개했다.... ",
+    "press": "inews365.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "축평원, 농협사료 실무자 대상으로 한우 경매·유통 교육",
+    "url": "https://www.newsis.com/view/NISX20260724_0003722295",
+    "published_at": "2026-07-24T15:02:00+09:00",
+    "category": "축종별 용어",
+    "description": "축평원은 지난 23~24일 aT농수산식품유통교육원에서 농협사료 마케팅·영업 실무자를 대상으로 '한우 경매(경락가격) 및 유통과정' 교육을 실시했다고 24일 밝혔다. 이번 교육은 실제 업무 현장에서 활용할 수 있는 직무 중심... ",
+    "press": "newsis.com",
+    "matched_keywords": [
+      "한우"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "부국사료, 이승엽 대표이사 취임… '미래 60년' 혁신 돛 올려",
+    "url": "https://www.aflnews.co.kr/news/articleView.html?idxno=324621",
+    "published_at": "2026-07-24T14:50:00+09:00",
+    "category": "사료업계 특화 용어",
+    "description": "특히 그는 \"고객이 '가격이 싸서 쓰는 사료'가 아니라, '우리 농장에 꼭 필요한 사료'라고 먼저 인정하고 찾아주는 고품질 사료를 만드는 것에 모든 역량을 집중 하겠다\" 라며 강력한 품질 경영 의지를 표명했다. 또한 시장... ",
+    "press": "aflnews.co.kr",
+    "matched_keywords": [
+      "사료"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "[미국 특징주] 트랙터 서플라이, 소비 저하에 하반기 실적 전망 하향",
+    "url": "https://www.newspim.com/news/view/20260724000725",
+    "published_at": "2026-07-24T13:33:00+09:00",
+    "category": "기타",
+    "description": "반려동물 사료에 대한 수요 확대 등 변화하는 소비자 선호에 발맞춰 상품 구성과 머천다이징을 개편하는 작업을 진행해왔다. 로턴 CEO는 \"우리는 반려동물 사업을 강화하고, 가격 경쟁력을 다지며, 사업 전반의 생산성을... ",
+    "press": "newspim.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "고려산업·한일사료 등 사료주 상승...곡물운송 차질 우려",
+    "url": "https://www.gukjenews.com/news/articleView.html?idxno=3645288",
+    "published_at": "2026-07-24T13:30:00+09:00",
+    "category": "사료업계 특화 용어",
+    "description": "한일사료 로고 사료 관련주가 상승세다. 24일 오후 1시 19분 기준 고려산업은 21.74%(450원) 상승한... 여기에 곡물 가격은 3년 만에 최고 수준으로 올랐다. 폭염과 중동 지역의 긴장이 곡물값을 끌어올린 것으로... ",
+    "press": "gukjenews.com",
+    "matched_keywords": [
+      "사료"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "축평원, 한우 경매·가격 어떻게 말들어 질까?",
+    "url": "https://www.kenews.co.kr/news/article.html?no=89723",
+    "published_at": "2026-07-24T13:06:00+09:00",
+    "category": "축종별 용어",
+    "description": "농협사료 마케팅과 영업 실무자를 대상으로 '한우 경매 및 유통과정' 교육을 진행했다. 이번 교육은 이론... 주요 내용은 경매 시스템 및 운영 구조, 한우 유통 구조의 이해와 경락가격 형성 원리, 근출혈 원리와 사양... ",
+    "press": "kenews.co.kr",
+    "matched_keywords": [
+      "한우"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "원자재 부담 덜고 탄약 수주 챙긴다… 풍산, 견조한 실적 흐름 눈길",
+    "url": "https://www.pinpointnews.co.kr/news/articleView.html?idxno=471210",
+    "published_at": "2026-07-24T13:04:00+09:00",
+    "category": "기타",
+    "description": "국제 곡물 가격 안정과 원화 강세가 맞물리면서 원맥 등 수입 원재료 조달 비용이 줄어들 것이라는 기대가 반영된다. 사료와 제분 사업의 수익성 개선 가능성이 부각되며 투자심리가 살아나고 있다. 비철금속 대표주인... ",
+    "press": "pinpointnews.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "[달리는 육체노동자]27세 축산인 김정환: 소는 누가 키우나",
+    "url": "http://www.ddanzi.com/890235546",
+    "published_at": "2026-07-24T11:10:00+09:00",
+    "category": "기타",
+    "description": "수입 옥수수가 주재료인 농후사료는 국제 정세 따라 가격이 요동친다. 한국농촌경제연구원 등 자료에 따르면 2018~2020년 평균 394원/kg 수준이던 사룟값이 러시아-우크라이나 전쟁 기점으로 폭등해 500원/kg대로 올랐다.... ",
+    "press": "ddanzi.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "삼립 ‘설기이야기’‧BYC ‘아미에 찰핏 아이스 브라’ 외[나왔다, 신상...",
+    "url": "https://www.etoday.co.kr/news/view/2606552",
+    "published_at": "2026-07-24T11:00:00+09:00",
+    "category": "기타",
+    "description": "사료 위에 올려 기호성을 높여주는 토핑 간식으로 소용량 포장과 합리적인 가격대로 부담을 낮췄다. 급속 동결건조 과일칩·원물트릿, 유산균을 더한 요거트큐브, 국내산 쌀로 만든 저칼로리 라이스팝 등 반려동물의... ",
+    "press": "etoday.co.kr",
     "matched_keywords": []
   },
   {
@@ -315,22 +416,22 @@
   },
   {
     "source": "네이버",
-    "title": "농어촌공사, K-농기자재 수출상담회서 373만 달러 규모 협약 성과",
-    "url": "https://daily.hankooki.com/news/articleView.html?idxno=1388632",
-    "published_at": "2026-07-23T14:28:00+09:00",
-    "category": "기타",
-    "description": "이번 행사에는 해외 23개국 51개 구매기업과 국내 농기계·비료·사료 등 관련 기업 71개사가 참여했다.... 이집트의 한 구매기업 관계자는 \"한국산 제품은 유럽산과 견주어도 품질과 가격 측면에서 충분한 경쟁력을... ",
-    "press": "daily.hankooki.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "윤준병 의원, 법률소비자연맹 선정 '대한민국 헌정대상' 6년 연속 수상",
     "url": "https://www.eroun.net/news/articleView.html?idxno=86097",
     "published_at": "2026-07-23T14:28:00+09:00",
     "category": "기타",
     "description": "이 법안은 국제 공급망 불안이나 원자재 가격 급등 등으로 비료·농약·사료 등 필수 농자재 가격이 급등할 경우 국가가 지원할 수 있는 근거를 마련하는 내용을 담고 있다. 또 농촌지역 신재생에너지 확대와 농가 소득... ",
     "press": "eroun.net",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "농어촌공사, K-농기자재 수출상담회서 373만 달러 규모 협약 성과",
+    "url": "https://daily.hankooki.com/news/articleView.html?idxno=1388632",
+    "published_at": "2026-07-23T14:28:00+09:00",
+    "category": "기타",
+    "description": "이번 행사에는 해외 23개국 51개 구매기업과 국내 농기계·비료·사료 등 관련 기업 71개사가 참여했다.... 이집트의 한 구매기업 관계자는 \"한국산 제품은 유럽산과 견주어도 품질과 가격 측면에서 충분한 경쟁력을... ",
+    "press": "daily.hankooki.com",
     "matched_keywords": []
   },
   {
@@ -563,16 +664,6 @@
   },
   {
     "source": "네이버",
-    "title": "도드람, 2025년 총 사업량 4조 6923억 원·매출액 1조 634억 원 달성",
-    "url": "https://www.aflnews.co.kr/news/articleView.html?idxno=325006",
-    "published_at": "2026-07-22T15:20:00+09:00",
-    "category": "기타",
-    "description": "올해 상반기 도드람 기준 사료 가격은 kg당 50원 인상됐고 연말까지 35원이 추가 인상될 전망이다. 수입 돼지고기 물량 또한 역대 최고 수준에 육박하면서 국내 양돈 농가의 어려움이 심화되고 있다. 박 조합장은 \"어려운... ",
-    "press": "aflnews.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "사룟값 잡는 '사료피'…쌀 수급·사료비 절감 '일타쌍피'",
     "url": "http://www.newstomato.com/ReadNews.aspx?no=1307882&inflow=N",
     "published_at": "2026-07-22T15:20:00+09:00",
@@ -582,6 +673,16 @@
     "matched_keywords": [
       "사료"
     ]
+  },
+  {
+    "source": "네이버",
+    "title": "도드람, 2025년 총 사업량 4조 6923억 원·매출액 1조 634억 원 달성",
+    "url": "https://www.aflnews.co.kr/news/articleView.html?idxno=325006",
+    "published_at": "2026-07-22T15:20:00+09:00",
+    "category": "기타",
+    "description": "올해 상반기 도드람 기준 사료 가격은 kg당 50원 인상됐고 연말까지 35원이 추가 인상될 전망이다. 수입 돼지고기 물량 또한 역대 최고 수준에 육박하면서 국내 양돈 농가의 어려움이 심화되고 있다. 박 조합장은 \"어려운... ",
+    "press": "aflnews.co.kr",
+    "matched_keywords": []
   },
   {
     "source": "네이버",
@@ -699,30 +800,6 @@
   },
   {
     "source": "네이버",
-    "title": "논에 벼 대신 풀 심는다…'사료피'가 전략작물 새 카드로",
-    "url": "https://www.mt.co.kr/economy/2026/07/23/2026072213341472182",
-    "published_at": "2026-07-22T14:00:00+09:00",
-    "category": "사료업계 특화 용어",
-    "description": "기존 동계 조사료 생산에 사용하던 예취기와 원형베일러 등 수확장비를 그대로 활용할 수 있어 별도 장비 투자 부담이 없고, 생산한 건초 가격도 수입 건초보다 약 31% 저렴해 사료비 절감 효과를 기대할 수 있다.... ",
-    "press": "mt.co.kr",
-    "matched_keywords": [
-      "사료"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
-    "url": "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
-    "published_at": "2026-07-22T14:00:00+09:00",
-    "category": "사료업계 특화 용어",
-    "description": "마른 상태를 기준으로 한 사료피 가격은 수입 건초보다 약 31% 저렴하다. 농진청은 올해 전국 50곳, 279㏊에서 사료피 현장 실증을 진행하고 있다. 조온과 다온은 민간 종자업체 5곳에 기술이전을 마쳤으며 만온도... ",
-    "press": "dailian.co.kr",
-    "matched_keywords": [
-      "사료"
-    ]
-  },
-  {
-    "source": "네이버",
     "title": "논에서도 잘 자라는 여름철 풀사료 ‘사료피’…“경제성·생산성 효과...",
     "url": "https://www.mediapen.com/news/view/1111503",
     "published_at": "2026-07-22T14:00:00+09:00",
@@ -741,6 +818,30 @@
     "category": "사료업계 특화 용어",
     "description": "또 사료피 가격은 수입 건초보다 약 31% 저렴해 축산농가의 사료비 절감에도 도움이 될 것으로 기대된다. 농진청은 제주와 남부 지역을 중심으로 국내 종자 생산 기반도 구축했다. 현재 조온과 다온은 민간 종자업체... ",
     "press": "newsis.com",
+    "matched_keywords": [
+      "사료"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
+    "url": "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
+    "published_at": "2026-07-22T14:00:00+09:00",
+    "category": "사료업계 특화 용어",
+    "description": "마른 상태를 기준으로 한 사료피 가격은 수입 건초보다 약 31% 저렴하다. 농진청은 올해 전국 50곳, 279㏊에서 사료피 현장 실증을 진행하고 있다. 조온과 다온은 민간 종자업체 5곳에 기술이전을 마쳤으며 만온도... ",
+    "press": "dailian.co.kr",
+    "matched_keywords": [
+      "사료"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "논에 벼 대신 풀 심는다…'사료피'가 전략작물 새 카드로",
+    "url": "https://www.mt.co.kr/economy/2026/07/23/2026072213341472182",
+    "published_at": "2026-07-22T14:00:00+09:00",
+    "category": "사료업계 특화 용어",
+    "description": "기존 동계 조사료 생산에 사용하던 예취기와 원형베일러 등 수확장비를 그대로 활용할 수 있어 별도 장비 투자 부담이 없고, 생산한 건초 가격도 수입 건초보다 약 31% 저렴해 사료비 절감 효과를 기대할 수 있다.... ",
+    "press": "mt.co.kr",
     "matched_keywords": [
       "사료"
     ]
@@ -868,10 +969,12 @@
     "title": "할당관세에 수천억 쏟아붓지만…물가안정 ‘제한적’ 국내 생산기반 ‘...",
     "url": "https://www.nongmin.com/article/20260720500759",
     "published_at": "2026-07-22T05:11:00+09:00",
-    "category": "기타",
+    "category": "무역/관세 이슈",
     "description": "일부 가격안정 효과를 보인 품목의 경우 그 여파가 국내 생산기반을 흔들어 장기적으로 공급 불안을 초래할... 농축산물(사료 포함)에 들어간 관세 지원액이 2608억원에 달했다. 전체 지원액(8305억원)의 31.4% 수준이다.... ",
     "press": "nongmin.com",
-    "matched_keywords": []
+    "matched_keywords": [
+      "할당관세"
+    ]
   },
   {
     "source": "네이버",
@@ -1047,6 +1150,16 @@
   },
   {
     "source": "네이버",
+    "title": "\"로켓 계란 등장, 달걀 가격 40% 폭등했다\"…대입 시험 때문이라는 나라",
+    "url": "https://view.asiae.co.kr/article/2026072114024977056",
+    "published_at": "2026-07-21T14:08:00+09:00",
+    "category": "기타",
+    "description": "이후 사료 가격을 감당할 수 없게 된 농가들은 과도한 수준의 암탉 살처분을 단행했고, 이번에는 생산량이 급감하면서 계란 가격도 폭등한 것이다. 대입 시험 땐 튀김 빵에 계란 2개 먹어야 매년 6월 치르는 중국 대입... ",
+    "press": "view.asiae.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
     "title": "부여군, 염소 사육 농가 FTA 직불금 지원",
     "url": "https://www.newstnt.com/news/articleView.html?idxno=711004",
     "published_at": "2026-07-21T14:08:00+09:00",
@@ -1056,16 +1169,6 @@
     "matched_keywords": [
       "FTA"
     ]
-  },
-  {
-    "source": "네이버",
-    "title": "\"로켓 계란 등장, 달걀 가격 40% 폭등했다\"…대입 시험 때문이라는 나라",
-    "url": "https://view.asiae.co.kr/article/2026072114024977056",
-    "published_at": "2026-07-21T14:08:00+09:00",
-    "category": "기타",
-    "description": "이후 사료 가격을 감당할 수 없게 된 농가들은 과도한 수준의 암탉 살처분을 단행했고, 이번에는 생산량이 급감하면서 계란 가격도 폭등한 것이다. 대입 시험 땐 튀김 빵에 계란 2개 먹어야 매년 6월 치르는 중국 대입... ",
-    "press": "view.asiae.co.kr",
-    "matched_keywords": []
   },
   {
     "source": "네이버",
@@ -1383,22 +1486,22 @@
   },
   {
     "source": "네이버",
-    "title": "식량자급률 3년째 50% 밑돌아…정부, 식량안보 다시 짠다",
-    "url": "https://www.etoday.co.kr/news/view/2605024",
-    "published_at": "2026-07-20T16:30:00+09:00",
-    "category": "기타",
-    "description": "이투데이=세종=노승길 기자 | 2024년 47.9%로 뒷걸음질…2027년 목표와 7.6%포인트 격차 사료용 포함 곡물자급률은 20%대…생산 확대 넘어 소비·농지까지 손질 판로·가격 보장 없으면 다시 벼농사…생산·소비 연계가... ",
-    "press": "etoday.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "CU 맥그리거 흑맥주, 에코 골프, 롯데GRS ‘한식미관’ 外 [똑똑한소비]",
     "url": "https://www.ekn.kr/web/view.php?key=20260720021593795",
     "published_at": "2026-07-20T16:30:00+09:00",
     "category": "기타",
     "description": "가격은 매장 기준 1만800원이다. 오는 10월15일까지 한정 판매된다. 써브웨이 관계자는 “김시현 셰프... '아르르 밥·꾸 간식'은 반려동물의 밥(사료) 위에 올려 급여하는 제품이다. 사료의 맛과 기호성을 높여준다.... ",
     "press": "ekn.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "식량자급률 3년째 50% 밑돌아…정부, 식량안보 다시 짠다",
+    "url": "https://www.etoday.co.kr/news/view/2605024",
+    "published_at": "2026-07-20T16:30:00+09:00",
+    "category": "기타",
+    "description": "이투데이=세종=노승길 기자 | 2024년 47.9%로 뒷걸음질…2027년 목표와 7.6%포인트 격차 사료용 포함 곡물자급률은 20%대…생산 확대 넘어 소비·농지까지 손질 판로·가격 보장 없으면 다시 벼농사…생산·소비 연계가... ",
+    "press": "etoday.co.kr",
     "matched_keywords": []
   },
   {
@@ -1513,16 +1616,6 @@
   },
   {
     "source": "네이버",
-    "title": "크라운제과 동원F&B 롯데GRS 外(새로나왔어요!)",
-    "url": "https://www.newsclaim.co.kr/news/articleView.html?idxno=3069753",
-    "published_at": "2026-07-20T13:50:00+09:00",
-    "category": "기타",
-    "description": "밥 위에 토핑처럼 올려 사료의 기호성을 높이는 제품으로, 동결건조 과일칩, 요거트큐브, 저칼로리 쌀과자 등 다양한 구성이 특징입니다. HACCP 인증 시설에서 생산된 소용량 제품으로 가격은 1000원입니다. 동원F&B... ",
-    "press": "newsclaim.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "한일사료 주가, 7월 20일 장중 2,785원 15.56% 상승",
     "url": "https://www.joongangenews.com/news/articleView.html?idxno=533871",
     "published_at": "2026-07-20T13:50:00+09:00",
@@ -1532,6 +1625,16 @@
     "matched_keywords": [
       "사료"
     ]
+  },
+  {
+    "source": "네이버",
+    "title": "크라운제과 동원F&B 롯데GRS 外(새로나왔어요!)",
+    "url": "https://www.newsclaim.co.kr/news/articleView.html?idxno=3069753",
+    "published_at": "2026-07-20T13:50:00+09:00",
+    "category": "기타",
+    "description": "밥 위에 토핑처럼 올려 사료의 기호성을 높이는 제품으로, 동결건조 과일칩, 요거트큐브, 저칼로리 쌀과자 등 다양한 구성이 특징입니다. HACCP 인증 시설에서 생산된 소용량 제품으로 가격은 1000원입니다. 동원F&B... ",
+    "press": "newsclaim.co.kr",
+    "matched_keywords": []
   },
   {
     "source": "네이버",
@@ -1939,16 +2042,6 @@
   },
   {
     "source": "네이버",
-    "title": "아버지, 그곳에서 평안하시지요?",
-    "url": "https://www.abcn.kr/news/articleView.html?idxno=89525",
-    "published_at": "2026-07-17T13:10:00+09:00",
-    "category": "기타",
-    "description": "폭락했고, 사료 값을 감당하지 못한 사람들의 한탄이 골짜기마다 가득했습니다. 반면, 과감히 등 돌리셨던 잠실의 그 낡고 허름했던 시영아파트는 재개발이라는 마법을 부리며 천정부지의 가격으로 치솟아 올랐습니다.... ",
-    "press": "abcn.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "42년 동안 같은 골목으로, 대구 남구 '주민 방역대'의 여름",
     "url": "https://www.dkilbo.com/news/articleView.html?idxno=549159",
     "published_at": "2026-07-21T15:56:00+09:00",
@@ -1997,140 +2090,6 @@
   },
   {
     "source": "네이버",
-    "title": "3종 가축전염병 ‘일률적 이동제한’ 합리화 추진",
-    "url": "https://www.nongmin.com/article/20260722500532",
-    "published_at": "2026-07-24T05:01:00+09:00",
-    "category": "정부·제도 용어",
-    "description": "돼지생식기호흡기증후군(PRRS)·돼지유행성설사병(PED) 같은 제3종 가축전염병 발생 때 일률적으로 적용되는 이동제한 조치를 질병 위험도에 따라 선택적으로 시행할 수 있게 하는 법률안이 국회에 제출돼 주목된다. 이들... ",
-    "press": "nongmin.com",
-    "matched_keywords": [
-      "이동제한"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "경북 축협조합장들, 구제역 이동중지명령에도 '외유'",
-    "url": "http://www.hansbiz.co.kr/news/articleView.html?idxno=851884",
-    "published_at": "2026-07-23T12:22:00+09:00",
-    "category": "질병명",
-    "description": "관계자의 이동을 엄격히 제한하는 조치였다. 그러나 안동봉화축협조합장을 포함한 조합장 10여 명은 명령 해제 2시간 전인 5일 오전 김해공항을 통해 베트남으로 출국했다.이는 가축전염병예방법 위반 행위다. 해당 법을... ",
-    "press": "hansbiz.co.kr",
-    "matched_keywords": [
-      "구제역"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "소고기 비싸 닭다리 샀더니 이마저도 8% 급등",
-    "url": "https://www.koreadaily.com/article/20260722181946826",
-    "published_at": "2026-07-23T10:20:00+09:00",
-    "category": "기타",
-    "description": "대체 단백질 수요 이동 닭고기 가격이 오른 것은 다른 단백질 식품 가격까지 함께 오르면서 소비자들이... 하지만 닭 한 마리에서 나오는 닭다리살은 두 개뿐이어서 공급이 제한적이었고, 늘어난 수요가 가격 상승으로... ",
-    "press": "koreadaily.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "7월 23일 오늘의 안전 상황",
-    "url": "http://fpn119.co.kr/254236",
-    "published_at": "2026-07-23T08:54:00+09:00",
-    "category": "기타",
-    "description": "22.):(가축)7,765마리(돼지342, 가금 7,423) (어류양식)없음 * (신고기준) 가축농업정책보험금융원... 양돈농가이동제한 및소독여부점검등 ▲ 주요 사고 - (화재) 7.23. 03:48경 / 강원 동해시 구호동 / 플라스틱제품... ",
-    "press": "fpn119.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "‘파리의 심판’ 주역 그르기치 힐스, 지구 구하는 ‘재생농업’ 박차 ...",
-    "url": "https://www.segye.com/newsView/20260723501322?OutUrl=naver",
-    "published_at": "2026-07-23T07:04:00+09:00",
-    "category": "기타",
-    "description": "또 가축 방목을 통한 천연 비료 공급으로 건강한 생태계도 유지합니다. 오가닉 인증. 홈페이지 왼쪽부터... 화학 비료나 기계 대신 수백마리의 양을 이동 방목하면 양들이 커버 크롭를 먹고 배설물로 자연 영양분을... ",
-    "press": "segye.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "경북, 구제역 논란부터 금융 내부통제·호우 산림조사까지",
-    "url": "https://www.ekn.kr/web/view.php?key=20260722023034935",
-    "published_at": "2026-07-22T23:56:00+09:00",
-    "category": "질병명",
-    "description": "하지만 안동봉화축협 조합장을 포함한 경북지역 축협 관계자들은 이동 제한이 해제되기 전인 5일 오전 김해공항을 통해 베트남으로 출국한 것으로 알려졌다. 정 의원은 이 같은 행동이 「가축전염병예방법」 위반 소지가... ",
-    "press": "ekn.kr",
-    "matched_keywords": [
-      "구제역"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "구제역 ‘심각’에도 베트남 간 축협 조합장들…경북도의원 “사퇴해야...",
-    "url": "https://www.edaily.co.kr/news/newspath.asp?newsid=06655126645517144",
-    "published_at": "2026-07-22T23:40:00+09:00",
-    "category": "질병명",
-    "description": "연수 참가자 중에는 위기 경보 ‘심각’ 지역인 안동과 문경을 비롯해 가축시장 운영이 중단된 영주지역... 이어 “구제역 발생으로 축산농가는 생업 중단과 이동 제한을 감수하며 방역에 협조했지만, 정작 농가를... ",
-    "press": "edaily.co.kr",
-    "matched_keywords": [
-      "구제역"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "정용채 경북도의원 “구제역 비상 속 베트남 간 축협 조합장 사퇴해야”",
-    "url": "https://www.kbsm.net/news/view.php?idx=527636",
-    "published_at": "2026-07-22T14:48:00+09:00",
-    "category": "질병명",
-    "description": "정 의원은 22일 경북도의회에서 기자회견을 열고 “축산농가가 이동 제한과 가축시장 폐쇄 등으로 어려움을 겪는 상황에서 조합장들이 해외 일정을 강행한 것은 책임 있는 자세로 보기 어렵다”고 밝혔다.... ",
-    "press": "kbsm.net",
-    "matched_keywords": [
-      "구제역"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "연일 폭염에… 가축 집단폐사 · 조선소 열사병 비상",
-    "url": "https://www.munhwa.com/article/11604209?ref=naver",
-    "published_at": "2026-07-22T11:39:00+09:00",
-    "category": "기타",
-    "description": "출입을 제한하고 있다. 고온 작업에 따른 열사병 등 온열 질환을 막기 위한 조치다. 66세 이상 고령... HD현대중공업은 이달부터 근로자 휴식시간을 늘리고 이동식 버스형 휴게시설과 간이 쉼터 등 270개의 휴게시설을... ",
-    "press": "munhwa.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "‘돼지 만성 소모성질환 일률적 이동제한’ 합리화 법안 발의…농가 “...",
-    "url": "https://www.nongmin.com/article/20260722500002",
-    "published_at": "2026-07-22T09:31:00+09:00",
-    "category": "정부·제도 용어",
-    "description": "돼지생식기호흡기증후군(PRRS)·돼지유행성설사병(PED) 같은 제3종 가축전염병 발생 때 일률적으로 적용되는 이동제한 조치를 질병 위험도에 따라 선택적으로 시행할 수 있게 하는 법률안이 국회에 제출돼 주목된다. 이들... ",
-    "press": "nongmin.com",
-    "matched_keywords": [
-      "이동제한"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "7월 22일 오늘의 안전 상황",
-    "url": "http://fpn119.co.kr/254167",
-    "published_at": "2026-07-22T08:52:00+09:00",
-    "category": "기타",
-    "description": "21.):(가축)돼지69마리 (어류양식)없음 * (신고기준) 가축농업정책보험금융원, 어류양식 해수부... 양돈농가이동제한 및소독여부점검등 ▲ 중대본차장(재난안전관리본부장)... ",
-    "press": "fpn119.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "\"묶어두는 방역은 끝났다\"",
-    "url": "http://www.youngnong.co.kr/news/articleView.html?idxno=61029",
-    "published_at": "2026-07-22T00:00:00+09:00",
-    "category": "정부·제도 용어",
-    "description": "대한한돈협회(회장 손세희)는 제3종 가축전염병에 대한 이동제한 조치를 위험도에 따라 합리적으로 적용할 수 있도록 한 「가축전염병 예방법 일부개정법률안(어기구 의원 대표발의)」에 대해 \"양돈 현장의 사육 현실을... ",
-    "press": "youngnong.co.kr",
-    "matched_keywords": [
-      "방역"
-    ]
-  },
-  {
-    "source": "네이버",
     "title": "'PRRS·PED' 가축 이동제한 조치 완화 추진",
     "url": "https://www.agrinet.co.kr/news/articleView.html?idxno=405850",
     "published_at": "2026-07-21T18:40:00+09:00",
@@ -2144,65 +2103,15 @@
   },
   {
     "source": "네이버",
-    "title": "\"전북혁신도시, 내일은 '악취' 주의하세요\"",
-    "url": "https://sjbnews.com/news/news.php?number=883401",
-    "published_at": "2026-07-21T18:34:00+09:00",
-    "category": "기타",
-    "description": "악취 이동경로를 비롯해 그 농도와 영향 범위 등을 예보한다. 현재 악취 유발 가능성이 있는 축산시설은 모두 130개가 입력됐다. 우사, 돈사, 계사, 가축분뇨 재활용사업장 등 그 종류도 다양하다. 악취 예보는 전주시... ",
-    "press": "sjbnews.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "한돈협회 \"가축전염병 예방법 개정안 환영\"",
-    "url": "http://www.newsfarm.co.kr/news/articleView.html?idxno=101723",
-    "published_at": "2026-07-21T10:28:00+09:00",
-    "category": "기타",
-    "description": "한국농업신문, NEWSFARM 대한한돈협회(회장 이기홍)는 지난 15일 성명을 내고 제3종 가축전염병에 대한 이동제한 조치를 위험도에 따라 적용할 수 있도록 하는 '가축전염병 예방법 일부개정법률안' 발의를 적극 환영한다고... ",
-    "press": "newsfarm.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "\"가축 전염병 발생 시 필수\"... 체시스, 동물의약품 및 방역 모멘텀 부각",
-    "url": "https://www.pinpointnews.co.kr/news/articleView.html?idxno=469753",
-    "published_at": "2026-07-20T15:08:00+09:00",
-    "category": "정부·제도 용어",
-    "description": "업종으로 이동하면서 관련 종목 전반이 약세를 보이고 있다. 다만 동물백신과 진단 분야 일부 종목은 개별... 체시스는 주력인 자동차 샤시 부품 제조 사업 외에도 계열사를 통해 동물의약품 및 가축 방역 관련 사업... ",
-    "press": "pinpointnews.co.kr",
+    "title": "'났다 하면 대형 피해'…제주시, 양돈장 화재 예방시설 지원",
+    "url": "https://www.jejudomin.co.kr/news/articleView.html?idxno=320836",
+    "published_at": "2026-07-24T14:06:00+09:00",
+    "category": "축종별 용어",
+    "description": "났다 하면 대형 피해가 발생하는 양돈장 화재를 선제적으로 막기 위한 지원사업이 이뤄지고 있다. 제주시는 축산업 허가 또는 등록된 양돈 농가를 대상으로 '양돈장 화재예방시설 지원사업'을 추진하고 있다고 24일... ",
+    "press": "jejudomin.co.kr",
     "matched_keywords": [
-      "방역"
+      "양돈"
     ]
-  },
-  {
-    "source": "네이버",
-    "title": "“돼지고기는 국민 식탁 위에 없어서는 안 될 존재”",
-    "url": "http://www.kookje.co.kr/news2011/asp/newsbody.asp?code=0200&key=20260719.99099005464",
-    "published_at": "2026-07-19T16:00:00+09:00",
-    "category": "기타",
-    "description": "또 농가의 귀책 사유가 없는 피해에 대한 합리적인 보상체계 마련, 이동 제한 기준 완화 등도 요청했다. ASF... 아울러 이를 위해서는 가축분뇨를 폐기물이 아닌 순환자원으로 활용, 방역순치돈사(질병 유입 위험을 낮추고자... ",
-    "press": "kookje.co.kr",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "[오름탐사④] 숲으로 변한 아부오름",
-    "url": "https://www.newsis.com/view/NISX20260718_0003713822",
-    "published_at": "2026-07-19T08:00:00+09:00",
-    "category": "기타",
-    "description": "오름 사면과 주변 평야를 하나의 방목지로 이용하고, 계절에 따라 가축을 이동시키며 초지를 관리했다.... 몽골과 중국 북부, 시베리아 등의 초원에 널리 분포하지만 국내에서는 제주 동부 일부 오름에서 제한적으로... ",
-    "press": "newsis.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "[공공돋보기] 복날의 새 풍경",
-    "url": "http://www.00news.co.kr/news/articleView.html?idxno=105215",
-    "published_at": "2026-07-17T12:40:00+09:00",
-    "category": "기타",
-    "description": "시민들이 이동하고 있는 모습. <사진=뉴시스> ◆생명 윤리 대전환...성숙한 선진 사회로 가는 중요한 이정표 다만 개 식용 종식은 단순한 특정 먹거리 규제나 개인의 식습관을 제한하는 차원을 넘어선다. 우리 사회가... ",
-    "press": "00news.co.kr",
-    "matched_keywords": []
   },
   {
     "source": "네이버",
@@ -2223,6 +2132,18 @@
     "description": "또한 전국 최대 양돈 생산지라는 지역 특성을 고려해 축산 악취 및 암모니아 저감 기술 개발에 역량을 집중하고 검증된 우수 사례의 도 차원 지원을 건의했다.... ",
     "press": "breaknews.com",
     "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "3종 가축전염병 ‘일률적 이동제한’ 합리화 추진",
+    "url": "https://www.nongmin.com/article/20260722500532",
+    "published_at": "2026-07-24T05:01:00+09:00",
+    "category": "정부·제도 용어",
+    "description": "이들 질병은 국내 양돈현장에 광범위하게 존재하는 소모성 질환인 만큼 발생 때마다 동일한 수준의... 양돈농가는 환영했다. 대한한돈협회는 성명에서 “위험도에 기반한 선택적 이동제한 체계를 도입함으로써 지역·농가... ",
+    "press": "nongmin.com",
+    "matched_keywords": [
+      "이동제한"
+    ]
   },
   {
     "source": "네이버",
@@ -2527,6 +2448,16 @@
   },
   {
     "source": "네이버",
+    "title": "7월 23일 오늘의 안전 상황",
+    "url": "http://fpn119.co.kr/254236",
+    "published_at": "2026-07-23T08:54:00+09:00",
+    "category": "기타",
+    "description": "22.): (양돈) 없음  (야생멧돼지) 1건(강원 화천) ※ 확진(누계): 양돈79건(경기32,강원21,경북6등), 야생멧돼지 4,512+1건(강원 2,115+1, 경북1,072, 경기 712 등) - 조치사항:(농식품부등)발생지역(10㎞내)... ",
+    "press": "fpn119.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
     "title": "밤낮없는 폭염에 가축 1만 5000여 마리 폐사…전남 축산농가 \"하루하루...",
     "url": "https://www.pressian.com/pages/articles/2026072217575165884?utm_source=naver&utm_medium=search",
     "published_at": "2026-07-23T06:08:00+09:00",
@@ -2667,6 +2598,28 @@
   },
   {
     "source": "네이버",
+    "title": "‘돼지 만성 소모성질환 일률적 이동제한’ 합리화 법안 발의…농가 “...",
+    "url": "https://www.nongmin.com/article/20260722500002",
+    "published_at": "2026-07-22T09:31:00+09:00",
+    "category": "정부·제도 용어",
+    "description": "이들 질병은 국내 양돈현장에 광범위하게 존재하는 소모성 질환인 만큼 발생 때마다 동일한 수준의... 양돈농가는 환영했다. 대한한돈협회는 성명에서 “위험도에 기반한 선택적 이동제한 체계를 도입함으로써 지역·농가... ",
+    "press": "nongmin.com",
+    "matched_keywords": [
+      "이동제한"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "7월 22일 오늘의 안전 상황",
+    "url": "http://fpn119.co.kr/254167",
+    "published_at": "2026-07-22T08:52:00+09:00",
+    "category": "기타",
+    "description": "21.): (양돈) 없음  (야생멧돼지) 1건(강원 화천) ※ 확진(누계): 양돈79건(경기32,강원21,경북6등), 야생멧돼지4,511+1건(강원 2,114+1, 경북1,072, 경기 712 등) - 조치사항:(농식품부등)발생지역(10㎞내)... ",
+    "press": "fpn119.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
     "title": "감사원도 설득한 'K-방역 승부수'…ASF 백신 세계무대 띄운 검역본부",
     "url": "https://www.mt.co.kr/economy/2026/07/23/2026072002134467928",
     "published_at": "2026-07-22T06:00:00+09:00",
@@ -2696,6 +2649,18 @@
     "description": "또한 “정부·농가·수의사가 함께해야 양돈산업이 지속할 수 있는 만큼 민간 임상수의사도 가축전염병 예방단계부터 핵심 주체로 참여할 수 있게 해야 한다”고 강조했다.",
     "press": "nongmin.com",
     "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "\"묶어두는 방역은 끝났다\"",
+    "url": "http://www.youngnong.co.kr/news/articleView.html?idxno=61029",
+    "published_at": "2026-07-22T00:00:00+09:00",
+    "category": "정부·제도 용어",
+    "description": "대한민국 양돈산업의 생산성을 좀먹던 고질적인 소모성 질병 방역체계가 현장 맞춤형 '과학적 방역'으로... 대해 \"양돈 현장의 사육 현실을 반영한 매우 합리적인 제도 개선\"이라며 적극적인 환영 성명서를 발표했다. 이번... ",
+    "press": "youngnong.co.kr",
+    "matched_keywords": [
+      "방역"
+    ]
   },
   {
     "source": "네이버",
@@ -2768,6 +2733,16 @@
     "published_at": "2026-07-21T13:00:00+09:00",
     "category": "기타",
     "description": "농협경제지주는 2016년 남원축협과 도드람양돈농협을 사업 참여 조합으로 선정했다. 임대가 가능한 축사나 경영이 어렵거나 폐업하는 농가의 축사를 농축협이 매입·수탁해 신규 진입자에게 임대하고, 향후 매입할 수... ",
+    "press": "newsfarm.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "한돈협회 \"가축전염병 예방법 개정안 환영\"",
+    "url": "http://www.newsfarm.co.kr/news/articleView.html?idxno=101723",
+    "published_at": "2026-07-21T10:28:00+09:00",
+    "category": "기타",
+    "description": "특히 이번 개정으로 PRRS(돼지생식기호흡기증후군)와 PED(돼지유행성설사병) 등 국내 양돈산업의 생산성과... 국내 양돈현장에 광범위하게 존재하는 질병의 특성과 사육 현실을 충분히 반영하지 못했다는 지적이 이어져... ",
     "press": "newsfarm.co.kr",
     "matched_keywords": []
   },
@@ -2971,6 +2946,16 @@
   },
   {
     "source": "네이버",
+    "title": "“돼지고기는 국민 식탁 위에 없어서는 안 될 존재”",
+    "url": "http://www.kookje.co.kr/news2011/asp/newsbody.asp?code=0200&key=20260719.99099005464",
+    "published_at": "2026-07-19T16:00:00+09:00",
+    "category": "기타",
+    "description": "전문가들은 양돈 농가의 목소리라는 점에서 경청해야 할 필요가 있다고 조언한다. 19일 대한한돈협회와 한돈자조금관리위원회에 따르면 이기홍 협회장·위원장은 지난 16일 세종에서 열린 기자간담회에서 “현재... ",
+    "press": "kookje.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
     "title": "제주 민관 거버넌스 '가축분뇨 신속 수거‧처리'",
     "url": "https://www.jejumaeil.net/news/articleView.html?idxno=402859",
     "published_at": "2026-07-19T15:20:00+09:00",
@@ -3075,12 +3060,32 @@
   },
   {
     "source": "네이버",
-    "title": "실적 622배 뛰어도 주가는 '뚝'…중국 AI주에 무슨 일이",
-    "url": "https://www.ebn.co.kr/news/articleView.html?idxno=1716795",
-    "published_at": "2026-07-17T14:02:00+09:00",
+    "title": "경기도·장쑤성 친서 외교…\"한중 전략적 협력에 새 활력\"",
+    "url": "https://www.joongboo.com/news/articleView.html?idxno=363732272",
+    "published_at": "2026-07-24T15:42:00+09:00",
     "category": "기타",
-    "description": "양돈업체 무위안푸즈그룹은 돼지고기 가격 변동에 타격을 입었고, 부동산 개발업체 차이나반커는 낮은 사업 수익성과 자산 손상으로 손실이 확대될 전망이다. 윌리엄 브래튼 BNP파리바 아시아·태평양 현금주식 리서치... ",
-    "press": "ebn.co.kr",
+    "description": "옌청 공장, LG에너지솔루션 난징 법인 등 우리 기업 3천여 곳이 진출해 있어 한중 공급망의 핵심 축으로 꼽힌다. 또 중국 최초의 외국인 기념관인 최치원기념관과 대한민국임시정부 사료진열관이 위치하는 등 역사... ",
+    "press": "joongboo.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "팜스코, 사업장별 안전결의대회 실시",
+    "url": "https://www.aflnews.co.kr/news/articleView.html?idxno=325148",
+    "published_at": "2026-07-24T14:50:00+09:00",
+    "category": "기타",
+    "description": "팜스코 배합사료공장인 칠곡공장은 지난해 11월 무재해 5배수를 달성한 성과를 바탕으로 내년 4월 무재해 6배수 달성을 위해 결의를 다졌다. 참석자들은 현장 안전을 최우선 가치로 삼고 사소한 위험요인도 놓치지 않는... ",
+    "press": "aflnews.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "인천내항 1·8부두 토양오염 '기준치 6배'…재개발 2029년으로 '지연'",
+    "url": "http://www.newstomato.com/ReadNews.aspx?no=1308136&inflow=N",
+    "published_at": "2026-07-24T14:18:00+09:00",
+    "category": "기타",
+    "description": "가장 엄격한 1지역 용도는 주거·학교용지와 공원, 2지역은 창고·체육·종교용지, 3지역은 공장·철도용지와... 각종 산업 활동과 도로 분진, 가축 사료 등을 통해 축적됩니다. 과거 잡화와 철재 등을 하역하던 내항 1... ",
+    "press": "newstomato.com",
     "matched_keywords": []
   },
   {
@@ -3095,22 +3100,22 @@
   },
   {
     "source": "네이버",
-    "title": "수령이 동식물 이름도 짓는 북한 성인 남성에 '뚱뚱한'은 왜 못쓸까",
-    "url": "https://www.m-joongang.com/news/articleView.html?idxno=402829",
-    "published_at": "2026-07-23T16:50:00+09:00",
-    "category": "기타",
-    "description": "김정은은 2015년 한 농장을 찾아서 사료용 풀 하나를 '애국풀'이라고 이름 지었다. '강성대국'(김강국, 김성국... 2022년에는 김정은 지시로 '대성산아이스크림공장'을 세우기도 했다. '키스'의 북한말이 '주둥이박치기' 또는... ",
-    "press": "m-joongang.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
     "title": "[ER현장] 전국 어디서나 같은 맛의 비결…투썸플레이스 'APP'를 가다",
     "url": "https://www.econovill.com/news/articleView.html?idxno=745948",
     "published_at": "2026-07-23T16:50:00+09:00",
     "category": "기타",
     "description": "'커피 로스팅 플랜트'는 처음부터 일반적인 원두 생산 공장을 넘어 로스팅에 최적화된 생산시설을 목표로... 이때 로스팅 과정에서 발생하는 생두의 얇은 껍질인 채프(Chaff)는 타블렛 형태로 압착해 퇴비나 사료 원료... ",
     "press": "econovill.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "수령이 동식물 이름도 짓는 북한 성인 남성에 '뚱뚱한'은 왜 못쓸까",
+    "url": "https://www.m-joongang.com/news/articleView.html?idxno=402829",
+    "published_at": "2026-07-23T16:50:00+09:00",
+    "category": "기타",
+    "description": "김정은은 2015년 한 농장을 찾아서 사료용 풀 하나를 '애국풀'이라고 이름 지었다. '강성대국'(김강국, 김성국... 2022년에는 김정은 지시로 '대성산아이스크림공장'을 세우기도 했다. '키스'의 북한말이 '주둥이박치기' 또는... ",
+    "press": "m-joongang.com",
     "matched_keywords": []
   },
   {
@@ -3459,12 +3464,72 @@
   },
   {
     "source": "네이버",
-    "title": "[블루오션 동물 의료기기] ①정병곤 동물약품협회장 “인체용에서 확장...",
-    "url": "https://www.edaily.co.kr/news/newspath.asp?newsid=02378006645516816",
-    "published_at": "2026-07-21T07:03:00+09:00",
+    "title": "광양시, 폭염 총력 대응···취약계층 밀착 관리",
+    "url": "https://www.thereport.co.kr/news/articleView.html?idxno=89902",
+    "published_at": "2026-07-24T15:54:00+09:00",
     "category": "기타",
-    "description": "과거 축산업 중심의 질병 관리·방역에서 출발한 국내 동물용 의료기기 시장의 무게중심이 정밀진단·치료... 수직계열화한 사례다. 이 방식은 수익은 극대화하면서 개발 리스크는 줄일 수 있다는 점에서 많은 기업들이... ",
-    "press": "edaily.co.kr",
+    "description": "중소규모 축사 34곳과 내수면 양식장 17곳에 대해서도 시설과 생육 상태를 지속해서 점검한다. 안전시설 관리도 강화한다. 시는 무더위쉼터 187곳과 스마트그늘막 152곳의 운영 상태를 수시로 점검해 시민 불편을... ",
+    "press": "thereport.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "SFACTORY(에스팩토리)서 열린 성동 투자사·기업 밋업 성료… 브랜드 팝...",
+    "url": "http://www.ttlnews.com/news/articleView.html?idxno=3127816",
+    "published_at": "2026-07-24T15:14:00+09:00",
+    "category": "기타",
+    "description": "있는 스마트 피트니스 기기다. 행사장에서는 참석자들이 직접 체험할 수 있는 콘텐츠형 팝업으로 구성돼... 나 실장의 발언은 단순한 축사를 넘어, 성수동이 가진 창의적 지역성과 문화·콘텐츠 생태계가 기업 IR... ",
+    "press": "ttlnews.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "광양시, '취약계층 보호·수경시설 가동'... 도심 폭염저감 총력",
+    "url": "http://www.newsworker.co.kr/news/articleView.html?idxno=438145",
+    "published_at": "2026-07-24T14:50:00+09:00",
+    "category": "기타",
+    "description": "중소규모 축사 34곳과 내수면 양식장 17곳의 시설과 생육 상태도 지속적으로 살피고 있다. 시민들이 가까운 곳에서 무더위를 피하도록 무더위쉼터 187곳과 스마트그늘막 152곳의 운영 상태를 점검하는 한편, 오는 29일부터... ",
+    "press": "newsworker.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "광양시 '폭염 종합대책' 추진…\"시민 안전 최우선\"",
+    "url": "https://www.news1.kr/local/gwangju-jeonnam/6238073",
+    "published_at": "2026-07-24T14:24:00+09:00",
+    "category": "기타",
+    "description": "축사 34개소와 내수면 양식장 17개소를 대상으로 시설과 생육 상태를 점검하는 등 현장 예찰도 이어가고 있다. 도심의 체감온도를 낮추고 시민들이 안전하게 더위를 피할 수 있도록 무더위쉼터 187개소와 스마트그늘막... ",
+    "press": "news1.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "광양시, '폭염 종합대책' 행정력 집중···분야별 대응 '촘촘'",
+    "url": "https://www.greened.kr/news/articleView.html?idxno=345862",
+    "published_at": "2026-07-24T13:48:00+09:00",
+    "category": "기타",
+    "description": "중소규모 축사 34곳과 내수면 양식장 17곳에 대한 현장 예찰도 강화하고 있다. 이와 함께 시민들이 무더위를 피할 수 있도록 무더위쉼터 187곳과 스마트그늘막 152곳의 운영 상태를 점검하며 폭염 저감시설 관리에도... ",
+    "press": "greened.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "[패트롤] 광명시-부천시-시흥시-안산시-안양시",
+    "url": "https://www.ekn.kr/web/view.php?key=20260724026265751",
+    "published_at": "2026-07-24T13:18:00+09:00",
+    "category": "기타",
+    "description": "국토교통부 스마트도시 규제샌드박스 실증사업에 선정되며 사업자금을 지원받았다. 창업지원센터는... 임병택 시흥시장은 영상 축사를 통해 “기후시민네트워크는 행정을 보완하는 기구를 넘어 시민이 직접 제안하고... ",
+    "press": "ekn.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "광양시, 폭염 대응 강화…취약계층 보호·현장 중심 관리 확대",
+    "url": "https://www.newspim.com/news/view/20260724000644",
+    "published_at": "2026-07-24T12:33:00+09:00",
+    "category": "기타",
+    "description": "축사 34곳과 내수면 양식장 17곳에 대한 예찰을 실시하고 무더위쉼터 187곳과 스마트그늘막 152곳의 운영 상태도 점검하고 있다. 시 관계자는 \"관계 부서 협력을 통해 인명피해 예방에 최선을 다하겠다\"며 \"시민들도 낮... ",
+    "press": "newspim.com",
     "matched_keywords": []
   },
   {
@@ -4275,13 +4340,115 @@
   },
   {
     "source": "네이버",
-    "title": "원주시, 경로당 프로그램 발표대회 성황리 마쳐",
-    "url": "https://www.jeonmae.co.kr/news/articleView.html?idxno=1275410",
-    "published_at": "2026-07-17T15:56:00+09:00",
+    "title": "수박값 1년 새 36%↓···여름 과일·채소값도 안정세",
+    "url": "https://www.seoulfn.com/news/articleView.html?idxno=633942",
+    "published_at": "2026-07-23T16:07:00+09:00",
     "category": "기타",
-    "description": "유 지회장은 각 경로당이 발표대회 준비에 많은 노력을 기울였다며 프로그램 확대와 스마트경로당 활성화가... 구자열 원주시장 행사장에 입장하면서 관계자들과 인사.[사진=전봉우 기자] 구자열 원주시장은 축사에서... ",
-    "press": "jeonmae.co.kr",
+    "description": "최근 집중호우와 폭염으로 농작물 약 390㏊가 침수되고 가축 약 20만 마리가 폐사하는 피해가 발생했지만, 정부는 전체 생산량 대비 피해 규모가 크지 않아 현재까지 농축산물 수급에는 큰 영향이 없는 것으로 보고... ",
+    "press": "seoulfn.com",
     "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "집중호우·폭염에도 농산물 수급 안정적",
+    "url": "http://www.amnews.co.kr/news/articleView.html?idxno=73630",
+    "published_at": "2026-07-23T10:04:00+09:00",
+    "category": "기타",
+    "description": "농식품부는 박정훈 실장 주재로 여름철 기상 여건에 따른 농축산물 수급과 가격 동향을 점검했다. 사진은 폭우 피해를 입은 농촌. 농림축산식품부는 지난 20일 박정훈 식량정책실장 주재로 제22차 수급상황 점검회의를... ",
+    "press": "amnews.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "“작년엔 비싸서 못 먹었는데 올해는 실컷 먹어보자”…가격 확 싸진 ‘...",
+    "url": "https://www.sedaily.com/article/20070800?ref=naver",
+    "published_at": "2026-07-23T09:08:00+09:00",
+    "category": "기타",
+    "description": "폭염과 집중호우가 겹친 여름철에도 주요 농축산물 수급은 대체로 안정된 흐름을 이어가고 있다. 23일 한국농수산식품유통공사(aT) 농산물유통정보 KAMIS에 따르면 수박 8㎏ 도매가격은 1만9706원으로 지난해 같은... ",
+    "press": "sedaily.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "휴가철 삼겹살값 '들썩'…청주 소비자 장바구니 부담 커진다",
+    "url": "https://www.ccdailynews.com/news/articleView.html?idxno=2429346",
+    "published_at": "2026-07-21T18:16:00+09:00",
+    "category": "기타",
+    "description": "농림축산식품부는 최근 집중호우와 폭염으로 일부 농작물 침수와 가축 폐사가 발생했지만, 전체 생산량에는 큰 영향이 없어 농축산물 수급에는 차질이 없다고 밝혔다. 농식품부 관계자는 \"폭염과 병해충 발생에... ",
+    "press": "ccdailynews.com",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "정부 “농산물값 안정세”라지만…소비자는 장보기 겁난다",
+    "url": "https://www.etoday.co.kr/news/view/2605523",
+    "published_at": "2026-07-21T16:10:00+09:00",
+    "category": "기타",
+    "description": "정부는 집중호우에도 농축산물 수급에 큰 차질이 없다고 진단했지만 장바구니에서는 이미 일부 채소 가격이 방향을 바꾸기 시작한 셈이다. 현재 농산물 가격이 안정됐다는 정부의 설명과 소비자가 느끼는 장바구니... ",
+    "press": "etoday.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "집중호우·폭염에도 채소·과일값 안정…수박 29%↓·시금치 38%↓",
+    "url": "http://www.newskr.kr/news/articleView.html?idxno=105171",
+    "published_at": "2026-07-21T10:46:00+09:00",
+    "category": "기타",
+    "description": "농림축산식품부는 지난 20일 제22차 수급상황 점검회의를 열어 농축산물 수급과 가격 동향을 점검한 결과 이같이 분석했다고 밝혔다. □ 시금치·오이·수박 등 채소·과일류 20~30%대 하락 농식품부에 따르면... ",
+    "press": "newskr.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "농축산물 가격 안정세…수박 29%·시금치 38% 하락",
+    "url": "https://www.kado.net/news/articleView.html?idxno=2062230",
+    "published_at": "2026-07-21T08:08:00+09:00",
+    "category": "기타",
+    "description": "최근 집중호우와 폭염이 이어졌지만 농축산물 수급에는 큰 차질이 없고, 생산량과 공급 확대로 주요 품목의 가격도 대체로 안정세를 유지하고 있는 것으로 나타났다. 농림축산식품부는 20일 제22차 수급상황... ",
+    "press": "kado.net",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "농식품부 “여름철 채소·과일 가격 하락…계란값 안정세”",
+    "url": "https://news.kbs.co.kr/news/pc/view/view.do?ncd=8615058&ref=A",
+    "published_at": "2026-07-20T18:38:00+09:00",
+    "category": "기타",
+    "description": "또 집중호우와 폭염에도 농축산물 수급에는 큰 차질이 없다고 설명했습니다. 농림축산식품부는 오늘(20일) 제22차 수급상황 점검회의를 열고, 주요 농축산물의 수급과 가격 동향을 점검했습니다. 축산물은 가축... ",
+    "press": "news.kbs.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "농식품부 \"여름철 채소·과일 가격 하락…계란값도 안정세\"",
+    "url": "https://news.sbs.co.kr/news/endPage.do?news_id=N1008665947&plink=ORI&cooper=NAVER",
+    "published_at": "2026-07-20T18:17:00+09:00",
+    "category": "기타",
+    "description": "정부는 최근 집중호우와 폭염에도 농축산물 수급에는 큰 차질이 없으며, 생산량 증가와 공급 확대로 농축산물 가격이 전반적으로 안정세를 보이고 있다고 분석했습니다. 농식품부는 오늘(20일) 제22차 수급상황... ",
+    "press": "news.sbs.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "농식품부 \"여름철 채소·과일 가격 하락…계란값도 안정세\"",
+    "url": "https://www.yna.co.kr/view/AKR20260720151700030?input=1195m",
+    "published_at": "2026-07-20T18:01:00+09:00",
+    "category": "기타",
+    "description": "폭염·호우에도 수급 차질 없어…병해충 방제·축산시설 지원 정부는 최근 집중호우와 폭염에도 농축산물 수급에는 큰 차질이 없으며, 생산량 증가와 공급 확대로 농축산물 가격이 전반적으로 안정세를 보이고... ",
+    "press": "yna.co.kr",
+    "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "폭염·호우 속 농축산물 수급 이상 무!…계란·닭고기 가격도 안정 찾는...",
+    "url": "http://www.foodnews.co.kr/news/articleView.html?idxno=119444",
+    "published_at": "2026-07-20T17:10:00+09:00",
+    "category": "시장/가격 용어",
+    "description": "미미해 수급에는 차질이 없는 것으로 나타났다. 농림축산식품부는 20일 박정훈 식량정책실장 주재로 제22차... 있으나, 축산물은 가축전염병 영향 등으로 가격이 여전히 높지만, 점차 낮아지는 추세를 보이고 있는 것으로... ",
+    "press": "foodnews.co.kr",
+    "matched_keywords": [
+      "축산물 수급"
+    ]
   },
   {
     "source": "GDELT",
@@ -4421,6 +4588,17 @@
     "matched_keywords": [
       "livestock trade"
     ]
+  },
+  {
+    "source": "GDELT",
+    "title": "Ministro Padrino López y gremios ganaderos articulan acciones por la certificación del país libre de fiebre de aftosa",
+    "url": "https://www.eluniversal.com/economia/237899/ministro-padrino-lopez-y-gremios-ganaderos-articulan-acciones-por-la-certificacion-del-pais-libre",
+    "published_at": "2026-07-24T02:00:00+00:00",
+    "category": "기타",
+    "press": "eluniversal.com",
+    "language": "Spanish",
+    "sourcecountry": "Venezuela",
+    "matched_keywords": []
   },
   {
     "source": "GDELT",
@@ -4747,17 +4925,6 @@
   },
   {
     "source": "GDELT",
-    "title": "Around the Town - The Express",
-    "url": "https://www.lockhaven.com/news/community/2026/07/around-the-town-2902/",
-    "published_at": "2026-07-17T06:30:00+00:00",
-    "category": "기타",
-    "press": "lockhaven.com",
-    "language": "English",
-    "sourcecountry": "United States",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "পোল্ট্রি খামারিদের ঋণ সুবিধা নিশ্চিতের আশ্বাস প্রতিমন্ত্রীর",
     "url": "https://www.jugantor.com/national/1128615",
     "published_at": "2026-07-18T15:00:00+00:00",
@@ -4934,17 +5101,6 @@
   },
   {
     "source": "GDELT",
-    "title": "أسعار كرتونة البيض في بورصة الدواجن والأسواق اليوم الجمعة 17 - 7 - 2026",
-    "url": "https://www.elwatannews.com/news/details/8321786",
-    "published_at": "2026-07-17T07:45:00+00:00",
-    "category": "기타",
-    "press": "elwatannews.com",
-    "language": "Arabic",
-    "sourcecountry": "Egypt",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "انخفاض الردة ، أسعار الأعلاف والحبوب اليوم في الأسواق",
     "url": "https://www.vetogate.com/5694961",
     "published_at": "2026-07-17T09:15:00+00:00",
@@ -4963,6 +5119,28 @@
     "press": "palembang.tribunnews.com",
     "language": "Indonesian",
     "sourcecountry": "Indonesia",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "Relief for consumers as Reserve Bank rate pause defies expectations",
+    "url": "https://www.businessday.co.za/economy/2026-07-24-reserve-bank-rate-pause-offers-indebted-consumers-temporary-relief/",
+    "published_at": "2026-07-24T04:30:00+00:00",
+    "category": "기타",
+    "press": "businessday.co.za",
+    "language": "English",
+    "sourcecountry": "South Africa",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "王健林的丹寨扶贫幻梦 _ 凤凰网",
+    "url": "https://finance.ifeng.com/c/8v0t8mR9yYq",
+    "published_at": "2026-07-24T02:15:00+00:00",
+    "category": "기타",
+    "press": "finance.ifeng.com",
+    "language": "Chinese",
+    "sourcecountry": "China",
     "matched_keywords": []
   },
   {
@@ -5033,6 +5211,17 @@
   },
   {
     "source": "GDELT",
+    "title": "猪周期反转 ， 这次可能来真的 - 虎嗅网",
+    "url": "https://www.huxiu.com/article/4877029.html",
+    "published_at": "2026-07-24T04:30:00+00:00",
+    "category": "기타",
+    "press": "huxiu.com",
+    "language": "Chinese",
+    "sourcecountry": "China",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
     "title": "牛肉太贵想用鸡肉替代 ？ 可现在鸡肉也成奢侈品了 ， 单月涨价8 . 2 %- 华侨网",
     "url": "https://www.chinesepress.com/archives/185940",
     "published_at": "2026-07-23T22:30:00+00:00",
@@ -5051,6 +5240,17 @@
     "press": "impartialreporter.com",
     "language": "English",
     "sourcecountry": "United Kingdom",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "หมูสันใน 126 - 148 บาท / กิโลกรัม อกไก่ 68 - 90 บาท / กิโลกรัม ปลานิล 45 - 50 บาท / กิโลกรัม",
+    "url": "https://www.bangkokbiznews.com/business/1244598",
+    "published_at": "2026-07-24T07:45:00+00:00",
+    "category": "기타",
+    "press": "bangkokbiznews.com",
+    "language": "Thai",
+    "sourcecountry": "Thailand",
     "matched_keywords": []
   },
   {
@@ -5209,17 +5409,6 @@
   },
   {
     "source": "GDELT",
-    "title": "AI+养殖机器人万台交付 ， 解码拉塞特吸引产业资本布局的底层逻辑",
-    "url": "https://baijiahao.baidu.com/s?id=1870295493367474298",
-    "published_at": "2026-07-17T06:00:00+00:00",
-    "category": "기타",
-    "press": "baijiahao.baidu.com",
-    "language": "Chinese",
-    "sourcecountry": "China",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "Saving Europe farmland : Agri - PV leads the way towards sustainable solar panel use",
     "url": "https://www.euronews.com/my-europe/2026/07/17/saving-europes-farmland-agri-pv-leads-the-way-towards-sustainable-solar-panel-use",
     "published_at": "2026-07-17T15:15:00+00:00",
@@ -5249,17 +5438,6 @@
     "press": "nzherald.co.nz",
     "language": "English",
     "sourcecountry": "New Zealand",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Minister Shivraj Singh Chauhan bats for non - GM research to increase pulses , oilseeds productivity",
-    "url": "https://www.newindianexpress.com/india/2026/Jul/17/minister-shivraj-singh-chauhan-bats-for-non-gm-research-to-increase-pulses-oilseeds-productivity",
-    "published_at": "2026-07-17T06:45:00+00:00",
-    "category": "기타",
-    "press": "newindianexpress.com",
-    "language": "English",
-    "sourcecountry": "India",
     "matched_keywords": []
   },
   {
@@ -5497,6 +5675,28 @@
   },
   {
     "source": "GDELT",
+    "title": "金河生物 ( 002688 ): 平安证券股份有限公司关于金河生物科技股份有限公司2025年度以简易程序向特定对象发行股票之上市保荐书 - CFi . CN 中财网",
+    "url": "http://www.cfi.net.cn/p20260724000338.html",
+    "published_at": "2026-07-24T05:00:00+00:00",
+    "category": "기타",
+    "press": "cfi.net.cn",
+    "language": "Chinese",
+    "sourcecountry": "China",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "金河生物 ( 002688 ): 平安证券股份有限公司关于金河生物科技股份有限公司2025年度以简易程序向特定对象发行股票之发行保荐书 - CFi . CN 中财网",
+    "url": "http://www.cfi.net.cn/p20260724000339.html",
+    "published_at": "2026-07-24T05:00:00+00:00",
+    "category": "기타",
+    "press": "cfi.net.cn",
+    "language": "Chinese",
+    "sourcecountry": "China",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
     "title": "FAO Agri Meet Urges Science , Innovation , Tech Solutions",
     "url": "https://www.miragenews.com/fao-agri-meet-urges-science-innovation-tech-1712962/",
     "published_at": "2026-07-20T16:15:00+00:00",
@@ -5519,22 +5719,22 @@
   },
   {
     "source": "GDELT",
-    "title": "云南能投 ( 002053 ): 云南能源投资股份有限公司关于全资子公司云南省盐业有限公司向云南省绿色能源产业集团有限公司转让云南省盐业怒江有限公司100 % 股权暨关联交易 - CFi . CN 中财网",
-    "url": "http://www.cfi.net.cn/p20260717001725.html",
-    "published_at": "2026-07-17T11:45:00+00:00",
+    "title": "连江定海 ： 往昔海防门户 今日海上牧场 _ 福州 _ 新闻频道 _ 福州新闻网",
+    "url": "https://news.fznews.com.cn/lianjiang/20260724/1QrJ4j9r34.shtml",
+    "published_at": "2026-07-24T05:00:00+00:00",
     "category": "기타",
-    "press": "cfi.net.cn",
+    "press": "news.fznews.com.cn",
     "language": "Chinese",
     "sourcecountry": "China",
     "matched_keywords": []
   },
   {
     "source": "GDELT",
-    "title": "2026 中国驼奶产业源头工厂与标杆品牌价值蓝皮书 _ 中华网",
-    "url": "https://m.tech.china.com/redian/2026/0717/072026_1919325.html",
-    "published_at": "2026-07-17T03:00:00+00:00",
+    "title": "云南能投 ( 002053 ): 云南能源投资股份有限公司关于全资子公司云南省盐业有限公司向云南省绿色能源产业集团有限公司转让云南省盐业怒江有限公司100 % 股权暨关联交易 - CFi . CN 中财网",
+    "url": "http://www.cfi.net.cn/p20260717001725.html",
+    "published_at": "2026-07-17T11:45:00+00:00",
     "category": "기타",
-    "press": "m.tech.china.com",
+    "press": "cfi.net.cn",
     "language": "Chinese",
     "sourcecountry": "China",
     "matched_keywords": []
@@ -5574,13 +5774,13 @@
   },
   {
     "source": "GDELT",
-    "title": "Weekly protein report : New World Screwworm hits turning point as cases resolve",
-    "url": "https://www.thecattlesite.com/articles/trade-barriers-highlight-ongoing-export-risks-for-poultry-producers",
-    "published_at": "2026-07-17T03:00:00+00:00",
+    "title": "潮声 | 连江定海 ： 往昔海防门户 今日海上牧场 - 社会",
+    "url": "http://fjnews.fjsen.com/2026-07/24/content_32224187.htm",
+    "published_at": "2026-07-24T02:15:00+00:00",
     "category": "기타",
-    "press": "thecattlesite.com",
-    "language": "English",
-    "sourcecountry": "United Kingdom",
+    "press": "fjnews.fjsen.com",
+    "language": "Chinese",
+    "sourcecountry": "China",
     "matched_keywords": []
   },
   {

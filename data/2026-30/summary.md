@@ -1,6 +1,6 @@
 # 사료·축산업 뉴스 큐레이션 - 2026-30
 
-생성 시각(UTC): 2026-07-24T02:09:04.124929+00:00
+생성 시각(UTC): 2026-07-24T08:27:55.654487+00:00
 
 ## 국내
 
@@ -18,12 +18,30 @@
 
 원문 링크: http://www.biztribune.co.kr/news/articleView.html?idxno=356148, https://www.donga.com/news/Economy/article/all/20260720/134331452/1, https://www.shinailbo.co.kr/news/articleView.html?idxno=5042524 외 17건
 
-### 연일 폭염에 축산농가 ‘비상’…가축 관리 총력
-- 점수: 11.40 / 언급 12건 (그룹 내 추가 12건 생략)
+### 당진시 “빗물 타고 유입될라”, 장마철 아프리카돼지열병 차단 총력
+- 점수: 10.00 / 언급 10건 (그룹 내 추가 9건 생략)
 
 (요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
 
-원문 링크: http://www.yonhapnewstv.co.kr/news/MYH20260722054209zWm, http://www.yonhapnewstv.co.kr/news/MYH20260721134426Uyc, http://www.yonhapnewstv.co.kr/news/MYH202607211148010Ux 외 10건
+원문 링크: http://www.breaknews.com/1224047, https://www.newstnt.com/news/articleView.html?idxno=711433, https://www.ccdn.co.kr/news/articleView.html?idxno=1089799 외 7건
+
+### 연일 폭염에 축산농가 ‘비상’…가축 관리 총력
+- 점수: 9.50 / 언급 11건 (그룹 내 추가 11건 생략)
+
+(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
+
+원문 링크: http://www.yonhapnewstv.co.kr/news/MYH20260722054209zWm, http://www.yonhapnewstv.co.kr/news/MYH20260721134426Uyc, http://www.yonhapnewstv.co.kr/news/MYH202607211148010Ux 외 9건
+
+### 충남도의회 농수산해양위, 축산·수산 현장서 도민 체감 정책 점검
+- 점수: 8.00 / 언급 8건 (그룹 내 추가 7건 생략)
+
+(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
+
+원문 링크: https://www.aflnews.co.kr/news/articleView.html?idxno=325126, http://www.breaknews.com/1224078, http://www.sisanews24.co.kr/19092 외 5건
+
+### 국내 - 카테고리별 Top N
+
+#### 질병명
 
 ### 당진시 “빗물 타고 유입될라”, 장마철 아프리카돼지열병 차단 총력
 - 점수: 10.00 / 언급 10건 (그룹 내 추가 9건 생략)
@@ -32,14 +50,14 @@
 
 원문 링크: http://www.breaknews.com/1224047, https://www.newstnt.com/news/articleView.html?idxno=711433, https://www.ccdn.co.kr/news/articleView.html?idxno=1089799 외 7건
 
-### 부여군, FTA 피해보전직불금 '염소고기' 신청
-- 점수: 9.00 / 언급 9건 (그룹 내 추가 8건 생략)
+#### 축종별 용어
+
+### 제주양돈농협, 소길리 어르신 건강한 여름나기 응원
+- 점수: 3.00 / 언급 3건 (그룹 내 추가 2건 생략)
 
 (요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
 
-원문 링크: https://www.ccdn.co.kr/news/articleView.html?idxno=1089390, https://www.ggilbo.com/news/articleView.html?idxno=1170479, https://www.aflnews.co.kr/news/articleView.html?idxno=324901 외 6건
-
-### 국내 - 카테고리별 Top N
+원문 링크: https://www.aflnews.co.kr/news/articleView.html?idxno=325025, https://www.newsjeju.net/news/articleView.html?idxno=423574, https://www.jejudomin.co.kr/news/articleView.html?idxno=320777
 
 #### 사료업계 특화 용어
 
@@ -53,29 +71,11 @@
 #### 무역/관세 이슈
 
 ### 부여군, FTA 피해보전직불금 '염소고기' 신청
-- 점수: 9.00 / 언급 9건 (그룹 내 추가 8건 생략)
+- 점수: 6.30 / 언급 9건 (그룹 내 추가 8건 생략)
 
 (요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
 
 원문 링크: https://www.ccdn.co.kr/news/articleView.html?idxno=1089390, https://www.ggilbo.com/news/articleView.html?idxno=1170479, https://www.aflnews.co.kr/news/articleView.html?idxno=324901 외 6건
-
-#### 축종별 용어
-
-### 제주양돈농협, 소길리 어르신 건강한 여름나기 응원
-- 점수: 3.00 / 언급 3건 (그룹 내 추가 2건 생략)
-
-(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
-
-원문 링크: https://www.aflnews.co.kr/news/articleView.html?idxno=325025, https://www.newsjeju.net/news/articleView.html?idxno=423574, https://www.jejudomin.co.kr/news/articleView.html?idxno=320777
-
-#### 질병명
-
-### 당진시 “빗물 타고 유입될라”, 장마철 아프리카돼지열병 차단 총력
-- 점수: 10.00 / 언급 10건 (그룹 내 추가 9건 생략)
-
-(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
-
-원문 링크: http://www.breaknews.com/1224047, https://www.newstnt.com/news/articleView.html?idxno=711433, https://www.ccdn.co.kr/news/articleView.html?idxno=1089799 외 7건
 
 #### 정부·제도 용어
 
@@ -98,7 +98,7 @@
 ## 해외
 
 ### 从 《 思想耀岭南 》 看县域富民产业发展 _ 南方网
-- 점수: 4.00 / 언급 4건 (그룹 내 추가 3건 생략)
+- 점수: 2.80 / 언급 4건 (그룹 내 추가 3건 생략)
 
 (요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
 
@@ -110,6 +110,13 @@
 (요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
 
 원문 링크: https://www.minyu-net.com/newspack/detail/2026072001000568, https://www.toonippo.co.jp/articles/-/2320934, http://www.shikoku-np.co.jp/national/life_topic/article.aspx?id=20260720000319
+
+### Ministro Padrino López y gremios ganaderos articulan acciones por la certificación del país libre de fiebre de aftosa
+- 점수: 2.00 / 언급 2건 (그룹 내 추가 1건 생략)
+
+(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
+
+원문 링크: https://www.eluniversal.com/economia/237899/ministro-padrino-lopez-y-gremios-ganaderos-articulan-acciones-por-la-certificacion-del-pais-libre, https://rnv.gob.ve/gobierno-y-gremios-ganaderos-articulan-acciones-por-la-certificacion-del-pais-libre-de-fiebre-de-aftosa/
 
 ### Peternak Ikan di Sungai Komering OKI Rugi Besar , 10 . 000 Bibit Cuma Tersisa 100 Ekor , Ini Penyebabnya
 - 점수: 2.00 / 언급 2건 (그룹 내 추가 1건 생략)
@@ -124,13 +131,6 @@
 (요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
 
 원문 링크: https://www.voria.gr/article/lagkarnt-oi-epiptoseis-toy-energeiakoy-sok-den-ehoyn-akomi-fanei, https://www.kathimerini.gr/economy/564362011/lagkarnt-o-energeiakos-logariasmos-den-echei-fanei-akomi/
-
-### 王煦棱 ： 升级转型若改善有效 槟政府无需聚焦关养猪场论光华日报 | 1910年创刊 创新每一天生活
-- 점수: 1.40 / 언급 2건 (그룹 내 추가 1건 생략)
-
-(요약 생략 - LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback))
-
-원문 링크: https://www.kwongwah.com.my/20260718/%E7%8E%8B%E7%85%A6%E6%A3%B1%EF%BC%9A%E5%8D%87%E7%BA%A7%E8%BD%AC%E5%9E%8B%E8%8B%A5%E6%94%B9%E5%96%84%E6%9C%89%E6%95%88-%E6%A7%9F%E6%94%BF%E5%BA%9C%E6%97%A0%E9%9C%80%E8%81%9A%E7%84%A6%E5%85%B3%E5%85%BB/, https://www.kwongwah.com.my/20260720/%E5%86%9C%E4%B8%9A%E9%83%A8%E7%A7%AF%E6%9E%81%E5%8D%8F%E8%B0%83%E5%85%BB%E7%8C%AA%E4%B8%9A%E8%AF%BE%E9%A2%98-%E7%BB%AD%E4%B8%8E%E4%B8%9A%E7%95%8C%E6%90%BA%E6%89%8B%E5%AF%BB%E5%B9%B3%E8%A1%A1/
 
 ### 해외 - 카테고리별 Top N
 
