@@ -58,7 +58,13 @@ CATEGORY_KEYWORDS = {
         "en": ['feed additive', 'antibiotic growth promoter', 'AGP', 'antimicrobial resistance', 'AMR', 'veterinary medicinal products', 'veterinary drugs', 'reduction of antibiotic use', 'antibiotic-free feed', 'Control of Livestock and Fish Feed Act', 'feed enzyme', 'probiotics', 'amino acid', 'lysine', 'methionine', 'feed supplement', 'phytase'],
     },
     "무역/관세 이슈": {
-        "kr": ['수입관세', '저율관세할당', '자유무역협정', '세이프가드', '원산지 표시', '검역협상', '무역분쟁', '수출금지', '수입금지', '시장접근', '교역제한'],
+        # 2026-07-24 추가: '할당관세' - 실제 축산물 관세 기사에서 압도적으로
+        # 많이 쓰이는 용어인데 누락돼 있었음(담당자가 naver_collector.py의
+        # 검색 키워드를 "축산물 수입관세"->"축산물 할당관세"로 바꾸면서
+        # 발견 - 검색 키워드는 고쳤는데 태깅 사전엔 이 단어가 없어서, 수집된
+        # 기사가 여전히 '기타'로 분류되는 걸 실측 확인함). 기존 '저율관세할당'
+        # 은 어순이 달라(저율+관세+할당) 부분 문자열로 '할당관세'를 못 잡음.
+        "kr": ['수입관세', '할당관세', '저율관세할당', '자유무역협정', '세이프가드', '원산지 표시', '검역협상', '무역분쟁', '수출금지', '수입금지', '시장접근', '교역제한'],
         "en": ['import tariff', 'tariff-rate quota', 'TRQ', 'Free Trade Agreement', 'FTA', 'safeguard measures', 'country-of-origin labeling', 'quarantine negotiations', 'trade dispute', 'export ban', 'import ban', 'market access', 'trade restriction'],
     },
     "가금 계열화/수직계열화": {
