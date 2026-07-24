@@ -70,6 +70,32 @@ def _is_recent(published_at: str, days: int) -> bool:
 MAX_START = 1000
 
 
+def _phrase_present(article: dict, keyword: str) -> bool:
+    """
+    2026-07-24 신규(담당자 지적으로 "축산물 수급" 노이즈 원인 재조사 후 추가).
+
+    네이버 뉴스 검색 API는 공백으로 구분된 검색어를 "정확한 문구"가 아니라
+    "각 단어의 AND"로 처리한다(이 프로젝트에서 이미 확인된 사실) - 예를 들어
+    "축산물 수급"을 검색하면 "축산물"이라는 단어와 "수급"이라는 단어가 같은
+    기사 안 어디에나 각각 등장하기만 해도 매칭된다. "수급"처럼 극도로
+    범용적인 단어(인력 수급/물량 수급/배우 수급 등 축산과 무관한 맥락에서도
+    흔히 쓰임)가 섞인 키워드는 이 방식 때문에 무관한 기사(프랜차이즈 기사,
+    영화 리뷰 등에 "축산물"과 "수급"이 각각 다른 맥락으로 우연히 같이
+    등장)가 섞여 들어오는 게 실측 확인됐음(2026-07-15 최초 발견, 2026-07-24
+    원인 규명).
+
+    검색어에 공백이 있는(여러 단어로 구성된) 키워드만, 실제로 그 문구가
+    제목+요약에 붙어서(인접해서) 등장하는지 재확인해서 걸러낸다. 단어
+    하나짜리 키워드는 애초에 AND로 인한 오탐 여지가 없으므로 항상 통과.
+    """
+    if " " not in keyword.strip():
+        return True
+    combined = f"{article.get('title', '')} {article.get('description', '')}"
+    combined_normalized = " ".join(combined.split())  # 연속 공백/줄바꿈 정리
+    keyword_normalized = " ".join(keyword.split())
+    return keyword_normalized in combined_normalized
+
+
 def collect() -> list[dict]:
     """
     KEYWORDS 리스트를 순서대로 돌면서 네이버 뉴스를 전부 수집한다.
@@ -115,7 +141,15 @@ def collect() -> list[dict]:
                         break
 
                     recent_in_page = [r for r in page if _is_recent(r["published_at"], DAYS_BACK)]
-                    keyword_results.extend(recent_in_page)
+                    # 2026-07-24 추가: AND 매칭 오탐 방지 필터 (_phrase_present
+                    # docstring 참고) - 여러 단어로 된 키워드만 대상, 걸러진
+                    # 건수는 로그로 남겨서 필터가 실제로 뭘 하는지 보이게 함.
+                    phrase_ok = [r for r in recent_in_page if _phrase_present(r, keyword)]
+                    filtered_out = len(recent_in_page) - len(phrase_ok)
+                    if filtered_out:
+                        print(f"[naver] '{keyword}' - 문구 인접성 필터로 {filtered_out}건 제외"
+                              f"(AND 매칭 오탐 방지, 2.3 참고)")
+                    keyword_results.extend(phrase_ok)
 
                     # 이 페이지의 마지막 항목 = 이 페이지 안에서 가장 오래된 기사
                     # (sort=date로 최신순 정렬돼 있으므로 항상 마지막이 제일 오래됨)

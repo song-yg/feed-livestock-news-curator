@@ -45,21 +45,26 @@ scorer.split_domestic_international()을 그대로 재사용해서 두 축을 �
 이 프로젝트 전체가 "종합 랭킹 없음, 국내/해외 각자 원본 신호 보존"
 원칙(3.2)이라 이 지표만 예외로 통합하면 다른 결과물과 앞뒤가 안 맞는다.
 
-** 지난주 대비 증감: 이번 범위 밖 (2026-07-14 결정) **
-저장 레이어(5번 섹션, 아직 미구현)가 있어야 "지난주 값"을 가져올 데이터가
-생기므로, 이번엔 "이번 주 집계"까지만 구현한다. 저장 레이어 완성 후
-data/YYYY-WW/scored.json 등에서 지난주 파일을 읽어와 비교하는 기능을
-별도로 붙일 것 (11번 섹션 아이디어 1번과 같은 계열 작업 - 함께 붙이면
-자연스러움).
+** 지난주 대비 증감: 구현 완료 (2026-07-25) **
+저장 레이어(storage.py)가 2026-07-23에 구현 완료되면서 "지난주 값"을
+가져올 데이터가 생겨, compare_with_last_week()/print_aggregate_with_
+comparison()으로 구현했다(아래 함수 정의부 docstring 참고). 비교 대상은
+category_distribution(카테고리별 단순 건수) - 이슈(Top N) 단위 비교는
+그룹 매칭이 까다로워 범위 밖으로 유지(담당자 논의로 결정).
 """
 
+import json
+import os
 from collections import Counter
+
 from keyword_tagger import CATEGORY_KEYWORDS
 import scorer
+import storage
 
 
-# CATEGORY_KEYWORDS의 카테고리 순서 그대로 + "기타"를 마지막에 추가해서 출력 순서를 고정한다.
-# (키워드표 카테고리 번호 순 - keyword_tagger.py의 동점 처리 결정적 규칙과 같은 이유: 실행마다 순서가 흔들리지 않도록)
+# CATEGORY_KEYWORDS의 카테고리 순서 그대로 + "기타"를 마지막에 추가해서
+# 출력 순서를 고정한다 (키워드표 카테고리 번호 순 - keyword_tagger.py의
+# 동점 처리 결정적 규칙과 같은 이유: 실행마다 순서가 흔들리지 않도록)
 _CATEGORY_ORDER = list(CATEGORY_KEYWORDS.keys()) + ["기타"]
 
 
@@ -67,8 +72,9 @@ def count_by_category(articles: list[dict]) -> Counter:
     """
     기사 리스트 하나를 받아 카테고리별 건수를 센다.
 
-    articles는 keyword_tagger.tag_articles()가 이미 "category" 필드를v채워둔 상태여야 한다.
-    (2.2 태깅이 먼저 실행돼 있어야 함 - 이 함수 자체는 태깅을 하지 않고, 이미 붙어있는 category 필드만 집계한다).
+    articles는 keyword_tagger.tag_articles()가 이미 "category" 필드를
+    채워둔 상태여야 한다 (2.2 태깅이 먼저 실행돼 있어야 함 - 이 함수 자체는
+    태깅을 하지 않고, 이미 붙어있는 category 필드만 집계한다).
     """
     return Counter(a.get("category", "기타") for a in articles)
 
@@ -78,7 +84,8 @@ def aggregate(articles: list[dict]) -> dict[str, Counter]:
     3.1 원칙대로 국내/해외 두 축으로 나눠서 각각 카테고리별 건수를 집계한다.
 
     반환값: {"국내": Counter, "해외": Counter}
-    (scorer.split_domestic_international과 동일한 축 정의 - 네이버=국내, WATT/GDELT=해외)
+    (scorer.split_domestic_international과 동일한 축 정의 - 네이버=국내,
+    WATT/GDELT=해외)
     """
     domestic, international = scorer.split_domestic_international(articles)
     return {
@@ -107,6 +114,95 @@ def print_aggregate(aggregated: dict[str, Counter]) -> None:
                 continue
             pct = count / total * 100
             print(f"  {category:15s} {count:4d}건 ({pct:.1f}%)")
+
+
+# ---------------------------------------------------------------------------
+# 지난주 대비 증감 (2026-07-25 신규 구현 - 모듈 docstring "지난주 대비 증감:
+# 이번 범위 밖" 문단에 예고해뒀던 자리를 채움. 저장 레이어(storage.py)가
+# 2026-07-23에 구현 완료돼서, 이제 지난주 scored.json을 읽어올 수 있음.)
+# ---------------------------------------------------------------------------
+
+def compare_with_last_week(current: dict[str, Counter], base_dir: str = "data",
+                            reference=None) -> dict[str, dict[str, dict]] | None:
+    """
+    이번 주 카테고리 집계(aggregate()의 반환값)를 지난주 scored.json의
+    category_distribution과 비교한다.
+
+    비교 대상을 category_distribution(카테고리별 단순 건수)으로 정한 이유:
+    이 값이 애초에 "다음 주 실행에서 지난주 대비 증감을 계산하려면 지난주
+    집계 결과가 파일로 남아있어야 한다"는 목적으로 저장돼온 데이터라
+    (storage.save_scored docstring 참고) 가장 자연스러운 1차 비교 대상.
+    이슈(Top N) 단위 비교("이 이슈가 지난주에도 있었나")는 그룹 매칭이 훨씬
+    까다로워서(제목이 매주 조금씩 다름, 그룹핑 자체가 매주 새로 돎) 범위
+    밖으로 남겨둠(담당자 논의로 결정).
+
+    지난주 파일이 없으면(첫 실행, 혹은 지난주 저장이 실패했던 경우) 예외를
+    던지지 않고 None을 반환한다 - 호출부가 이걸 보고 "지난주 데이터 없음"
+    으로 안전하게 표시하면 됨(9.4/9.5 원칙과 같은 방향).
+
+    반환값 (지난주 데이터가 있는 경우):
+      {"국내": {카테고리: {"this_week": int, "last_week": int, "delta": int}, ...},
+       "해외": {...}}
+    두 주 중 어느 한쪽에만 등장한 카테고리도 전부 포함(없는 쪽은 0으로 취급).
+    """
+    path = os.path.join(storage.previous_week_dir(base_dir, reference), "scored.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            last_week_payload = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError) as e:
+        print(f"[category_aggregator] 지난주 데이터 없음/읽기 실패({path}) - "
+              f"증감 비교 생략: {type(e).__name__}")
+        return None
+
+    last_week_distribution = last_week_payload.get("category_distribution", {})
+
+    comparison = {}
+    for axis in ("국내", "해외"):
+        this_counter = current.get(axis, Counter())
+        last_counter = last_week_distribution.get(axis, {})
+        categories = set(this_counter) | set(last_counter)
+        axis_result = {}
+        for category in categories:
+            this_count = this_counter.get(category, 0)
+            last_count = last_counter.get(category, 0)
+            axis_result[category] = {
+                "this_week": this_count,
+                "last_week": last_count,
+                "delta": this_count - last_count,
+            }
+        comparison[axis] = axis_result
+
+    return comparison
+
+
+def print_aggregate_with_comparison(aggregated: dict[str, Counter],
+                                     comparison: dict[str, dict[str, dict]] | None) -> None:
+    """
+    print_aggregate()와 같은 표를 만들되, comparison이 있으면(지난주 데이터가
+    있으면) 각 줄에 지난주 대비 증감을 같이 붙인다. comparison이 None이면
+    print_aggregate()와 동일하게 동작(증감 표시 없이).
+    """
+    for axis in ("국내", "해외"):
+        counter = aggregated.get(axis, Counter())
+        total = sum(counter.values())
+        suffix = "" if comparison is None else ", 지난주 대비"
+        print(f"\n=== 카테고리 집계 - {axis} (전체 {total}건{suffix}) ===")
+        if total == 0:
+            print("  (기사 없음)")
+            continue
+        axis_comparison = None if comparison is None else comparison.get(axis, {})
+        for category in _CATEGORY_ORDER:
+            count = counter.get(category, 0)
+            if count == 0:
+                continue
+            pct = count / total * 100
+            line = f"  {category:15s} {count:4d}건 ({pct:.1f}%)"
+            if axis_comparison is not None and category in axis_comparison:
+                delta = axis_comparison[category]["delta"]
+                last_count = axis_comparison[category]["last_week"]
+                sign = "+" if delta >= 0 else ""
+                line += f" [지난주 {last_count}건, {sign}{delta}]"
+            print(line)
 
 
 if __name__ == "__main__":

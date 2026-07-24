@@ -36,7 +36,27 @@ titles/urls/press_list/summary 등 요약된 필드만 남긴다.
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+
+def previous_week_dir(base_dir: str = "data", reference: datetime | None = None) -> str:
+    """
+    2026-07-25 신규("지난주 대비 증감" 기능용). 지난주의 'data/YYYY-WW'
+    경로를 계산만 해서 반환한다 - week_dir()과 달리 존재 여부와 무관하게
+    경로 문자열만 계산하고, 디렉토리를 만들지도 않는다(읽기 전용 조회
+    용도라 없는 경로를 새로 만들 이유가 없음 - 있으면 읽고, 없으면 호출부가
+    "지난주 데이터 없음"으로 처리).
+
+    지난주 계산은 "오늘 날짜 - 7일"의 ISO 주차를 그대로 쓴다 - 연도
+    경계(예: 올해 1주차의 지난주 = 작년 마지막 주차)도 날짜 뺄셈이
+    자연스럽게 처리해줘서, 주차 번호를 직접 -1 해서 계산하는 것보다
+    안전하다(직접 계산은 "1주차 - 1 = 0주차"처럼 존재하지 않는 값이
+    나올 위험이 있음).
+    """
+    now = reference or datetime.now(timezone.utc)
+    last_week = now - timedelta(weeks=1)
+    iso = last_week.isocalendar()
+    return os.path.join(base_dir, f"{iso.year}-{iso.week:02d}")
 
 
 def week_dir(base_dir: str = "data", reference: datetime | None = None) -> str | None:
@@ -193,11 +213,38 @@ def _format_category_sections(by_category: dict[str, list[dict]]) -> list[str]:
     return lines
 
 
+def _format_category_comparison_section(category_comparison: dict[str, dict[str, dict]] | None) -> list[str]:
+    """
+    2026-07-25 신규. category_aggregator.compare_with_last_week()의 결과를
+    summary.md용 마크다운 줄 리스트로 만든다. 콘솔의
+    category_aggregator.print_aggregate_with_comparison()과 같은 정보를
+    담는다 - 이슈 목록보다 위, 문서 맨 앞부분에 배치해서 "이번 주 큰 흐름"을
+    먼저 보여주는 구성.
+
+    category_comparison이 None이면(지난주 데이터 없음) 빈 리스트 반환 -
+    호출부가 이 경우 섹션 자체를 아예 안 넣도록.
+    """
+    if not category_comparison:
+        return []
+    lines = ["\n## 카테고리별 지난주 대비 증감"]
+    for axis in ("국내", "해외"):
+        axis_data = category_comparison.get(axis, {})
+        if not axis_data:
+            continue
+        lines.append(f"\n### {axis}")
+        for category, values in axis_data.items():
+            delta = values["delta"]
+            sign = "+" if delta >= 0 else ""
+            lines.append(f"- {category}: {values['this_week']}건 (지난주 {values['last_week']}건, {sign}{delta})")
+    return lines
+
+
 def save_summary_md(directory: str, week_label: str, domestic_summarized: list[dict],
                      international_summarized: list[dict],
                      domestic_by_category: dict[str, list[dict]],
                      international_by_category: dict[str, list[dict]],
-                     failed_sources: list[str]) -> str | None:
+                     failed_sources: list[str],
+                     category_comparison: dict[str, dict[str, dict]] | None = None) -> str | None:
     """
     사람이 바로 읽을 배포용 요약본. llm_summarizer.print_summaries와 같은
     내용을 마크다운 파일로 남긴다(9.4 안전장치 - 요약 유무와 무관하게 원문
@@ -214,10 +261,16 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
     제목(###)과도 겹치지 않게 구분). 카테고리가 하나도 없으면(이번 주 그
     축에 "기타" 아닌 카테고리 이슈가 전혀 없었던 경우) 하위 섹션 자체를
     생략한다.
+
+    2026-07-25 신규: category_comparison(카테고리별 지난주 대비 증감,
+    category_aggregator.compare_with_last_week() 결과)이 있으면 문서 맨
+    앞(생성 시각 바로 다음)에 "카테고리별 지난주 대비 증감" 섹션을 추가한다.
+    None(지난주 데이터 없음)이면 섹션 자체를 생략 - 예전 문서 형태와 동일.
     """
     lines = [f"# 사료·축산업 뉴스 큐레이션 - {week_label}", ""]
     lines.append(f"생성 시각(UTC): {datetime.now(timezone.utc).isoformat()}")
     lines.append("")
+    lines.extend(_format_category_comparison_section(category_comparison))
 
     lines.append("## 국내")
     if domestic_summarized:
@@ -262,6 +315,7 @@ def save_week(articles: list[dict], domestic_summarized: list[dict],
               domestic_by_category: dict[str, list[dict]],
               international_by_category: dict[str, list[dict]],
               gdelt_timeline: dict, failed_sources: list[str], category_distribution: dict,
+              category_comparison: dict[str, dict[str, dict]] | None = None,
               base_dir: str = "data") -> str | None:
     """
     main.py에서 부르는 단일 진입점. raw.json/scored.json/summary.md를 한
@@ -293,7 +347,7 @@ def save_week(articles: list[dict], domestic_summarized: list[dict],
         "summary.md": save_summary_md(directory, week_label, domestic_summarized,
                                        international_summarized,
                                        domestic_by_category, international_by_category,
-                                       failed_sources),
+                                       failed_sources, category_comparison),
     }
 
     succeeded = [name for name, path in saved.items() if path is not None]

@@ -194,21 +194,57 @@ def _is_korean_title(title: str, threshold: float = 0.2) -> bool:
     return (hangul_count / non_space_count) >= threshold
 
 
+def _is_korean_gdelt_article(article: dict) -> bool:
+    """
+    2026-07-25 이동(원래 main.py에 있던 함수 - scorer.py로 옮겨서 main.py의
+    score()와 scorer.split_domestic_international() 둘 다 이 하나만 쓰도록
+    통일함. 담당자가 "지난주 대비 증감" 기능 설계 중, category_aggregator.py
+    가 아직도 예전 방식(_is_korean_title만 사용)인 split_domestic_
+    international()을 통해 카테고리 집계를 내고 있어서 Top N 스코어링과
+    카테고리 집계 숫자가 서로 다른 기준으로 국내/해외를 나누고 있던 걸
+    발견 - 두 군데가 각자 복사본을 갖고 따로 갱신되는 구조 자체가 문제의
+    원인이라, 이 함수 하나로 합침.
+
+    2026-07-23 최초 작성 당시 설명: GDELT 소스 기사가 실제로 한국어(국내)
+    기사인지 판단한다. 처음엔 _is_korean_title()(제목의 한글 유니코드 비율)
+    만 썼는데, raw.json을 직접 열어보다가 GDELT 응답에 이미 "language":
+    "Korean" 같은 필드가 자체적으로 붙어 있는 걸 발견함(담당자 발견) - GDELT가
+    크롤링 시점에 이미 판별해둔 원본 신호라, 제목 글자를 세어 우리가 다시
+    추측하는 것보다 훨씬 신뢰도가 높음. language 필드가 있으면 그걸 우선
+    쓰고, 없는 경우(예: 이 필드가 비어있는 응답이 실제로 관측됨, raw.json
+    "쯔양" 기사 중 하나가 sourcecountry는 빈 문자열이었던 사례 참고)에만
+    기존 글자 세기 방식으로 안전하게 fallback한다.
+    """
+    language = article.get("language")
+    if language:
+        return language == "Korean"
+    return _is_korean_title(article.get("title", ""))
+
+
 def split_domestic_international(articles: list[dict]) -> tuple[list[dict], list[dict]]:
     """
     3.1 "국내/해외 개별 집계" 축 분리. 네이버 = 국내, WATT/GDELT = 해외
     (알고리즘 문서 1번 섹션 소스 표 기준).
 
-    2026-07-22 예외 추가: GDELT로 수집됐지만 제목이 한국어인 기사는 "해외"가
-    아니라 "국내"로 재분류한다(`_is_korean_title` 참고) - WATT는 원래
-    영어권 업계지라 이 문제가 없어 GDELT 소스에만 적용.
+    2026-07-22 예외 추가, 2026-07-25 개선: GDELT로 수집됐지만 실제로는
+    한국어(국내) 기사인 경우 "해외"가 아니라 "국내"로 재분류한다
+    (`_is_korean_gdelt_article` 참고 - GDELT의 language 필드를 우선 쓰고
+    없을 때만 글자 비율 추정으로 fallback). WATT는 원래 영어권 업계지라
+    이 문제가 없어 GDELT 소스에만 적용.
+
+    2026-07-25 수정: 예전엔 이 함수가 `_is_korean_title`(글자 비율 추정만)
+    을 썼는데, main.py의 score()는 이미 더 정확한 `_is_korean_gdelt_article`
+    (language 필드 우선)을 쓰고 있어서 Top N 스코어링과 이 함수를 쓰는
+    category_aggregator.py의 카테고리 집계가 서로 다른 기준으로 국내/해외를
+    나누는 불일치가 있었음(담당자 지적으로 발견) - 이 함수도 동일하게
+    맞춤.
     """
     domestic = []
     international = []
     for a in articles:
         if a.get("source") == "네이버":
             domestic.append(a)
-        elif a.get("source") == "GDELT" and _is_korean_title(a.get("title", "")):
+        elif a.get("source") == "GDELT" and _is_korean_gdelt_article(a):
             domestic.append(a)
         else:
             international.append(a)

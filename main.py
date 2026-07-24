@@ -161,24 +161,6 @@ def normalize(articles: list[dict]) -> list[dict]:
 # 3) 스코어링 (섹션 3) - scorer.py 그대로 사용
 # ---------------------------------------------------------------------------
 
-def _is_korean_gdelt_article(article: dict) -> bool:
-    """
-    2026-07-23 개선: GDELT 소스 기사가 실제로 한국어(국내) 기사인지 판단한다.
-    처음엔 scorer._is_korean_title()(제목의 한글 유니코드 비율)만 썼는데,
-    raw.json을 직접 열어보다가 GDELT 응답에 이미 "language": "Korean" 같은
-    필드가 자체적으로 붙어 있는 걸 발견함(담당자 발견) - GDELT가 크롤링
-    시점에 이미 판별해둔 원본 신호라, 제목 글자를 세어 우리가 다시 추측하는
-    것보다 훨씬 신뢰도가 높음. language 필드가 있으면 그걸 우선 쓰고,
-    없는 경우(예: 이 필드가 비어있는 응답이 실제로 관측됨, 위 raw.json
-    "쯔양" 기사 중 하나가 sourcecountry는 빈 문자열이었던 사례 참고)에만
-    기존 글자 세기 방식으로 안전하게 fallback한다.
-    """
-    language = article.get("language")
-    if language:
-        return language == "Korean"
-    return scorer._is_korean_title(article.get("title", ""))
-
-
 def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list[dict], dict, dict]:
     """
     2.1 이슈 그룹핑(issue_grouper.group_issues) + 3.1/3.2 국내/해외 개별 랭킹(Top N)까지 수행.
@@ -240,12 +222,12 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
         domestic_part = [
             a for a in group
             if a.get("source") == "네이버"
-            or (a.get("source") == "GDELT" and _is_korean_gdelt_article(a))
+            or (a.get("source") == "GDELT" and scorer._is_korean_gdelt_article(a))
         ]
         international_part = [
             a for a in group
             if a.get("source") != "네이버"
-            and not (a.get("source") == "GDELT" and _is_korean_gdelt_article(a))
+            and not (a.get("source") == "GDELT" and scorer._is_korean_gdelt_article(a))
         ]
         if domestic_part and international_part:
             # 2026-07-25 구현(3.2 "국내-해외 교차 매칭 🔗", 담당자 요청) -
@@ -403,13 +385,18 @@ def run() -> None:
     scorer.print_category_top_n("국내", domestic_category_ranked, n=CATEGORY_TOP_N)
     scorer.print_category_top_n("해외", international_category_ranked, n=CATEGORY_TOP_N)
 
-    print("\n=== [3-보조] 카테고리 전체 집계 (국내/해외, 2026-07-14 신규) ===")
+    print("\n=== [3-보조] 카테고리 전체 집계 (국내/해외, 2026-07-14 신규 / 2026-07-25 지난주 대비 증감 추가) ===")
     # 2.1 이슈 그룹핑이 "동일 사건만" 묶는 좁은 정의라 큰 트렌드가 개별
     # 이슈로 흩어져 보이는 공백을 메우는 거친(coarse) 보조 지표 - 순위(Top N)와는
     # 별개로, 카테고리 자체가 이번 주 몇 건 다뤄졌는지만 보여준다.
     # (category_aggregator.py 모듈 docstring 참고)
     category_distribution = category_aggregator.aggregate(articles)
-    category_aggregator.print_aggregate(category_distribution)
+    # 2026-07-25 추가: 지난주 scored.json이 있으면 카테고리별 증감을 같이
+    # 보여준다. 지난주 데이터가 없으면(첫 실행 등) compare_with_last_week가
+    # 안전하게 None을 반환하고, 아래 출력 함수는 그 경우 증감 없이 예전과
+    # 동일하게 출력한다(category_aggregator.py 함수 docstring 참고).
+    category_comparison = category_aggregator.compare_with_last_week(category_distribution)
+    category_aggregator.print_aggregate_with_comparison(category_distribution, category_comparison)
 
     # 4~6단계
     print("\n=== [4] LLM 요약 생성 (상위 이슈, 국내/해외 각각) ===")
@@ -435,7 +422,8 @@ def run() -> None:
     try:
         saved_dir = storage.save_week(articles, domestic_summarized, international_summarized,
                                        domestic_category_summarized, international_category_summarized,
-                                       gdelt_timeline, failed_sources, category_distribution)
+                                       gdelt_timeline, failed_sources, category_distribution,
+                                       category_comparison)
     except Exception as e:
         print(f"[main] 저장 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
               f"{type(e).__name__} - {e!r}")
@@ -450,7 +438,7 @@ def run() -> None:
         week_label = os.path.basename(saved_dir) if saved_dir else datetime.now(timezone.utc).strftime("%G-%V")
         deploy.send_weekly_email(week_label, domestic_summarized, international_summarized,
                                   domestic_category_summarized, international_category_summarized,
-                                  failed_sources)
+                                  failed_sources, category_comparison)
     except Exception as e:
         print(f"[main] 배포 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
               f"{type(e).__name__} - {e!r}")

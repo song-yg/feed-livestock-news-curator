@@ -1,211 +1,353 @@
 """
-deploy.py - 6단계 배포 레이어 (2026-07-24 신규 구현).
+scorer.py
+"3. 언급빈도 x 최신가중치 계산 (Scoring)" 담당 모듈.
+(알고리즘 문서 "3. 언급빈도 x 최신가중치 계산" 참조)
 
-Gmail SMTP로 이번 주 큐레이션 결과를 HTML 이메일로 발송한다. main.py의
-_step6_deploy_todo() 자리에 이 모듈의 send_weekly_email()을 연결한다.
+이 레이어는 순수 계산만 한다 - LLM 안 씀 (문서에 "이 레이어도 LLM 안 씀. 순수
+계산." 이라고 3.2 끝에 명시돼 있음).
 
-** Gmail SMTP를 선택한 이유 (담당자 논의, 2026-07-24) **
-SendGrid/Mailgun 같은 무료 트랜잭션 이메일 API는 도메인 인증(SPF/DKIM)
-없이 기본 발신 주소로 보내면 스팸함으로 분류될 확률이 높음 - 이제 막 만든
-발신자라 평판이 전혀 없는 상태로 시작하기 때문. Gmail SMTP는 실제 Gmail
-계정에서 Gmail 서버를 통해 보내는 거라 SPF/DKIM이 자동으로 유효하고
-발신처 신뢰도도 이미 높아 이 문제가 훨씬 덜함 - 특히 지금처럼 수신자가
-소수(테스트 단계엔 담당자 본인 메일 하나)일 때는 도메인 설정 같은 번거로운
-과정 없이 바로 쓸 수 있는 쪽이 낫다고 판단.
+** 중요 - 2.1 이슈 그룹핑과의 의존 관계 **
+이 모듈의 함수들은 전부 "이슈 그룹"(같은 사건을 다루는 기사 묶음, list[dict])을
+입력으로 받도록 설계했다 - issue_score 공식 자체가 "그룹 내 기사 각각 계산 후
+합산"이기 때문에(3번 섹션 수식 참조) 애초에 그룹 단위가 자연스러운 입력이다.
 
-** 인증정보 관리 **
-GitHub Secrets(민감정보라 Variables 아님)에서 읽는다:
-  SMTP_USER          발신용 Gmail 주소
-  SMTP_APP_PASSWORD  Gmail 앱 비밀번호(일반 로그인 비밀번호 아님)
-  EMAIL_RECIPIENTS   수신자 이메일, 콤마로 구분(지금은 담당자 본인 메일 1개)
-
-** 콘텐츠 구성 **
-storage.py가 이미 만들어둔 domestic_summarized/international_summarized/
-domestic_by_category/international_by_category(scored.json과 동일한
-데이터)를 그대로 받아서 summary.md와 같은 구조(9.4 안전장치 - 요약 유무와
-무관하게 원문 링크는 항상 같이 노출)로 HTML을 렌더링한다. 이메일 클라이언트는
-외부 스타일시트를 지원 안 하는 경우가 많아 인라인 스타일만 사용.
-
-** 안전 실패 원칙 **
-storage.py와 같은 방향 - 이메일 발송이 실패해도(SMTP 인증 오류, 네트워크
-문제 등) 예외를 그대로 던지지 않고 로그만 남기고 조용히 실패한다. 이 시점엔
-이미 수집/스코어링/요약/저장이 다 끝난 뒤라, 배포 하나 실패했다고 전체
-실행을 죽이면 안 된다는 판단(9.1 원칙과 같은 방향).
+문제는 2.1(BGE-M3 임베딩 기반 이슈 그룹핑)이 아직 구현 전이라, 지금 당장은
+"진짜 이슈 그룹"을 넘겨줄 수 있는 곳이 없다는 것. 그래서 임시로
+`to_singleton_groups()`를 하나 만들어 "기사 1건 = 그룹 1개"로 취급하게 했다.
+이렇게 하면:
+  - recency_weight, issue_score 계산 로직 자체는 지금 바로 검증 가능
+  - 3.2의 "동일 언론사 도배 dedup"은 그룹 크기가 항상 1이라 사실상 작동할
+    일이 없음(도배가 성립하려면 같은 그룹 안에 같은 언론사 기사가 여러 건
+    있어야 하는데, 지금은 애초에 그룹이 기사 1건뿐이라 캡에 걸릴 대상이 없음)
+  - 3.2의 국내-해외 교차 매칭 🔗 태그는 2026-07-25 구현 완료(score_group의
+    cross_axis_partner 필드, main.py의 score()가 채워줌 - 상세는 score_group
+    docstring 참고)
+2.1이 실제로 붙으면 `to_singleton_groups` 대신 진짜 그룹 리스트를 넘기기만
+하면 되고, score_group/score_and_rank 쪽 로직은 바꿀 필요 없다.
 """
 
-import html
-import os
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
 
 
-def _escape(value) -> str:
-    return html.escape(str(value))
+# --- recency_weight: 계단형(문턱 함수) 가중치, 3번 섹션 표 그대로 ---
+#
+# 문서에 "나중에 담당자가 값을 조정할 때, 수식 이해 없이 표의 숫자만 바꾸면
+# 되도록" 계단형으로 확정했다고 명시돼 있음 - 이 표만 수정하면 조정 가능.
+RECENCY_WEIGHT_TABLE = [
+    # (경과일수 상한(포함), weight)  - 순서대로 검사, 마지막 항목이 "8일 이상"
+    (2, 1.0),
+    (5, 0.7),
+    (7, 0.4),
+]
+RECENCY_WEIGHT_DEFAULT = 0.1  # 8일 이상
 
 
-def _format_issue_html(item: dict) -> str:
-    """이슈 하나 분량의 HTML 블록. summary.md의 _format_issue_section과 같은 정보를 담는다."""
-    titles = item.get("titles", [])
-    rep_title = titles[0] if titles else "(제목 없음)"
-    extra = f" (그룹 내 추가 {len(titles) - 1}건 생략)" if len(titles) > 1 else ""
+def recency_weight(days_elapsed: int) -> float:
+    """발행일로부터 경과일수에 따른 계단형 가중치 (3번 섹션 표/코드 그대로 이식)."""
+    for max_days, weight in RECENCY_WEIGHT_TABLE:
+        if days_elapsed <= max_days:
+            return weight
+    return RECENCY_WEIGHT_DEFAULT
 
-    cross_html = ""
-    if item.get("cross_axis_partner"):
-        # 2026-07-25 추가(3.2 "국내-해외 교차 매칭 🔗" 구현)
-        cross_html = (f'<p style="margin:2px 0 4px 0; font-size:12px; color:#1a73e8;">'
-                      f'🔗 반대 축에서도 다뤄짐: {_escape(item["cross_axis_partner"])}</p>')
 
-    if item.get("summary"):
-        body_html = f'<p style="margin:4px 0 8px 0; color:#333; font-size:13px; line-height:1.5;">{_escape(item["summary"])}</p>'
-    else:
-        reason = item.get("summary_skipped_reason", "사유 불명")
-        body_html = (f'<p style="margin:4px 0 8px 0; color:#999; font-size:12px; font-style:italic;">'
-                     f'(요약 생략 - {_escape(reason)})</p>')
-
-    urls = item.get("urls", [])
-    shown = urls[:3]
-    more = f" 외 {len(urls) - 3}건" if len(urls) > 3 else ""
-    links_html = ""
-    if shown:
-        link_tags = ", ".join(f'<a href="{_escape(u)}" style="color:#1a73e8; text-decoration:none;">원문</a>' for u in shown)
-        links_html = f'<p style="margin:0; font-size:12px; color:#888;">원문 링크: {link_tags}{more}</p>'
-
-    return f"""
-    <div style="margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #eee;">
-      <p style="margin:0; font-weight:bold; font-size:14px; color:#111;">{_escape(rep_title)}</p>
-      <p style="margin:2px 0 4px 0; font-size:12px; color:#aaa;">점수 {item.get('issue_score', 0):.2f} / 언급 {item.get('mention_count', 0)}건{extra}</p>
-      {cross_html}
-      {body_html}
-      {links_html}
-    </div>
+def _days_elapsed(published_at: str, reference: datetime | None = None) -> int:
     """
-
-
-def _format_section_html(title: str, items: list[dict]) -> str:
-    if not items:
-        return f'<h3 style="font-size:16px; color:#222; margin:20px 0 8px 0;">{_escape(title)}</h3><p style="color:#999; font-size:13px;">(이번 주 이슈 없음)</p>'
-    body = "".join(_format_issue_html(item) for item in items)
-    return f'<h3 style="font-size:16px; color:#222; margin:20px 0 8px 0;">{_escape(title)}</h3>{body}'
-
-
-def _format_category_html(label: str, by_category: dict[str, list[dict]]) -> str:
-    if not by_category:
-        return ""
-    blocks = []
-    for category, items in by_category.items():
-        blocks.append(f'<h4 style="font-size:13px; color:#555; margin:14px 0 6px 0;">[{_escape(category)}]</h4>')
-        blocks.append("".join(_format_issue_html(item) for item in items))
-    return f'<h3 style="font-size:16px; color:#222; margin:24px 0 8px 0;">{_escape(label)} - 카테고리별 Top N</h3>{"".join(blocks)}'
-
-
-def render_email_html(week_label: str, domestic_summarized: list[dict], international_summarized: list[dict],
-                       domestic_by_category: dict[str, list[dict]],
-                       international_by_category: dict[str, list[dict]],
-                       failed_sources: list[str]) -> str:
+    published_at(ISO 8601 문자열)과 기준 시각(reference, 기본값 지금) 사이의
+    경과일수를 정수로 반환한다. 음수(미래 날짜 등 이상치)는 0으로 clamp.
     """
-    scored.json과 동일한 데이터를 받아 이메일 본문(HTML 문자열)을 만든다.
-    summary.md(storage.py)와 콘텐츠 구성은 같고 렌더링 형식만 HTML로 다르다.
+    pub_dt = datetime.fromisoformat(published_at)
+    ref = reference if reference is not None else datetime.now(pub_dt.tzinfo or timezone.utc)
+    if pub_dt.tzinfo is None:
+        pub_dt = pub_dt.replace(tzinfo=timezone.utc)
+    delta_days = (ref - pub_dt).days
+    return max(0, delta_days)
+
+
+# --- 동일 언론사 도배 dedup (3.2) ---
+#
+# "같은 언론사가 같은 이슈를 반복 게재하는 경우만 mention_count 집계에서
+# 제한한다 (예: 언론사당 상위 N건까지만 카운트). 서로 다른 언론사가 각자
+# 취재해서 다루는 경우는 캡을 걸지 않고 원본 그대로 반영"
+PRESS_DEDUP_CAP = 3  # 언론사당 그룹 내 최대 카운트 (정확한 수치는 미확정 - 잠정값)
+
+
+def _press_of(article: dict) -> str:
     """
-    parts = [
-        '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Arial, sans-serif; '
-        'max-width:640px; margin:0 auto; padding:20px; color:#333;">',
-        f'<h2 style="font-size:20px; margin:0 0 4px 0;">사료·축산업 뉴스 큐레이션 - {_escape(week_label)}</h2>',
-    ]
-
-    parts.append(_format_section_html("국내", domestic_summarized))
-    parts.append(_format_category_html("국내", domestic_by_category))
-    parts.append(_format_section_html("해외", international_summarized))
-    parts.append(_format_category_html("해외", international_by_category))
-
-    if failed_sources:
-        parts.append(
-            f'<p style="margin-top:24px; font-size:12px; color:#c0392b;">'
-            f'참고 - 이번 실행에서 실패한 소스: {_escape(", ".join(failed_sources))}</p>'
-        )
-
-    parts.append("</div>")
-    return "".join(parts)
-
-
-def send_email(html_content: str, subject: str, recipients: list[str],
-               smtp_user: str, smtp_app_password: str) -> bool:
+    언론사 식별자를 꺼낸다. naver/gdelt는 "press"(도메인) 필드가 이미 있고,
+    WATT는 "press" 필드가 없는 대신 "source"(예: "WATTAgNet")가 사실상
+    언론사 역할을 한다 - 사이트 자체가 하나의 매체이므로 source를 대체값으로 씀.
     """
-    Gmail SMTP(587, STARTTLS)로 HTML 이메일을 보낸다. 성공하면 True, 실패하면
-    (예외를 던지지 않고) False를 반환한다 - 호출부가 이 결과로 로그만 남기고
-    계속 진행할 수 있게.
-    """
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = smtp_user
-    msg["To"] = ", ".join(recipients)
-    msg.attach(MIMEText(html_content, "html", "utf-8"))
+    return article.get("press") or article.get("source") or "(미상)"
 
-    try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_app_password)
-            server.sendmail(smtp_user, recipients, msg.as_string())
-    except (smtplib.SMTPException, OSError) as e:
-        print(f"[deploy] 이메일 발송 실패: {type(e).__name__} - {e}")
+
+def dedup_group_by_press(group: list[dict], cap: int = PRESS_DEDUP_CAP) -> list[dict]:
+    """
+    그룹(같은 이슈로 묶인 기사들) 안에서, 같은 언론사 기사가 cap건을 넘으면
+    그 언론사 몫만 잘라낸다. 어떤 기사를 남길지는 최신순(발행일 내림차순)으로
+    정렬해 앞에서부터 cap개만 유지 - 오래된 반복 게재보다 최근 것을 우선함.
+
+    서로 다른 언론사는 캡을 걸지 않는다 (3.2 원칙 - "서로 다른 언론사가 각자
+    취재해서 다루는 경우는... 원본 그대로 반영, 이게 실제 화제성 신호이기 때문")
+    """
+    by_press: dict[str, list[dict]] = defaultdict(list)
+    for article in group:
+        by_press[_press_of(article)].append(article)
+
+    kept = []
+    for press, press_articles in by_press.items():
+        press_articles.sort(key=lambda a: a.get("published_at", ""), reverse=True)
+        kept.extend(press_articles[:cap])
+    return kept
+
+
+def score_group(group: list[dict], reference: datetime | None = None) -> dict:
+    """
+    이슈 그룹 하나를 스코어링한다.
+
+    반환값:
+      issue_score: Σ recency_weight(경과일수) - dedup 이후 기사 기준 (3.2:
+                   "dedup은 점수 계산과 화면 노출 숫자 양쪽에 동일하게 적용")
+      mention_count: dedup 이후 건수 (화면 노출용)
+      raw_mention_count: dedup 이전 원본 건수 (data/scored.json에만 남김, 3.2 참고)
+      titles: 그룹에 속한 기사 제목 전부 (LLM 요약 단계에서 사용, 2.1 7번 항목)
+      urls: 그룹에 속한 기사 원문 링크 전부
+      press_list: 참여 언론사 목록 (발행매체 다양성 참고용, 11번 섹션 아이디어 2)
+      cross_axis_partner: 2026-07-25 신규(3.2 "국내-해외 교차 매칭 🔗" 구현) -
+                   같은 이슈가 국내/해외 양쪽 축에서 동시에 다뤄진 경우, 반대
+                   축 대표 제목이 여기 담긴다(없으면 None). main.py의 score()가
+                   그룹을 국내/해외로 나누기 전에 article dict에
+                   "_cross_axis_partner"(내부용, storage에 저장 안 됨)를 미리
+                   붙여두면 여기서 꺼내 정식 필드로 올려준다.
+    """
+    raw_mention_count = len(group)
+    deduped = dedup_group_by_press(group)
+
+    issue_score = sum(
+        recency_weight(_days_elapsed(a["published_at"], reference)) for a in deduped
+    )
+
+    cross_axis_partner = None
+    for a in group:
+        if a.get("_cross_axis_partner"):
+            cross_axis_partner = a["_cross_axis_partner"]
+            break
+
+    return {
+        "issue_score": round(issue_score, 3),
+        "mention_count": len(deduped),
+        "raw_mention_count": raw_mention_count,
+        "titles": [a["title"] for a in group],
+        "urls": [a["url"] for a in group],
+        "press_list": sorted({_press_of(a) for a in group}),
+        "cross_axis_partner": cross_axis_partner,
+        "articles": group,  # 하위 단계(LLM 요약 등)에서 원본 기사 접근이 필요할 수 있어 보존
+    }
+
+
+def score_and_rank(groups: list[list[dict]], top_n: int | None = None,
+                    reference: datetime | None = None) -> list[dict]:
+    """
+    이슈 그룹 리스트 전체를 스코어링하고 issue_score 내림차순으로 정렬한다.
+    top_n이 지정되면 상위 N개만 반환 (7번 섹션 - 초기엔 "주간 Top 5"로 제한
+    운영하기로 돼 있으니 main.py에서 LLM 요약 호출 전 top_n=5로 넘기면 됨).
+
+    3.2 원칙대로 정규화·환산 없이 각 축(국내/해외)의 원본 issue_score를 그대로
+    비교해 순위만 매긴다 - 국내/해외를 하나로 합치는 종합 랭킹은 만들지 않음
+    (이 함수는 이미 한 축으로 분리된 groups만 받는다는 전제, main.py에서
+    호출부가 국내/해외를 나눠서 각각 이 함수를 부른다).
+    """
+    scored = [score_group(g, reference) for g in groups]
+    scored.sort(key=lambda s: s["issue_score"], reverse=True)
+    return scored[:top_n] if top_n is not None else scored
+
+
+def to_singleton_groups(articles: list[dict]) -> list[list[dict]]:
+    """
+    ** 임시 placeholder - 2.1 이슈 그룹핑이 구현되기 전까지만 쓴다 **
+
+    "기사 1건 = 그룹 1개"로 취급해서, 진짜 그룹핑이 아직 없어도 스코어링
+    로직(score_group/score_and_rank)을 지금 바로 검증할 수 있게 해준다.
+    2.1이 실제로 구현되면 이 함수 대신 임베딩 매칭 결과(진짜 그룹 리스트)를
+    score_and_rank에 바로 넘기면 되고, scorer.py 쪽 코드는 안 바꿔도 된다.
+    """
+    return [[a] for a in articles]
+
+
+def _is_korean_title(title: str, threshold: float = 0.2) -> bool:
+    """
+    2026-07-22 추가: GDELT는 번역 인덱싱 기능이 있어서, 영어 키워드로 검색해도
+    한국어 기사가 걸려 들어오는 경우가 있음(예: `foot-and-mouth disease` 검색에
+    "구제역"이라는 단어를 쓴 순수 국내 기사 - 유튜버 닉네임 동음이의 사건이
+    실제로 "해외" 랭킹에 노출된 사례로 실측 확인됨). 제목에서 한글 비율이
+    threshold 이상이면 국내 기사로 판단한다 - langdetect 같은 언어 감지
+    라이브러리는 제목처럼 짧은 텍스트에서 신뢰도가 떨어지는 것으로 알려져
+    있어, 대신 결정론적이고 의존성 없는 한글 유니코드(가~힣, U+AC00-D7A3)
+    비율 체크로 충분하다고 판단(담당자 논의로 결정).
+    """
+    if not title:
         return False
+    hangul_count = sum(1 for ch in title if "\uac00" <= ch <= "\ud7a3")
+    non_space_count = sum(1 for ch in title if not ch.isspace())
+    if non_space_count == 0:
+        return False
+    return (hangul_count / non_space_count) >= threshold
 
-    print(f"[deploy] 이메일 발송 완료 -> {', '.join(recipients)}")
-    return True
 
-
-def send_weekly_email(week_label: str, domestic_summarized: list[dict], international_summarized: list[dict],
-                       domestic_by_category: dict[str, list[dict]],
-                       international_by_category: dict[str, list[dict]],
-                       failed_sources: list[str]) -> bool:
+def _is_korean_gdelt_article(article: dict) -> bool:
     """
-    main.py에서 부르는 단일 진입점. 환경변수(GitHub Secrets)에서 인증정보를
-    읽고, 없으면 요약 모듈들과 같은 패턴으로 안전하게 생략한다 - 배포
-    레이어가 아직 시범 단계라 인증정보 미설정이 흔할 수 있음.
+    2026-07-25 이동(원래 main.py에 있던 함수 - scorer.py로 옮겨서 main.py의
+    score()와 scorer.split_domestic_international() 둘 다 이 하나만 쓰도록
+    통일함. 담당자가 "지난주 대비 증감" 기능 설계 중, category_aggregator.py
+    가 아직도 예전 방식(_is_korean_title만 사용)인 split_domestic_
+    international()을 통해 카테고리 집계를 내고 있어서 Top N 스코어링과
+    카테고리 집계 숫자가 서로 다른 기준으로 국내/해외를 나누고 있던 걸
+    발견 - 두 군데가 각자 복사본을 갖고 따로 갱신되는 구조 자체가 문제의
+    원인이라, 이 함수 하나로 합침.
+
+    2026-07-23 최초 작성 당시 설명: GDELT 소스 기사가 실제로 한국어(국내)
+    기사인지 판단한다. 처음엔 _is_korean_title()(제목의 한글 유니코드 비율)
+    만 썼는데, raw.json을 직접 열어보다가 GDELT 응답에 이미 "language":
+    "Korean" 같은 필드가 자체적으로 붙어 있는 걸 발견함(담당자 발견) - GDELT가
+    크롤링 시점에 이미 판별해둔 원본 신호라, 제목 글자를 세어 우리가 다시
+    추측하는 것보다 훨씬 신뢰도가 높음. language 필드가 있으면 그걸 우선
+    쓰고, 없는 경우(예: 이 필드가 비어있는 응답이 실제로 관측됨, raw.json
+    "쯔양" 기사 중 하나가 sourcecountry는 빈 문자열이었던 사례 참고)에만
+    기존 글자 세기 방식으로 안전하게 fallback한다.
     """
-    smtp_user = os.environ.get("SMTP_USER")
-    smtp_app_password = os.environ.get("SMTP_APP_PASSWORD")
-    recipients_raw = os.environ.get("EMAIL_RECIPIENTS")
+    language = article.get("language")
+    if language:
+        return language == "Korean"
+    return _is_korean_title(article.get("title", ""))
 
-    if not smtp_user or not smtp_app_password:
-        print("[deploy] SMTP_USER/SMTP_APP_PASSWORD 없음 - 이메일 발송 생략")
-        return False
-    if not recipients_raw:
-        print("[deploy] EMAIL_RECIPIENTS 없음 - 이메일 발송 생략")
-        return False
 
-    recipients = [r.strip() for r in recipients_raw.split(",") if r.strip()]
-    if not recipients:
-        print("[deploy] EMAIL_RECIPIENTS가 비어있음(콤마만 있거나 공백) - 이메일 발송 생략")
-        return False
+def split_domestic_international(articles: list[dict]) -> tuple[list[dict], list[dict]]:
+    """
+    3.1 "국내/해외 개별 집계" 축 분리. 네이버 = 국내, WATT/GDELT = 해외
+    (알고리즘 문서 1번 섹션 소스 표 기준).
 
-    html_content = render_email_html(week_label, domestic_summarized, international_summarized,
-                                      domestic_by_category, international_by_category, failed_sources)
-    subject = f"[사료·축산뉴스] {week_label} 주간 큐레이션"
-    return send_email(html_content, subject, recipients, smtp_user, smtp_app_password)
+    2026-07-22 예외 추가, 2026-07-25 개선: GDELT로 수집됐지만 실제로는
+    한국어(국내) 기사인 경우 "해외"가 아니라 "국내"로 재분류한다
+    (`_is_korean_gdelt_article` 참고 - GDELT의 language 필드를 우선 쓰고
+    없을 때만 글자 비율 추정으로 fallback). WATT는 원래 영어권 업계지라
+    이 문제가 없어 GDELT 소스에만 적용.
+
+    2026-07-25 수정: 예전엔 이 함수가 `_is_korean_title`(글자 비율 추정만)
+    을 썼는데, main.py의 score()는 이미 더 정확한 `_is_korean_gdelt_article`
+    (language 필드 우선)을 쓰고 있어서 Top N 스코어링과 이 함수를 쓰는
+    category_aggregator.py의 카테고리 집계가 서로 다른 기준으로 국내/해외를
+    나누는 불일치가 있었음(담당자 지적으로 발견) - 이 함수도 동일하게
+    맞춤.
+    """
+    domestic = []
+    international = []
+    for a in articles:
+        if a.get("source") == "네이버":
+            domestic.append(a)
+        elif a.get("source") == "GDELT" and _is_korean_gdelt_article(a):
+            domestic.append(a)
+        else:
+            international.append(a)
+    return domestic, international
+
+
+def _majority_category(group: list[dict]) -> str:
+    """
+    그룹(같은 사건으로 묶인 기사들) 안에서 가장 많이 나온 category를 대표
+    카테고리로 정한다. 이슈 그룹핑이 "같은 사건"을 묶는 거라 보통 카테고리가
+    일관되지만, 사전 매칭이 기사마다 미묘하게 다르게 걸려 섞이는 경우가
+    있을 수 있어 다수결로 정함. 동률이면 먼저 나온 걸 쓴다 - Counter는
+    삽입 순서를 보존하는 dict 서브클래스이고 most_common()의 정렬은
+    안정정렬(stable sort)이라, 동률인 항목들은 원래 순서(그룹 안에서 먼저
+    나온 순서) 그대로 유지된다.
+    """
+    counts = Counter(a.get("category", "기타") for a in group)
+    return counts.most_common(1)[0][0]
+
+
+def score_by_category(groups: list[list[dict]], top_n: int,
+                       exclude: tuple[str, ...] = ("기타",)) -> dict[str, list[dict]]:
+    """
+    카테고리별 Top N (2026-07-23 신규, 담당자 설계 확정: "국내/해외 축과
+    독립적으로 카테고리 축도 만들되, 국내/해외 구분은 유지" - 즉 이 함수는
+    domestic_groups/international_groups 중 하나를 받아서 그 축 "안에서"
+    카테고리별로 나눈다. 호출부(main.py)가 국내용/해외용으로 각각 한 번씩
+    불러써야 함).
+
+    "기타"는 기본적으로 제외한다 - 카테고리별 Top N의 목적(질병명/무역·관세
+    처럼 명확한 주제별로 뭐가 중요한지 보기)과 "카테고리 안 걸린 잡다한 것들
+    중 언급 많은 것"은 성격이 다르기 때문(담당자 논의로 결정).
+
+    이슈가 없는 카테고리는 결과 dict에 아예 키로 안 남는다(빈 리스트를
+    안 만듦) - 호출부에서 "이 카테고리는 이번 주 이슈 없음"과 "이 카테고리
+    자체가 없음"을 구분할 필요가 없게 하기 위함.
+    """
+    by_category: dict[str, list[list[dict]]] = defaultdict(list)
+    for group in groups:
+        category = _majority_category(group)
+        if category in exclude:
+            continue
+        by_category[category].append(group)
+
+    result = {}
+    for category, cat_groups in by_category.items():
+        ranked = score_and_rank(cat_groups, top_n=top_n)
+        if ranked:
+            # 2026-07-23 추가: 이후 단계(LLM 요약, storage 저장)에서 여러
+            # 카테고리 결과를 하나의 평평한 리스트로 합쳐 처리할 일이 있는데,
+            # 그때도 "이 항목이 원래 어느 카테고리였는지" 추적할 수 있도록
+            # 항목 자체에 category를 남겨둔다.
+            for item in ranked:
+                item["category"] = category
+            result[category] = ranked
+    return result
+
+
+def print_category_top_n(label: str, category_ranked: dict[str, list[dict]], n: int) -> None:
+    """카테고리별 Top N을 사람이 읽기 좋은 형태로 출력 (진단/확인용)."""
+    if not category_ranked:
+        print(f"\n=== {label} 카테고리별 Top {n} === (해당 카테고리 이슈 없음)")
+        return
+    print(f"\n=== {label} 카테고리별 Top {n} ===")
+    for category, ranked in category_ranked.items():
+        print(f"\n[{category}]")
+        for i, item in enumerate(ranked, start=1):
+            rep_title = item["titles"][0] if item["titles"] else "(제목 없음)"
+            print(f"  {i}. [{item['issue_score']:.2f}점, 언급 {item['mention_count']}건] {rep_title}")
+            if len(item["titles"]) > 1:
+                print(f"     (그룹 내 추가 {len(item['titles']) - 1}건 생략)")
+            if item.get("cross_axis_partner"):
+                print(f"     🔗 반대 축에서도 다뤄짐: {item['cross_axis_partner']}")
+
+
+def print_top_n(label: str, ranked: list[dict], n: int = 5) -> None:
+    """상위 N개 이슈를 사람이 읽기 좋은 형태로 출력 (진단/확인용)."""
+    print(f"\n=== {label} Top {min(n, len(ranked))} ===")
+    for i, item in enumerate(ranked[:n], start=1):
+        rep_title = item["titles"][0] if item["titles"] else "(제목 없음)"
+        print(f"{i}. [{item['issue_score']:.2f}점, 언급 {item['mention_count']}건] {rep_title}")
+        if len(item["titles"]) > 1:
+            print(f"   (그룹 내 추가 {len(item['titles']) - 1}건 생략)")
+        if item.get("cross_axis_partner"):
+            print(f"   🔗 반대 축에서도 다뤄짐: {item['cross_axis_partner']}")
 
 
 if __name__ == "__main__":
-    # 자체 점검용 - 실제 SMTP 발송 없이 렌더링/안전 생략 경로만 확인.
-    sample_domestic = [{
-        "issue_score": 3.5, "mention_count": 2, "titles": ["구제역 확산", "구제역 추가 발생"],
-        "urls": ["https://a.com/1", "https://a.com/2"], "summary": "테스트 요약입니다.",
-    }]
-    sample_category = {"질병명": sample_domestic}
+    # 자체 점검용 - 그룹핑 없이 recency_weight/score_group만 확인
+    from datetime import timedelta
 
-    html_out = render_email_html("2026-30", sample_domestic, [], sample_category, {}, ["GDELT"])
-    assert "구제역 확산" in html_out
-    assert "테스트 요약입니다" in html_out
-    assert "[질병명]" in html_out
-    assert "GDELT" in html_out
-    print("[deploy] HTML 렌더링 자체 점검 통과")
+    now = datetime.now(timezone.utc)
+    sample_articles = [
+        {"title": "구제역 확산", "url": "https://a.com/1", "source": "네이버",
+         "press": "yna.co.kr", "published_at": now.isoformat()},
+        {"title": "구제역 추가 발생", "url": "https://a.com/2", "source": "네이버",
+         "press": "yna.co.kr", "published_at": (now - timedelta(days=1)).isoformat()},
+        {"title": "구제역 3주째", "url": "https://a.com/3", "source": "네이버",
+         "press": "chosun.com", "published_at": (now - timedelta(days=6)).isoformat()},
+    ]
+    group_result = score_group(sample_articles)
+    print(group_result)
+    assert group_result["mention_count"] == 3  # cap=3 안 넘었으니 dedup 없음
 
-    # 인증정보 없을 때 안전하게 생략되는지 확인
-    for key in ("SMTP_USER", "SMTP_APP_PASSWORD", "EMAIL_RECIPIENTS"):
-        os.environ.pop(key, None)
-    result = send_weekly_email("2026-30", sample_domestic, [], sample_category, {}, [])
-    assert result is False
-    print("[deploy] 인증정보 없을 때 안전 생략 확인 - 통과")
+    for d in (0, 2, 3, 5, 6, 7, 8, 30):
+        print(f"경과 {d}일 -> weight {recency_weight(d)}")
