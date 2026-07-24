@@ -70,49 +70,77 @@ SNIPPET_MAX_CHARS = 150
 
 
 _SYSTEM_PROMPT = (
-    "너는 사료·축산업 뉴스 큐레이션 시스템의 관련성 판별기다. 아래 기준으로 "
-    "각 기사가 \"사료 산업\" 또는 \"축산업\"(가축 사육·방역·유통·정책 등)을 "
-    "실질적 주제로 다루는지 판단하라.\n\n"
-    "관련 있음(true):\n"
-    "- 가축(소/돼지/닭/오리 등) 사육·질병·방역, 축산물(고기/계란/우유 등) "
-    "생산·가격·무역, 축산업 관련 정부 정책/법안을 핵심 주제로 다루는 기사\n"
-    "- 사료 원료(옥수수·대두박·소맥 등 곡물, 국제 곡물 시황), 사료첨가제"
-    "(아미노산·프로바이오틱스·효소제·항생제 대체제 등), 사료 제조·유통"
-    "(사료공장·프리믹스·배합사료·TMR 등)을 핵심 주제로 다루는 기사도 포함한다\n\n"
-    "관련 없음(false) - 아래는 실제로 반복 확인된 오매칭 유형이니 특히 주의해서 "
-    "걸러라:\n"
-    "1. 동음이의어: 검색어와 철자는 같지만 다른 대상을 가리킴 (예: 질병명이 "
-    "사람의 이름/닉네임인 경우, \"사료\"가 반려동물 사료 산업을 가리키는 경우 "
-    "- 반려동물 사료는 이 프로젝트 범위 밖이다)\n"
-    "2. 고유명사의 일부로만 등장: 검색어가 기관명·법안명 등 고유명사의 일부일 "
-    "뿐 (예: 국회 상임위원회 이름 안에 포함된 경우 - 기사 주제 자체는 무관한 "
-    "정치 뉴스)\n"
-    "3. 각주성 언급: 기사의 핵심 주제는 따로 있고(예: 반도체 수출, 종합 "
-    "물가지수), 축산 관련 내용은 여러 통계/품목 나열 중 한 줄로만 잠깐 등장\n"
-    "4. 곡물이 사료 용도가 아닌 경우: 옥수수·소맥·대두 등 곡물 관련 기사가 "
-    "사료용이 아니라 식용·바이오에너지(에탄올)용·일반 농산물 시장 전반을 "
-    "다루고, 사료·축산 관련 언급이 전혀 없는 경우 (예: 옥수수 가격 기사가 "
-    "팝콘·시리얼 등 식품 원료 수급이나 에탄올 원료 얘기뿐인 경우)\n\n"
-    "반드시 관련 있음(true)으로 남겨야 하는 예시 - 아래 유형을 실수로 걸러낸 "
-    "사례가 실제로 확인됐으니 특히 주의하라:\n"
-    "- 축산물(계란/고기/우유 등) 소비자가격·수급 관련 기사는 제목에 \"축산\"/"
-    "\"가축\" 같은 단어가 안 보여도 관련 있음이다. 유행어·신조어를 섞은 "
-    "가벼운 톤의 제목이어도 마찬가지다. 예를 들어 '로켓계란'이라는 신조어를 "
-    "써서 계란값 급등 원인을 다루는 기사는 계란(축산물) 가격 기사이므로 "
-    "true이다 - 제목 톤이 가볍다거나 \"축산\"이라는 단어가 안 보인다는 "
-    "이유로 false로 판단하면 안 된다.\n"
-    "- 이런 기사는 관련 없음(false) 판단 기준 1~4번(동음이의어/고유명사 일부/"
-    "각주성 언급/사료 아닌 곡물) 중 어디에도 해당하지 않는다는 점을 먼저 "
-    "확인하라 - 확실히 해당 안 되면 자동으로 관련 있음이다.\n\n"
-    "함께 주어지는 \"카테고리\" 값은 사전 키워드 매칭으로 자동 분류된 참고용 "
-    "힌트일 뿐, 확정된 정답이 아니다 - 실제 제목/요약 내용을 보고 최종 "
-    "판단하라.\n\n"
-    "판단이 애매하면 true로 답한다(보수적 기본값 - 관련 있는 기사를 잘못 "
-    "걸러내는 것보다, 무관한 기사가 몇 개 더 통과하는 편이 안전하다).\n\n"
-    "제목 언어가 서로 다를 수 있다(한국어/영어/기타 언어 혼재) - 언어와 "
-    "무관하게 같은 기준으로 판단한다.\n\n"
-    "다른 설명 없이 JSON 배열만 출력한다. 각 원소는 {\"id\": 번호, \"relevant\": "
-    "true|false} 형태이며, id는 입력받은 기사의 번호와 정확히 일치해야 한다."
+    # 2026-07-25 영어로 번역(담당자 요청) - 특히 작은 무료 모델일수록 학습
+    # 데이터가 영어 위주라 형식 지시(JSON만 출력 등) 준수율이 더 안정적인
+    # 경향이 있고, 판단 대상(기사 제목) 자체도 다국어라 지시문을 영어로
+    # 통일하는 게 더 자연스럽다는 판단. 규칙/예시 내용은 한국어 버전과
+    # 완전히 동일 - 실측으로 확인된 오매칭 유형(동음이의어, 고유명사 일부,
+    # 각주성 언급, 사료 아닌 곡물)과 반드시 통과시켜야 할 예시(로켓계란
+    # 사례)를 그대로 옮김. 요약 생성 프롬프트(llm_summarizer.py)는 결과물이
+    # 한국어여야 하므로 번역 대상에서 제외.
+    "You are a relevance classifier for a feed and livestock industry news "
+    "curation system. For each article, decide whether it substantively "
+    "covers the \"feed industry\" or \"livestock industry\" (animal "
+    "husbandry, disease control, distribution, policy, etc.) as its actual "
+    "topic.\n\n"
+    "RELEVANT (true):\n"
+    "- Articles whose core topic is livestock (cattle/pigs/chickens/ducks "
+    "etc.) rearing, disease, disease control, livestock product "
+    "(meat/eggs/milk etc.) production, pricing, trade, or livestock-related "
+    "government policy/legislation\n"
+    "- Articles whose core topic is feed ingredients (grains such as corn, "
+    "soybean meal, wheat; international grain market conditions), feed "
+    "additives (amino acids, probiotics, enzymes, antibiotic alternatives, "
+    "etc.), or feed manufacturing/distribution (feed mills, premixes, "
+    "compound feed, TMR, etc.)\n\n"
+    "NOT RELEVANT (false) - the following are mismatch patterns that have "
+    "actually been confirmed to repeat, so filter them out with particular "
+    "care:\n"
+    "1. Homonyms: the search term spells the same but refers to something "
+    "different (e.g. a disease name that is actually a person's name/"
+    "nickname, or \"feed\" referring to the pet food industry - pet food is "
+    "out of scope for this project)\n"
+    "2. Appears only as part of a proper noun: the search term is merely "
+    "part of an institution name, bill name, etc. (e.g. embedded in the "
+    "name of a National Assembly standing committee - the article's actual "
+    "subject is unrelated political news)\n"
+    "3. Footnote-level mention: the article's core topic is something else "
+    "entirely (e.g. semiconductor exports, overall price index), and "
+    "livestock-related content appears only briefly as one line among many "
+    "statistics/items\n"
+    "4. Grain not used for feed: articles about corn, wheat, soybeans, etc. "
+    "where the grain is not for feed but for food, bioenergy (ethanol), or "
+    "the general agricultural commodity market broadly, with no mention of "
+    "feed or livestock at all (e.g. a corn price article that only "
+    "discusses food-ingredient supply like popcorn/cereal or ethanol "
+    "feedstock)\n\n"
+    "Examples that MUST be kept as relevant (true) - these types have "
+    "actually been mistakenly filtered out before, so pay special "
+    "attention:\n"
+    "- Articles about consumer prices/supply of livestock products "
+    "(eggs/meat/milk etc.) are relevant even if the title doesn't contain "
+    "words like \"livestock\" or \"animal husbandry\". This is true even "
+    "for titles with a light tone using slang or buzzwords. For example, "
+    "an article discussing the cause of an egg price surge using the "
+    "buzzword \"rocket eggs\" is an article about egg (a livestock product) "
+    "prices, so it is true - do not judge it false just because the tone "
+    "is light or the word \"livestock\" doesn't appear.\n"
+    "- Before marking such an article false, first confirm it doesn't "
+    "actually match any of NOT RELEVANT criteria 1-4 (homonym / part of "
+    "proper noun / footnote mention / grain not for feed) - if it clearly "
+    "doesn't match any of them, it is automatically relevant.\n\n"
+    "The \"category\" value provided alongside each article is just a "
+    "reference hint from automatic dictionary-keyword matching, not a "
+    "confirmed answer - make your final judgment based on the actual "
+    "title/summary content.\n\n"
+    "If the judgment is ambiguous, answer true (conservative default - it "
+    "is safer to let a few irrelevant articles through than to wrongly "
+    "filter out a relevant one).\n\n"
+    "Titles may be in different languages (Korean/English/other languages "
+    "mixed) - judge by the same criteria regardless of language.\n\n"
+    "Output only a JSON array with no other explanation. Each element must "
+    "be in the form {\"id\": number, \"relevant\": true|false}, and id must "
+    "exactly match the number of the input article."
 )
 
 
@@ -130,19 +158,23 @@ def _snippet(article: dict) -> str | None:
 
 
 def _build_user_prompt(batch: list[dict]) -> str:
-    lines = ["다음 기사들이 사료·축산업 뉴스로서 관련이 있는지 판단해줘.\n"]
+    # 2026-07-25 지시문 영어로 번역(시스템 프롬프트와 같은 이유). "카테고리"
+    # 값 자체(예: "기타", "질병명")는 keyword_tagger.py가 정하는 프로젝트
+    # 전역 한글 라벨이라 번역 대상 아님 - 지시문 안에 한글 값이 섞여 들어가는
+    # 건 정상(모델이 다국어 입력을 다루는 데는 문제없음).
+    lines = ["Judge whether each of the following articles is relevant to feed/livestock industry news.\n"]
     for idx, article in enumerate(batch, start=1):
         title = article.get("title", "")
         category = article.get("category", "기타")
         snippet = _snippet(article)
-        snippet_part = f'"{snippet}"' if snippet else "(없음 - 제목만으로 판단)"
+        snippet_part = f'"{snippet}"' if snippet else "(none - judge from title only)"
         lines.append(
-            f'{idx}. 제목: "{title}" / 카테고리: {category} / 요약: {snippet_part}'
+            f'{idx}. Title: "{title}" / Category: {category} / Summary: {snippet_part}'
         )
     lines.append(
-        f'\n총 {len(batch)}건이다. 각 원소에 위 번호를 "id"로 그대로 포함해서 '
-        f'JSON 배열로만 답하라 (예: [{{"id": 1, "relevant": true}}, '
-        f'{{"id": 2, "relevant": false}}, ...]). id를 빠뜨리거나 순서를 바꾸지 마라.'
+        f'\nThere are {len(batch)} articles total. Include the number above as "id" in each '
+        f'element and answer with a JSON array only (e.g. [{{"id": 1, "relevant": true}}, '
+        f'{{"id": 2, "relevant": false}}, ...]). Do not omit any id or change the order.'
     )
     return "\n".join(lines)
 
@@ -301,9 +333,9 @@ def filter_articles(articles: list[dict]) -> list[dict]:
             batch = llm_target_articles[i:i + BATCH_SIZE]
             # 2026-07-22 추가: 어떤 기사가 어느 배치에 속했는지 로그로 안 남아서,
             # 특정 기사가 "LLM이 판정했는데 놓친 것"인지 "429 등으로 애초에 판정
-            # 자체를 못 받은 것"인지 사후에 구분이 안 되는 문제가 있었음.
-            # 배치 시작 시점에 포함된 기사 제목을 남겨서,
-            # 바로 다음 줄에 나오는 성공/실패 로그와 대조하면 추적 가능하게 함.
+            # 자체를 못 받은 것"인지 사후에 구분이 안 되는 문제가 있었음(담당자
+            # 지적). 배치 시작 시점에 포함된 기사 제목을 남겨서, 바로 다음 줄에
+            # 나오는 성공/실패 로그와 대조하면 추적 가능하게 함.
             titles_preview = " / ".join(a.get("title", "")[:40] for a in batch)
             print(f"[relevance_filter] 배치 {batch_num}/{total_batches} 처리 중 "
                   f"({len(batch)}건): {titles_preview}")

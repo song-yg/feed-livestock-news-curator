@@ -435,38 +435,51 @@ LLM_BATCH_SIZE = 20  # 한 번의 API 호출에 몇 쌍까지 같이 물어볼�
 _OPENROUTER_X_TITLE = "feed-livestock-news-issue-grouping-stage3"
 
 _LLM_SYSTEM_PROMPT = (
-    "너는 뉴스 이슈 그룹핑을 보조하는 판정기다. 두 기사 제목이 주어지면, "
-    "두 기사가 \"완전히 동일한 사건\"을 다루는지 판단하라. "
-    "같은 질병/주제를 다뤄도 발생 국가·장소·시점이 다르면 별개 사건으로 "
-    "판단한다 (예: 한국의 조류독감 발생 기사와 미국의 조류독감 발생 기사는 "
-    "질병명이 같아도 별개 사건). "
-    "국가 단위뿐 아니라 국내 지역(도/시/군) 단위가 다른 경우도 마찬가지다 "
-    "(예: 경남의 가축 폭염 피해 기사와 제주의 가축 폭염 피해 기사는 둘 다 "
-    "국내이고 같은 사안을 다뤄도 발생 지역이 다르면 별개 사건). "
-    "2026-07-24 추가: 한쪽 기사가 사안 하나(A)만 단독으로 다루고 다른 쪽 "
-    "기사가 그 사안을 포함한 여러 사안(A, B, C, D 등)을 종합해서 다루는 "
-    "경우도 별개 사건으로 판단한다 - 하나가 겹친다고 같은 사건이 아니라, "
-    "다루는 범위와 초점 자체가 다르기 때문이다 (예: \"경남 가축 폭염 피해\" "
-    "단독 기사와 \"경남 가축 폭염·호우·태풍 피해 종합\" 기사는 폭염 피해가 "
-    "겹치더라도 후자가 여러 재해를 종합 보도하는 별개 성격의 기사라 같은 "
-    "사건으로 보지 않는다). "
-    "제목 언어가 서로 다를 수 있다(한국어/영어/기타 언어 혼재) - 언어가 "
-    "달라도 같은 사건을 가리키면 같은 사건으로 판단한다. "
-    "판단이 확실하지 않으면 반드시 false로 답한다(보수적 기본값 - 잘못 "
-    "묶는 것보다 안 묶는 게 안전하다). "
-    "다른 설명 없이 JSON 배열만 출력한다. 각 원소는 {\"id\": 번호, \"same_event\": "
-    "true|false} 형태이며, id는 입력받은 쌍의 번호와 정확히 일치해야 한다."
+    # 2026-07-25 영어로 번역(담당자 요청, relevance_filter.py와 같은 이유).
+    # 규칙/예시는 한국어 버전과 완전히 동일 - 국가 구분(한국-미국), 국내
+    # 지역 구분(경남-제주), 단신 vs 종합기사 구분 규칙 모두 그대로 옮김.
+    "You are a judge that assists news issue grouping. Given two article "
+    "titles, decide whether the two articles cover \"exactly the same "
+    "event\". "
+    "Even if they cover the same disease/topic, judge them as separate "
+    "events if the country, location, or timing differs (e.g. an article "
+    "about an avian influenza outbreak in Korea and one in the US are "
+    "separate events even though the disease name is the same). "
+    "This applies not only at the country level but also to different "
+    "domestic regions (province/city/county) within the same country "
+    "(e.g. an article about heatwave damage to livestock in Gyeongnam and "
+    "one in Jeju are both domestic and cover the same kind of issue, but "
+    "are separate events if the affected region differs). "
+    "Also judge them as separate events when one article covers a single "
+    "issue (A) alone and the other article covers several issues "
+    "including that one (A, B, C, D, etc.) together - overlapping on one "
+    "issue does not make them the same event, because the scope and focus "
+    "covered are different (e.g. a standalone article on \"Gyeongnam "
+    "livestock heatwave damage\" and an article on \"Gyeongnam livestock "
+    "damage from heatwave, flooding, and typhoon combined\" are not the "
+    "same event even though the heatwave damage overlaps, because the "
+    "latter is a separate roundup-style article covering multiple "
+    "disasters together). "
+    "Titles may be in different languages (Korean/English/other languages "
+    "mixed) - judge them as the same event if they refer to the same "
+    "event, regardless of language. "
+    "If you are not certain, you must answer false (conservative default "
+    "- it is safer not to group than to group incorrectly). "
+    "Output only a JSON array with no other explanation. Each element must "
+    "be in the form {\"id\": number, \"same_event\": true|false}, and id must "
+    "exactly match the number of the input pair."
 )
 
 
 def _build_llm_user_prompt(pairs: list[tuple[dict, dict, float]]) -> str:
-    lines = ["다음 기사 제목 쌍들이 각각 완전히 동일한 사건을 다루는지 판단해줘.\n"]
+    # 2026-07-25 지시문 영어로 번역(시스템 프롬프트와 같은 이유).
+    lines = ["Judge whether each of the following pairs of article titles covers exactly the same event.\n"]
     for idx, (a, b, _sim) in enumerate(pairs, start=1):
         lines.append(f"{idx}. A: \"{a.get('title', '')}\" / B: \"{b.get('title', '')}\"")
     lines.append(
-        f'\n총 {len(pairs)}개 쌍이다. 각 원소에 위 번호를 "id"로 그대로 포함해서 '
-        f'JSON 배열로만 답하라 (예: [{{"id": 1, "same_event": true}}, '
-        f'{{"id": 2, "same_event": false}}, ...]). id를 빠뜨리거나 순서를 바꾸지 마라.'
+        f'\nThere are {len(pairs)} pairs total. Include the number above as "id" in each '
+        f'element and answer with a JSON array only (e.g. [{{"id": 1, "same_event": true}}, '
+        f'{{"id": 2, "same_event": false}}, ...]). Do not omit any id or change the order.'
     )
     return "\n".join(lines)
 

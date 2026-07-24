@@ -195,8 +195,7 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
     group_issues가 만든 그룹 하나가 국내(네이버)·해외(WATT/GDELT) 기사를 동시에 포함할 수 있다.
     3.2 원칙("양쪽 리스트 모두에서 노출... 하나의 점수로 합치지는 않음, 정규화·환산 없이 각 축의 원본 신호를 그대로 보존")대로,
     이런 그룹은 국내 축 스코어링엔 그 그룹 안의 네이버 기사만, 해외 축 스코어링엔 그 그룹 안의 WATT/GDELT 기사만 걸러서 넘긴다 - 각 축의 issue_score가 그 축 안에서의 원본 신호만 반영하게 하기 위함이다.
-    다만 "이 이슈가 다른 축에서도 다뤄졌다"를 화면에 🔗로 표시해주는 기능 자체는 scorer.py 상단 docstring에 이미 명시된 대로 여전히 미구현.
-    이번 연결 작업 범위 밖(다음 세션에서 배포 포맷 확정 시 추가할 것).
+    다만 "이 이슈가 다른 축에서도 다뤄졌다"를 화면에 🔗로 표시해주는 기능은 2026-07-25 구현 완료 - 아래 domestic_part/international_part 둘 다 비어있지 않은 경우에만 서로에게 "_cross_axis_partner"를 붙이고, scorer.score_group()이 이를 cross_axis_partner 정식 필드로 승격한다.
 
     ** 2026-07-23 버그 수정: GDELT 소스의 한국어 기사를 국내로 재분류 **
     아래 domestic/international 분리를 소스(source)만으로 판단하면, GDELT가
@@ -248,6 +247,16 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
             if a.get("source") != "네이버"
             and not (a.get("source") == "GDELT" and _is_korean_gdelt_article(a))
         ]
+        if domestic_part and international_part:
+            # 2026-07-25 구현(3.2 "국내-해외 교차 매칭 🔗", 담당자 요청) -
+            # 같은 그룹이 국내/해외 양쪽에 걸쳐 있으면, 각 축의 대표 기사
+            # (scorer.score_group이 titles[0]로 쓰는 group[0])에 반대 축
+            # 대표 제목을 "_cross_axis_partner"로 붙여둔다. 앞에 _를 붙인
+            # 이유는 내부 전달용 임시 필드임을 표시하기 위함(storage.py가
+            # raw.json 저장 시 body와 함께 제거) - scorer.score_group()이
+            # 이 필드를 읽어 정식 필드 cross_axis_partner로 승격시킨다.
+            domestic_part[0]["_cross_axis_partner"] = international_part[0].get("title", "")
+            international_part[0]["_cross_axis_partner"] = domestic_part[0].get("title", "")
         if domestic_part:
             domestic_groups.append(domestic_part)
         if international_part:
@@ -372,6 +381,16 @@ def run() -> None:
     # - 이후 단계(임베딩 계산, 3차 LLM 그룹핑 보조)의 대상도 함께 줄어드는
     # 효과가 있음. 자세한 설계 배경은 relevance_filter.py 모듈 docstring 참고.
     articles = relevance_filter.filter_articles(articles)
+
+    print("\n=== [2.6] 카테고리 재분류 (LLM - '기타'로 남았지만 관련성 확인된 기사) ===")
+    # 2026-07-25 신설(담당자 지적): keyword_tagger(사전 매칭)와 relevance_filter
+    # (LLM 관련성 판단)는 기준이 서로 달라서, 사전엔 안 걸려 category="기타"로
+    # 붙었는데 relevance_filter가 "관련 있음"으로 확정하는 기사가 생길 수 있음
+    # - 이 기사는 필터는 통과하는데 category는 계속 "기타"라, "기타"를 제외하는
+    # 카테고리별 Top N(3번 섹션)에는 영원히 못 들어가는 공백이 있었음. 이
+    # 단계로 그 기사들만 다시 LLM에 물어 재분류한다 - 자세한 설계 배경은
+    # relevance_filter.recategorize_uncategorized() docstring 참고.
+    articles = relevance_filter.recategorize_uncategorized(articles)
 
     print("\n=== [2.1] 이슈 그룹핑 임베딩 모델 로드 (BGE-M3, 실행당 1회) ===")
     embedding_model = _load_embedding_model()

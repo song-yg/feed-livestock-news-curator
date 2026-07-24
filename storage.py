@@ -64,7 +64,12 @@ def week_dir(base_dir: str = "data", reference: datetime | None = None) -> str |
 
 
 def _strip_body(article: dict) -> dict:
-    return {k: v for k, v in article.items() if k != "body"}
+    # 2026-07-25 추가: "_cross_axis_partner"는 main.py의 score()가 국내/해외
+    # 교차 매칭 표시를 scorer.score_group()에 전달하려고 잠깐 붙이는 내부용
+    # 임시 필드(앞의 _가 그 표시) - raw.json에 남길 필요 없어 body와 함께
+    # 제거. 정식 결과는 scored.json의 각 이슈 항목에 cross_axis_partner로
+    # 이미 승격돼 저장됨(save_scored 참고).
+    return {k: v for k, v in article.items() if k not in ("body", "_cross_axis_partner")}
 
 
 def _strip_scored_item(item: dict) -> dict:
@@ -160,6 +165,9 @@ def _format_issue_section(item: dict) -> str:
         f"- 점수: {item.get('issue_score', 0):.2f} / 언급 {item.get('mention_count', 0)}건"
         + (f" (그룹 내 추가 {len(titles) - 1}건 생략)" if len(titles) > 1 else ""),
     ]
+    if item.get("cross_axis_partner"):
+        # 2026-07-25 추가(3.2 "국내-해외 교차 매칭 🔗" 구현)
+        lines.append(f"- 🔗 반대 축에서도 다뤄짐: {item['cross_axis_partner']}")
     if item.get("summary"):
         lines.append(f"\n{item['summary']}\n")
     else:

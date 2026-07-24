@@ -19,8 +19,9 @@ scorer.py
   - 3.2의 "동일 언론사 도배 dedup"은 그룹 크기가 항상 1이라 사실상 작동할
     일이 없음(도배가 성립하려면 같은 그룹 안에 같은 언론사 기사가 여러 건
     있어야 하는데, 지금은 애초에 그룹이 기사 1건뿐이라 캡에 걸릴 대상이 없음)
-  - 3.2의 국내-해외 교차 매칭 🔗 태그도 2.1이 있어야 성립하는 기능이라 지금은
-    구현하지 않음 (아래 rank_top_n에 태그 필드 없음 - TODO로 남김)
+  - 3.2의 국내-해외 교차 매칭 🔗 태그는 2026-07-25 구현 완료(score_group의
+    cross_axis_partner 필드, main.py의 score()가 채워줌 - 상세는 score_group
+    docstring 참고)
 2.1이 실제로 붙으면 `to_singleton_groups` 대신 진짜 그룹 리스트를 넘기기만
 하면 되고, score_group/score_and_rank 쪽 로직은 바꿀 필요 없다.
 """
@@ -112,6 +113,12 @@ def score_group(group: list[dict], reference: datetime | None = None) -> dict:
       titles: 그룹에 속한 기사 제목 전부 (LLM 요약 단계에서 사용, 2.1 7번 항목)
       urls: 그룹에 속한 기사 원문 링크 전부
       press_list: 참여 언론사 목록 (발행매체 다양성 참고용, 11번 섹션 아이디어 2)
+      cross_axis_partner: 2026-07-25 신규(3.2 "국내-해외 교차 매칭 🔗" 구현) -
+                   같은 이슈가 국내/해외 양쪽 축에서 동시에 다뤄진 경우, 반대
+                   축 대표 제목이 여기 담긴다(없으면 None). main.py의 score()가
+                   그룹을 국내/해외로 나누기 전에 article dict에
+                   "_cross_axis_partner"(내부용, storage에 저장 안 됨)를 미리
+                   붙여두면 여기서 꺼내 정식 필드로 올려준다.
     """
     raw_mention_count = len(group)
     deduped = dedup_group_by_press(group)
@@ -120,6 +127,12 @@ def score_group(group: list[dict], reference: datetime | None = None) -> dict:
         recency_weight(_days_elapsed(a["published_at"], reference)) for a in deduped
     )
 
+    cross_axis_partner = None
+    for a in group:
+        if a.get("_cross_axis_partner"):
+            cross_axis_partner = a["_cross_axis_partner"]
+            break
+
     return {
         "issue_score": round(issue_score, 3),
         "mention_count": len(deduped),
@@ -127,6 +140,7 @@ def score_group(group: list[dict], reference: datetime | None = None) -> dict:
         "titles": [a["title"] for a in group],
         "urls": [a["url"] for a in group],
         "press_list": sorted({_press_of(a) for a in group}),
+        "cross_axis_partner": cross_axis_partner,
         "articles": group,  # 하위 단계(LLM 요약 등)에서 원본 기사 접근이 필요할 수 있어 보존
     }
 
@@ -266,6 +280,8 @@ def print_category_top_n(label: str, category_ranked: dict[str, list[dict]], n: 
             print(f"  {i}. [{item['issue_score']:.2f}점, 언급 {item['mention_count']}건] {rep_title}")
             if len(item["titles"]) > 1:
                 print(f"     (그룹 내 추가 {len(item['titles']) - 1}건 생략)")
+            if item.get("cross_axis_partner"):
+                print(f"     🔗 반대 축에서도 다뤄짐: {item['cross_axis_partner']}")
 
 
 def print_top_n(label: str, ranked: list[dict], n: int = 5) -> None:
@@ -276,6 +292,8 @@ def print_top_n(label: str, ranked: list[dict], n: int = 5) -> None:
         print(f"{i}. [{item['issue_score']:.2f}점, 언급 {item['mention_count']}건] {rep_title}")
         if len(item["titles"]) > 1:
             print(f"   (그룹 내 추가 {len(item['titles']) - 1}건 생략)")
+        if item.get("cross_axis_partner"):
+            print(f"   🔗 반대 축에서도 다뤄짐: {item['cross_axis_partner']}")
 
 
 if __name__ == "__main__":

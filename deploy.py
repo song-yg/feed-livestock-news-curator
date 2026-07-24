@@ -53,6 +53,12 @@ def _format_issue_html(item: dict) -> str:
     rep_title = titles[0] if titles else "(제목 없음)"
     extra = f" (그룹 내 추가 {len(titles) - 1}건 생략)" if len(titles) > 1 else ""
 
+    cross_html = ""
+    if item.get("cross_axis_partner"):
+        # 2026-07-25 추가(3.2 "국내-해외 교차 매칭 🔗" 구현)
+        cross_html = (f'<p style="margin:2px 0 4px 0; font-size:12px; color:#1a73e8;">'
+                      f'🔗 반대 축에서도 다뤄짐: {_escape(item["cross_axis_partner"])}</p>')
+
     if item.get("summary"):
         body_html = f'<p style="margin:4px 0 8px 0; color:#333; font-size:13px; line-height:1.5;">{_escape(item["summary"])}</p>'
     else:
@@ -72,6 +78,7 @@ def _format_issue_html(item: dict) -> str:
     <div style="margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #eee;">
       <p style="margin:0; font-weight:bold; font-size:14px; color:#111;">{_escape(rep_title)}</p>
       <p style="margin:2px 0 4px 0; font-size:12px; color:#aaa;">점수 {item.get('issue_score', 0):.2f} / 언급 {item.get('mention_count', 0)}건{extra}</p>
+      {cross_html}
       {body_html}
       {links_html}
     </div>
