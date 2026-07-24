@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     # 로컬에서 체감 2시간 정도라 GDELT 429 재시도 등 변동을 감안해 여유 있게 설정
     # (9번 섹션 실측 - GDELT 수집만 최대 78분 걸린 사례 있음)
-    timeout-minutes: 240
+    timeout-minutes: 480
 
     steps:
       - name: 리포 체크아웃
