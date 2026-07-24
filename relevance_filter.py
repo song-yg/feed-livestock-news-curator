@@ -359,3 +359,199 @@ def filter_articles(articles: list[dict]) -> list[dict]:
             print(f"   - {title}")
 
     return kept
+
+
+# ---------------------------------------------------------------------------
+# 카테고리 재분류 (2026-07-25 신규, 담당자 지적)
+# ---------------------------------------------------------------------------
+#
+# keyword_tagger.py는 사전(CATEGORY_KEYWORDS) 단어가 제목에 있는지만 보고
+# category를 정하는데, relevance_filter는 완전히 다른 기준(LLM이 "진짜
+# 사료·축산 뉴스인가?")으로 관련성을 판단한다 - 그래서 사전 매칭엔 안 걸려
+# category="기타"로 붙었는데 relevance_filter가 "관련 있음"으로 확정한
+# 기사가 생길 수 있다. 이 기사는 필터를 통과해 살아남지만 category는
+# 여전히 "기타"라서, "카테고리별 Top N"(기타 제외 설계)에는 영원히 못
+# 들어가는 공백이 있었음(담당자 발견) - 이 함수로 그 공백을 메운다.
+#
+# 관련성 판정(filter_articles)의 이진 true/false 스키마는 안 건드리고
+# (더 복잡한 스키마를 물어보면 무료 모델의 JSON 파싱 실패율이 올라갈
+# 위험이 있어서), 이미 "관련 있다"고 확정된 기사 중 category="기타"인
+# 것만 별도 배치로 추려서 다시 LLM에 묻는 방식으로 분리했다 - 범위를
+# 좁혀서 실패해도 영향이 제한적이게 함.
+
+CATEGORY_RECLASSIFY_SYSTEM_PROMPT_TEMPLATE = (
+    "You are a categorization assistant for a feed and livestock industry "
+    "news curation system. Each article below was not matched by "
+    "dictionary-based keyword tagging and is currently labeled \"기타\" "
+    "(uncategorized), but it has already been confirmed relevant to the "
+    "feed/livestock industry by a separate relevance check. Assign the "
+    "single best-fitting category for each article from the following "
+    "exact list. Respond with the Korean label written exactly as shown "
+    "below, character for character - do not translate, abbreviate, or "
+    "modify it in any way:\n\n"
+    "{category_list}\n\n"
+    "If none of the categories are a good fit, respond with \"기타\" "
+    "(i.e. leave it uncategorized) rather than forcing a poor match.\n\n"
+    "Output only a JSON array with no other explanation. Each element must "
+    "be in the form {{\"id\": number, \"category\": \"<one label from the "
+    "list above, or 기타>\"}}, and id must exactly match the number of the "
+    "input article."
+)
+
+
+def _build_category_user_prompt(batch: list[dict]) -> str:
+    lines = ["Assign the best-fitting category to each of the following articles.\n"]
+    for idx, article in enumerate(batch, start=1):
+        title = article.get("title", "")
+        snippet = _snippet(article)
+        snippet_part = f'"{snippet}"' if snippet else "(none - judge from title only)"
+        lines.append(f'{idx}. Title: "{title}" / Summary: {snippet_part}')
+    lines.append(
+        f'\nThere are {len(batch)} articles total. Include the number above as "id" in each '
+        f'element and answer with a JSON array only. Do not omit any id or change the order.'
+    )
+    return "\n".join(lines)
+
+
+def _call_category_llm(batch: list[dict], api_key: str, session: requests.Session,
+                        category_choices: list[str], system_prompt: str) -> list[str] | None:
+    """
+    _call_llm과 같은 호출/방어 패턴(코드펜스 벗기기, id 기반 부분 복구)을
+    재분류용으로 그대로 재사용한 버전. 다른 점: 응답이 bool이 아니라
+    category_choices 중 하나(또는 "기타")인 문자열이어야 하고, 그 목록에
+    없는 값이 오면(모델이 카테고리명을 살짝 바꿔서 답하는 등) 안전하게
+    무시한다(개별 항목만 "안 바뀜=기타 유지"로 처리 - id 자체가 아예
+    누락된 경우와 동일하게 다룸).
+    """
+    user_prompt = _build_category_user_prompt(batch)
+
+    try:
+        if LLM_PROVIDER == "openrouter":
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "content-type": "application/json",
+                "X-Title": _OPENROUTER_X_TITLE,
+            }
+            body = {
+                "model": LLM_MODEL_OPENROUTER,
+                "temperature": 0,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            }
+            resp = session.post(LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["choices"][0]["message"]["content"].strip()
+        else:
+            headers = {
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            }
+            body = {
+                "model": LLM_MODEL_ANTHROPIC,
+                "max_tokens": 1024,
+                "temperature": 0,
+                "system": system_prompt,
+                "messages": [{"role": "user", "content": user_prompt}],
+            }
+            resp = session.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            text = "".join(
+                block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
+            ).strip()
+
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            text = text[4:] if text.startswith("json") else text
+        parsed = json.loads(text.strip())
+    except Exception as e:
+        print(f"[relevance_filter] 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
+              f"이 배치({len(batch)}건) 전부 '기타' 유지: {type(e).__name__} - {e!r}")
+        return None
+
+    if not isinstance(parsed, list) or not parsed:
+        actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
+        print(f"[relevance_filter] 카테고리 재분류 LLM({LLM_PROVIDER}) 출력 형식 이상"
+              f"(리스트가 아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 '기타' 유지")
+        return None
+
+    valid_choices = set(category_choices) | {"기타"}
+    by_id: dict[int, str] = {}
+    for item in parsed:
+        try:
+            category = str(item["category"])
+            idx = int(item["id"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if category not in valid_choices:
+            continue  # 목록에 없는 값 - 이 항목만 무시(기타 유지)
+        by_id[idx] = category
+
+    results = []
+    missing = []
+    for idx in range(1, len(batch) + 1):
+        if idx in by_id:
+            results.append(by_id[idx])
+        else:
+            missing.append(idx)
+            results.append("기타")  # 안전한 기본값 - 재분류 안 하고 기타 유지
+
+    if missing:
+        print(f"[relevance_filter] 카테고리 재분류 LLM({LLM_PROVIDER}) 출력에서 id {missing} "
+              f"누락/형식 이상(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 "
+              f"'기타' 유지, 나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
+
+    return results
+
+
+def recategorize_uncategorized(articles: list[dict]) -> list[dict]:
+    """
+    filter_articles()를 통과했지만 category="기타"로 남아있는 기사를 LLM으로
+    재분류한다. main.py에서 filter_articles() 바로 다음 단계로 부른다.
+
+    API 키가 없거나 전부 실패해도 안전하게 원본 그대로(재분류 없이) 반환 -
+    9.4/9.5 원칙과 같은 방향.
+    """
+    targets = [a for a in articles if a.get("category") == "기타"]
+    if not targets:
+        return articles
+
+    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    api_key = os.environ.get(key_env_var)
+    if not api_key:
+        print(f"[relevance_filter] {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+              f"카테고리 재분류 생략, {len(targets)}건 '기타' 그대로 유지")
+        return articles
+
+    import keyword_tagger
+    category_choices = list(keyword_tagger.CATEGORY_KEYWORDS.keys())
+    category_list_text = "\n".join(f"- {c}" for c in category_choices)
+    system_prompt = CATEGORY_RECLASSIFY_SYSTEM_PROMPT_TEMPLATE.format(category_list=category_list_text)
+
+    model_name = LLM_MODEL_OPENROUTER if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
+    print(f"[relevance_filter] 카테고리 재분류 시작 - provider={LLM_PROVIDER}, "
+          f"model={model_name}, 대상 {len(targets)}건('기타'로 남았지만 관련성 확인된 기사)")
+
+    reclassified_count = 0
+    total_batches = (len(targets) + BATCH_SIZE - 1) // BATCH_SIZE
+    with requests.Session() as session:
+        for batch_num, i in enumerate(range(0, len(targets), BATCH_SIZE), start=1):
+            batch = targets[i:i + BATCH_SIZE]
+            print(f"[relevance_filter] 카테고리 재분류 배치 {batch_num}/{total_batches} "
+                  f"처리 중 ({len(batch)}건)")
+            results = _call_category_llm(batch, api_key, session, category_choices, system_prompt)
+            if results is None:
+                continue  # 이 배치는 전부 '기타' 유지 (원본 이미 '기타'라 손댈 것 없음)
+            for article, new_category in zip(batch, results):
+                if new_category != "기타":
+                    article["category"] = new_category
+                    reclassified_count += 1
+
+    print(f"[relevance_filter] 카테고리 재분류 완료 - {len(targets)}건 중 "
+          f"{reclassified_count}건 재분류됨, {len(targets) - reclassified_count}건 '기타' 유지")
+
+    return articles
