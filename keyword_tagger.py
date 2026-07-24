@@ -58,12 +58,9 @@ CATEGORY_KEYWORDS = {
         "en": ['feed additive', 'antibiotic growth promoter', 'AGP', 'antimicrobial resistance', 'AMR', 'veterinary medicinal products', 'veterinary drugs', 'reduction of antibiotic use', 'antibiotic-free feed', 'Control of Livestock and Fish Feed Act', 'feed enzyme', 'probiotics', 'amino acid', 'lysine', 'methionine', 'feed supplement', 'phytase'],
     },
     "무역/관세 이슈": {
-        # 2026-07-24 추가: '할당관세' - 실제 축산물 관세 기사에서 압도적으로
-        # 많이 쓰이는 용어인데 누락돼 있었음(담당자가 naver_collector.py의
-        # 검색 키워드를 "축산물 수입관세"->"축산물 할당관세"로 바꾸면서
-        # 발견 - 검색 키워드는 고쳤는데 태깅 사전엔 이 단어가 없어서, 수집된
-        # 기사가 여전히 '기타'로 분류되는 걸 실측 확인함). 기존 '저율관세할당'
-        # 은 어순이 달라(저율+관세+할당) 부분 문자열로 '할당관세'를 못 잡음.
+        # '할당관세'는 실제 축산물 관세 기사에서 압도적으로 많이 쓰이는
+        # 용어라 포함한다. 기존 '저율관세할당'은 어순이 달라(저율+관세+
+        # 할당) 부분 문자열로 '할당관세'를 못 잡는다.
         "kr": ['수입관세', '할당관세', '저율관세할당', '자유무역협정', '세이프가드', '원산지 표시', '검역협상', '무역분쟁', '수출금지', '수입금지', '시장접근', '교역제한'],
         "en": ['import tariff', 'tariff-rate quota', 'TRQ', 'Free Trade Agreement', 'FTA', 'safeguard measures', 'country-of-origin labeling', 'quarantine negotiations', 'trade dispute', 'export ban', 'import ban', 'market access', 'trade restriction'],
     },
@@ -88,20 +85,15 @@ CATEGORY_KEYWORDS = {
 # gdelt_collector.py의 FALSE_POSITIVE_FILTERS와 같은 철학: 원본 사전은 안
 # 건드리고 실행 시점에 알려진 위험 토큰만 걸러냄).
 #
-# 2.2 스펙상 카테고리 오분류는 기사를 탈락시키지 않고 라벨만 틀리게 붙는
-# 수준의 낮은 리스크이긴 하지만, "AI"는 다른 토큰과 비교해 충돌 빈도가
-# 자릿수부터 다를 것으로 예상돼 선제적으로 제외했다. 다른 짧은 약어(ND, LSD,
-# TMR 등)는 "아직 실제 오매칭이 확인된 바 없어 그대로 둠"이었으나, 그중 "ND"는
-# 2026-07-15 GDELT 실측 데이터(calibration_raw_2026-W29.json) 재검증 중 실제
-# 오매칭이 확인됨 - "nd"가 "underway"/"Uganda"/"Andy"/"neighbourhoods"처럼
-# 영어에서 아주 흔한 2글자 조합이라, 축산/사료와 전혀 무관한 기사 다수가
-# "질병명" 카테고리로 잘못 태깅됐다 (예: "National racing gets back underway
-# at the GR Legends Rally" -> ['ND'] 매칭). "AI"보다 오히려 충돌 빈도가 더
-# 넓을 수 있는 케이스라 판단해 제외 목록에 추가한다 (원칙은 동일 - 확인된
-# 것만 대응, 일반화된 규칙은 안 만듦). 참고: "Newcastle disease"(풀네임)는
-# CATEGORY_KEYWORDS에 별도로 이미 등록돼 있어, "ND"를 빼도 뉴캣슬병 자체에
-# 대한 매칭 능력은 유지된다 - 풀네임으로 언급되는 기사만 못 잡게 될 뿐.
-# LSD/TMR 등 나머지 약어는 여전히 실제 오매칭 미확인 상태라 그대로 둠.
+# "ND"도 같은 이유로 제외한다 - "nd"가 "underway"/"Uganda"/"Andy"/
+# "neighbourhoods"처럼 영어에서 아주 흔한 2글자 조합이라, 축산/사료와
+# 전혀 무관한 기사 다수가 "질병명" 카테고리로 잘못 태깅되는 게 확인됨
+# (예: "National racing gets back underway at the GR Legends Rally" ->
+# ['ND'] 매칭). "Newcastle disease"(풀네임)는 CATEGORY_KEYWORDS에 별도로
+# 이미 등록돼 있어, "ND"를 빼도 뉴캣슬병 자체에 대한 매칭 능력은 유지된다
+# - 풀네임으로 언급되는 기사만 못 잡게 될 뿐. LSD/TMR 등 나머지 약어는
+# 실제 오매칭이 확인된 바 없어 그대로 둔다(확인된 것만 대응, 일반화된
+# 규칙은 안 만드는 원칙).
 EXCLUDED_TERMS = {"AI", "ND"}
 
 
@@ -127,17 +119,17 @@ _FLAT_INDEX = _build_flat_index()
 
 def _dedupe_contained(terms: list[str]) -> list[str]:
     """
-    2026-07-20 추가. 리스트 안에서 다른 항목의 부분 문자열인 항목은 제거한다
-    (대소문자 무시, 더 구체적인/긴 쪽을 남김).
+    리스트 안에서 다른 항목의 부분 문자열인 항목은 제거한다(대소문자 무시,
+    더 구체적인/긴 쪽을 남김).
 
     배경: CATEGORY_KEYWORDS에 "feed cost"/"feed costs"처럼 한쪽이 다른 쪽의
-    부분 문자열인 쌍이 실제로 다수 존재함(전수 조사 결과 27건 - corn/corn
-    futures, wheat/wheat futures, 사료/배합사료업체, 계열화/계열화사업법 등).
-    이런 쌍은 같은 개념을 사실상 두 번 세는 것이라, 제목에 "feed costs"가
-    있으면 "feed cost"와 "feed costs" 둘 다 매칭돼 그 카테고리의 매칭
-    개수가 인위적으로 부풀려짐 - tag_title()의 "가장 많이 매칭된 카테고리
-    채택" 동점 처리 공정성에 직접 영향을줌(부풀려진 카테고리가 실제로는
-    안 이겨야 할 경합에서 이기는 경우가 생길 수 있음).
+    부분 문자열인 쌍이 다수 존재한다(corn/corn futures, wheat/wheat
+    futures, 사료/배합사료업체, 계열화/계열화사업법 등). 이런 쌍은 같은
+    개념을 사실상 두 번 세는 것이라, 제목에 "feed costs"가 있으면 "feed
+    cost"와 "feed costs" 둘 다 매칭돼 그 카테고리의 매칭 개수가 인위적으로
+    부풀려진다 - tag_title()의 "가장 많이 매칭된 카테고리 채택" 동점 처리
+    공정성에 직접 영향을 준다(부풀려진 카테고리가 실제로는 안 이겨야 할
+    경합에서 이기는 경우가 생길 수 있음).
 
     사전(CATEGORY_KEYWORDS) 자체는 원본 키워드표를 그대로 옮긴 것이라는
     이 모듈의 원칙(모듈 docstring 참고)을 지키기 위해, 사전을 고치는 대신
@@ -168,9 +160,9 @@ def tag_title(title: str) -> tuple[str, list[str]]:
     사전 순서 자체에 우선순위 의미는 없지만, 결과가 실행마다 흔들리지 않도록
     결정적(deterministic) 규칙 하나는 필요해서 정함.
 
-    2026-07-20 수정: 카테고리별 원 매칭 리스트에 _dedupe_contained를 적용해서,
-    "corn"/"corn futures"처럼 한쪽이 다른 쪽에 포함되는 매칭은 하나로 센다
-    (위 _dedupe_contained 참고 - 매칭 개수 인위적 부풀림이 동점 처리 공정성을
+    카테고리별 원 매칭 리스트에 _dedupe_contained를 적용해서, "corn"/"corn
+    futures"처럼 한쪽이 다른 쪽에 포함되는 매칭은 하나로 센다(위
+    _dedupe_contained 참고 - 매칭 개수 인위적 부풀림이 동점 처리 공정성을
     해치는 걸 방지).
 
     반환값: (category, matched_terms)
@@ -211,10 +203,6 @@ def tag_articles(articles: list[dict]) -> list[dict]:
     체계가 다르고(사이트마다 자체 기준) 이 프로젝트의 카테고리별 집계에는
     안 맞아서다. 다만 정보 손실을 막기 위해 WATT의 원래 값은 "site_category"
     필드에 별도로 보존한다.
-
-    이 판단(WATT 원본 category를 덮어쓰고 site_category로만 보존)은 알고리즘
-    문서 "2.2 키워드 태깅" 섹션에 2026-07-14 반영 완료 (기존엔 문서에 명시 안
-    돼 있어 구현 중 임의로 내린 판단이었으나, 문서화되며 정식 확정됨).
     """
     other_count = 0
     for article in articles:
@@ -250,12 +238,11 @@ def print_category_distribution(articles: list[dict]) -> None:
 
 def print_uncategorized_sample(articles: list[dict], sample_size: int = 30) -> None:
     """
-    '기타'로 분류된 기사 제목 샘플을 출력한다 (2026-07-17 추가).
+    '기타'로 분류된 기사 제목 샘플을 출력한다.
 
-    배경: '기타' 비율이 70% 넘게 나오는 게 실행마다 반복 확인됐는데,
-    실제로 뭐가 '기타'에 몰리는지 숫자(비율)만으로는 감이 안 잡혀서
-    "이 새끼들은 뭐지" 같은 반응이 나올 수밖에 없었음 - 키워드 사전을
-    어떻게 보강할지 논의하려면 실제 제목을 눈으로 봐야 함.
+    '기타' 비율이 높게 나올 때, 숫자(비율)만으로는 실제로 뭐가 몰리는지
+    감이 안 잡히므로 - 키워드 사전을 어떻게 보강할지 판단하려면 실제
+    제목을 눈으로 봐야 한다.
 
     무작위 추출이 아니라 리스트 앞에서부터 sample_size개만 그대로 보여준다
     - 표본 대표성을 엄밀히 따지는 통계용이 아니라 "감 잡기용" 진단
@@ -289,7 +276,7 @@ if __name__ == "__main__":
         category, matched = tag_title(t)
         print(f"[{category:15s}] {t}  <- {matched}")
 
-    # 2026-07-20 추가 - 부분 문자열 포함 관계인 매칭이 중복 집계되지 않는지 검증
+    # 부분 문자열 포함 관계인 매칭이 중복 집계되지 않는지 검증
     # ("feed cost"가 "feed costs"의 부분 문자열이라 실제로 겹치는 게 확인된 사례)
     _, matched_dup = tag_title("Global feed costs surge amid grain shortage")
     assert not ("feed cost" in matched_dup and "feed costs" in matched_dup), \

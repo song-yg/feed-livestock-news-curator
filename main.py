@@ -3,58 +3,33 @@ main.py
 사료·축산업 뉴스 큐레이션 시스템의 오케스트레이션 레이어.
 (알고리즘 문서 "6. 실행/오케스트레이션 (Runner)" 참조)
 
-문서의 6단계 파이프라인 중 이번 작업에서 실제로 구현한 범위:
-  1) 수집        -> 구현 완료 (watt/naver/gdelt collector, 기존 모듈 그대로 호출)
-  2) 정규화      -> 구현 완료: 공통 스키마 통합 + 완전 동일 기사(URL) 제거
-                    + 2.2 키워드 태깅(keyword_tagger.py)
-                    + 2.1 이슈 그룹핑(issue_grouper.py, 2026-07-15 연결 완료 -
-                    아래 score() 함수 참고. 1차 사전 매칭 + 2차 BGE-M3 임베딩 +
-                    3차 LLM 보조(2026-07-15, issue_grouper.stage3_llm_assist)
-                    까지 전부 연결됨. 3차는 기본적으로 ANTHROPIC_API_KEY 환경변수가
-                    필요하나, Anthropic 키 발급 승인 전까지는 LLM_PROVIDER=openrouter
-                    +OPENROUTER_API_KEY로 임시 대체 가능(issue_grouper.py 프로바이더
-                    스위치 참조). GitHub Actions에서 돌리려면 리포 Secrets/Variables에
-                    추가 등록 필요(8번 섹션 체크리스트 참조). 둘 다 없으면 3차만
-                    안전하게 생략되고 나머지 파이프라인은 계속 동작함. **GitHub
-                    Actions 실행 검증(2026-07-15)**: 최초 실행 시 "No space left on
-                    device"로 실패 → 원인은 sentence-transformers가 끌어오는 GPU용
-                    PyTorch + BGE-M3 + Playwright 용량이 러너 보장 여유공간(14GB)을
-                    초과한 것으로 확인 → workflow에 프리인스톨 툴 정리(dotnet/
-                    android/ghc) + PyTorch CPU 전용 선설치를 추가해 해결, 이후
-                    main.py 실행 진입까지 확인됨(.github/workflows/run-pipeline.yml
-                    참조)
-  3) 스코어링    -> 구현 완료 (scorer.py) - 2.1이 실제로 연결되면서 이제
-                    "이슈(여러 기사 묶음) 단위 점수"로 정상 작동함 (기존엔
-                    to_singleton_groups 임시 처리로 사실상 기사 단위 점수와
-                    동일했음)
-                    + 카테고리 전체 집계(category_aggregator.py, 2026-07-14
-                    신규) 보조 지표 추가 - 2.1 이슈 그룹핑이 "동일 사건만"
-                    묶는 좁은 정의라 생기는 공백을 메우는 별개 지표 (순위와
-                    무관, 국내/해외 각각 카테고리별 단순 건수만 집계)
-  4) LLM 요약    -> 구현 완료 (2026-07-17, llm_summarizer.py): (A) 자체 요약
-                    + (A-1) 얇은 재료 fallback. (B) 그룹핑 보조는 2.1에서
-                    이미 구현 완료(issue_grouper.stage3_llm_assist). 프로바이더
-                    설정(LLM_PROVIDER, 모델명, X-Title 등)은 issue_grouper.py
-                    에서 그대로 재사용 - 3차 개발 중 겪은 버그(빈 문자열 env
-                    var, 헤더 인코딩)가 이 설정값 자체의 문제였어서, 새로
-                    베껴 쓰지 않고 이미 검증된 값을 공유해 재발을 막음.
-                    API 키가 없거나 LLM 호출이 실패해도 그 이슈는 "요약 생략,
-                    원문 제목만 노출"로 안전하게 fallback(9.4/9.5 원칙 재사용)
-  5) 저장        -> 구현 완료 (2026-07-23, storage.py) - data/YYYY-WW/에
-                    raw.json(정규화+필터링된 최종 기사 데이터)/scored.json
-                    (스코어링+요약 결과, articles 필드는 raw.json과 중복이라
-                    제외)/summary.md(사람이 읽을 배포용 요약본) 저장. WATT
-                    body는 저작권상 raw.json에서도 제외(storage.py docstring
-                    참고). git 커밋/푸시는 워크플로(run-pipline.yml) 책임 -
-                    이 단계는 파일 생성까지만.
-  6) 배포        -> 구현 완료 (2026-07-24, deploy.py) - Gmail SMTP로 국내/해외
-                    Top N + 카테고리별 Top N을 HTML 이메일로 발송. 인증정보
-                    (SMTP_USER/SMTP_APP_PASSWORD/EMAIL_RECIPIENTS)는 GitHub
-                    Secrets에서 읽고, 미설정 시 안전하게 발송만 생략(파이프라인
-                    안 죽음). Gmail SMTP를 고른 이유는 deploy.py docstring 참고
-                    (무료 이메일 API의 스팸함 분류 위험 회피).
-
-main.py를 6단계 전부 실제로 동작하는 파이프라인으로 잇는다.
+6단계 파이프라인 전부 구현 완료:
+  1) 수집        -> watt/naver/gdelt collector 순차 실행
+  2) 정규화      -> 공통 스키마 통합 + 완전 동일 기사(URL) 제거 + 2.2 키워드
+                    태깅(keyword_tagger.py) + 2.5 관련성 필터(relevance_filter.py)
+                    + 2.6 카테고리 재분류(relevance_filter.py) + 2.1 이슈
+                    그룹핑(issue_grouper.py - 1차 사전 매칭 + 2차 BGE-M3
+                    임베딩 + 3차 LLM 보조)
+  3) 스코어링    -> scorer.py가 이슈(여러 기사 묶음) 단위로 점수 계산 +
+                    국내-해외 교차 매칭(🔗) + 카테고리 전체 집계
+                    (category_aggregator.py, 지난주 대비 증감 포함) 보조 지표
+  4) LLM 요약    -> llm_summarizer.py: (A) 자체 요약 + (A-1) 얇은 재료
+                    fallback. (B) 그룹핑 보조는 issue_grouper.stage3_llm_assist
+                    담당. 프로바이더 설정(LLM_PROVIDER, 모델명, X-Title 등)은
+                    issue_grouper.py에서 그대로 재사용. API 키가 없거나
+                    LLM 호출이 실패해도 그 이슈는 "요약 생략, 원문 제목만
+                    노출"로 안전하게 fallback(9.4/9.5 원칙)
+  5) 저장        -> storage.py - data/YYYY-WW/에 raw.json(정규화+필터링된
+                    최종 기사 데이터)/scored.json(스코어링+요약 결과,
+                    articles 필드는 raw.json과 중복이라 제외)/summary.md
+                    (사람이 읽을 배포용 요약본) 저장. WATT body는 저작권상
+                    raw.json에서도 제외(storage.py docstring 참고). git
+                    커밋/푸시는 워크플로(run-pipline.yml) 책임 - 이 단계는
+                    파일 생성까지만.
+  6) 배포        -> deploy.py - Gmail SMTP로 국내/해외 Top N + 카테고리별
+                    Top N을 HTML 이메일로 발송. 인증정보(SMTP_USER/
+                    SMTP_APP_PASSWORD/EMAIL_RECIPIENTS)는 GitHub Secrets에서
+                    읽고, 미설정 시 안전하게 발송만 생략(파이프라인 안 죽음).
 """
 
 import os
@@ -73,11 +48,10 @@ import relevance_filter
 import storage
 import deploy
 
-# 2026-07-23 신규: 카테고리별 Top N (국내/해외 축과 별개로, 카테고리 축에서도
-# Top N을 뽑는 기능 - 최종 목표인 "주간 Top N + 카테고리별 Top N" 중 카테고리
-# 축 담당). 처음엔 1로 시작 - LLM 요약 호출이 카테고리 수(최대 9개) x
-# 국내/해외(2) x 이 값만큼 늘어나서, OpenRouter 429 상황을 감안해 최소로
-# 시작하고 나중에 조정하기로 함(담당자 결정). 여기서만 바꾸면 전체에 반영됨.
+# 카테고리별 Top N (국내/해외 축과 별개로, 카테고리 축에서도 Top N을 뽑는
+# 기능 - "주간 Top N + 카테고리별 Top N" 중 카테고리 축 담당). LLM 요약
+# 호출이 카테고리 수(최대 9개) x 국내/해외(2) x 이 값만큼 늘어나므로 낮게
+# 유지 - 여기서만 바꾸면 전체에 반영됨.
 CATEGORY_TOP_N = 1
 
 
@@ -94,8 +68,8 @@ def run_collectors() -> tuple[list[dict], dict, list[str]]:
 
     반환값:
       all_articles: watt+naver+gdelt 기사를 하나로 합친 리스트 (아직 정규화 전 원본 스키마 - 이미 세 collector가 공통 스키마를 지키므로 합치기만 하면 됨)
-      gdelt_timeline: GDELT 시계열 데이터 (3.1 규칙대로 스코어링에는 안 들어가고 참고 지표 전용- 지금은 그냥 들고만 있음, 저장 레이어(5번, 아직 미구현) 완성 시 그쪽에서 사용)
-      failed_sources: 실패한 소스 이름 목록 (9.2 "에러 리포트 자동화"의 재료 - 저장/배포 레이어가 아직 없어서 지금은 콘솔에만 출력)
+      gdelt_timeline: GDELT 시계열 데이터 (3.1 규칙대로 스코어링에는 안 들어가고 참고 지표 전용 - storage.py가 scored.json에 그대로 저장)
+      failed_sources: 실패한 소스 이름 목록 (9.2 "에러 리포트 자동화"의 재료 - storage.py/deploy.py가 결과물에 반영)
     """
     all_articles: list[dict] = []
     gdelt_timeline: dict = {}
@@ -163,56 +137,43 @@ def normalize(articles: list[dict]) -> list[dict]:
 
 def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list[dict], dict, dict]:
     """
-    2.1 이슈 그룹핑(issue_grouper.group_issues) + 3.1/3.2 국내/해외 개별 랭킹(Top N)까지 수행.
-    (2026-07-15, to_singleton_groups 임시 처리를 실제 그룹핑으로 교체 - 배경 문서 "진행할 것 — 최우선" 참조)
+    이슈 그룹핑(issue_grouper.group_issues) + 3.1/3.2 국내/해외 개별 랭킹(Top N)까지 수행.
 
     ** 그룹핑을 먼저, 축 분리는 그 다음 (설계 결정) **
     알고리즘 문서 2.1 "작동 방식" 3번은 매칭 범위를 "전체 기사 벡터 x 전체 기사 벡터"(국내-국내 / 해외-해외 / 국내-해외 전부 포함)로 명시하고 있다.
-    그런데 기존 임시 코드는 split_domestic_international()을 먼저 호출해 국내/해외를 나눈 뒤 각각 따로 to_singleton_groups()를 적용하고 있었다.
-    이 순서 그대로 group_issues만 바꿔치기하면 국내/해외가 애초에 분리된 채로 그룹핑되어 버려서 국내-해외 교차 매칭이 구조적으로 아예 발생할 수 없게 된다 (문서 정의와 어긋남).
-    그래서 이번 연결 작업에서 순서를 뒤집었다:
-    ① 전체 기사를 대상으로 group_issues()를 한 번 호출 -> ② 그 결과 그룹들을 국내/해외 축으로 "나눠서" scorer에 넘긴다.
+    국내/해외를 먼저 나눠서 각각 그룹핑하면 국내-해외 교차 매칭이 구조적으로 아예 발생할 수 없게 된다 (문서 정의와 어긋남).
+    그래서 순서는: ① 전체 기사를 대상으로 group_issues()를 한 번 호출 -> ② 그 결과 그룹들을 국내/해외 축으로 "나눠서" scorer에 넘긴다.
 
     ** 국내-해외 교차 매칭된 그룹의 처리 **
     group_issues가 만든 그룹 하나가 국내(네이버)·해외(WATT/GDELT) 기사를 동시에 포함할 수 있다.
     3.2 원칙("양쪽 리스트 모두에서 노출... 하나의 점수로 합치지는 않음, 정규화·환산 없이 각 축의 원본 신호를 그대로 보존")대로,
     이런 그룹은 국내 축 스코어링엔 그 그룹 안의 네이버 기사만, 해외 축 스코어링엔 그 그룹 안의 WATT/GDELT 기사만 걸러서 넘긴다 - 각 축의 issue_score가 그 축 안에서의 원본 신호만 반영하게 하기 위함이다.
-    다만 "이 이슈가 다른 축에서도 다뤄졌다"를 화면에 🔗로 표시해주는 기능은 2026-07-25 구현 완료 - 아래 domestic_part/international_part 둘 다 비어있지 않은 경우에만 서로에게 "_cross_axis_partner"를 붙이고, scorer.score_group()이 이를 cross_axis_partner 정식 필드로 승격한다.
+    "이 이슈가 다른 축에서도 다뤄졌다"는 🔗 표시로 화면에 노출된다 - 아래 domestic_part/international_part 둘 다 비어있지 않은 경우에만 서로에게 "_cross_axis_partner"를 붙이고, scorer.score_group()이 이를 cross_axis_partner 정식 필드로 승격한다.
 
-    ** 2026-07-23 버그 수정: GDELT 소스의 한국어 기사를 국내로 재분류 **
-    아래 domestic/international 분리를 소스(source)만으로 판단하면, GDELT가
-    번역 인덱싱 기능 때문에 한국어 기사를 물어오는 경우(예: "foot-and-mouth
-    disease" 검색에 "구제역"이라는 단어를 쓴 순수 국내 기사가 걸리는 경우 -
-    유튜버 닉네임 동음이의 협박 소송 기사가 실제로 "해외" Top1을 두 번이나
-    도배한 사례로 실측 확인됨, 2026-07-22/23) 국내 이슈가 "해외" 축으로
-    잘못 분류된다. `_is_korean_gdelt_article()`로 재분류함 - GDELT 응답에
-    이미 붙어있는 `language` 필드("Korean" 등, GDELT가 크롤링 시점에
-    자체 판별한 원본 신호)를 우선 쓰고, 이 필드가 없는 예외적인 경우에만
-    `scorer._is_korean_title()`(제목의 한글 유니코드 비율 체크)로 안전하게
-    fallback한다. 처음엔 `_is_korean_title()`만 썼는데, raw.json을 직접
-    열어보다가 GDELT가 이미 `language` 필드를 주고 있다는 걸 발견해서
-    (담당자 발견, 2026-07-23) 더 신뢰도 높은 이 신호를 우선하도록 개선함 -
-    제목 글자를 세어 우리가 다시 추측하는 것보다, GDELT 자체 판별 결과를
-    쓰는 게 더 정확함.
-    **이전 실수**: 이 재분류 로직을 처음엔 `scorer.split_domestic_international()`
-    에만 넣었었는데, 실제로 이 함수 아래 국내/해외 분리 로직은 그 함수를 안
-    쓰고 이 함수(main.py의 score()) 안에 별도로 구현돼 있어서 수정이 실행
-    경로에 전혀 반영이 안 됐던 게 실측(2026-07-23 재현 확인)으로 드러남 -
-    이번엔 실제로 쓰이는 이 위치에 직접 반영함. `scorer.split_domestic_
-    international()`은 이제 아무 데서도 안 쓰이는 죽은 코드로 확인됨(정리는
-    범위 밖, 다음 세션에서 검토).
+    ** GDELT 소스의 한국어 기사는 국내로 재분류 **
+    국내/해외 분리를 소스(source)만으로 판단하면, GDELT가 번역 인덱싱
+    기능 때문에 한국어 기사를 물어오는 경우(예: 영문 키워드 검색에 한국어
+    동음이의 기사가 걸리는 경우) 국내 이슈가 "해외" 축으로 잘못 분류된다.
+    `scorer._is_korean_gdelt_article()`로 재분류한다 - GDELT 응답에 붙어있는
+    `language` 필드("Korean" 등, GDELT가 크롤링 시점에 자체 판별한 원본
+    신호)를 우선 쓰고, 이 필드가 없는 예외적인 경우에만 제목의 한글
+    유니코드 비율 체크로 안전하게 fallback한다.
+
+    같은 국내/해외 판별 로직은 category_aggregator.py가 쓰는
+    `scorer.split_domestic_international()`도 함께 쓴다 - Top N 스코어링과
+    카테고리 집계가 서로 다른 기준으로 국내/해외를 나누지 않도록 단일
+    소스(scorer._is_korean_gdelt_article)로 통일돼 있다.
 
     model: sentence_transformers.SentenceTransformer 인스턴스, 또는 None.
            None이면 issue_grouper.group_issues가 2차(임베딩) 없이 1차 결과만으로 안전하게 fallback한다 (아래 _load_embedding_model 참고).
 
-    ** 2026-07-23 신규: 카테고리별 Top N도 함께 계산해서 반환 **
-    최종 목표("주간 Top N + 카테고리별 Top N", 담당자 확정)에 맞춰, 국내/해외
-    축을 나눈 domestic_groups/international_groups 각각에 대해
-    scorer.score_by_category()로 카테고리별 Top N도 같이 계산한다. 카테고리
-    축도 국내/해외 축과 독립적으로 유지(교차 안 함 - 담당자가 "구분해서" 결정)
-    - 즉 "국내 질병명 Top N", "해외 질병명 Top N"처럼 최대 카테고리 9개 x
-    국내/해외 2개 = 18개 리스트가 나올 수 있음. N 값은 CATEGORY_TOP_N 상수
-    (현재 1)로 조정 가능.
+    ** 카테고리별 Top N도 함께 계산해서 반환 **
+    "주간 Top N + 카테고리별 Top N" 목표에 맞춰, 국내/해외 축을 나눈
+    domestic_groups/international_groups 각각에 대해 scorer.score_by_category()
+    로 카테고리별 Top N도 같이 계산한다. 카테고리 축도 국내/해외 축과
+    독립적으로 유지(교차 안 함) - 즉 "국내 질병명 Top N", "해외 질병명 Top N"
+    처럼 최대 카테고리 9개 x 국내/해외 2개 = 18개 리스트가 나올 수 있다.
+    N 값은 CATEGORY_TOP_N 상수로 조정 가능.
     """
     groups = issue_grouper.group_issues(articles, model=model)
 
@@ -230,12 +191,11 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
             and not (a.get("source") == "GDELT" and scorer._is_korean_gdelt_article(a))
         ]
         if domestic_part and international_part:
-            # 2026-07-25 구현(3.2 "국내-해외 교차 매칭 🔗", 담당자 요청) -
-            # 같은 그룹이 국내/해외 양쪽에 걸쳐 있으면, 각 축의 대표 기사
-            # (scorer.score_group이 titles[0]로 쓰는 group[0])에 반대 축
-            # 대표 제목을 "_cross_axis_partner"로 붙여둔다. 앞에 _를 붙인
-            # 이유는 내부 전달용 임시 필드임을 표시하기 위함(storage.py가
-            # raw.json 저장 시 body와 함께 제거) - scorer.score_group()이
+            # 같은 그룹이 국내/해외 양쪽에 걸쳐 있으면, 각 축의 대표
+            # 기사(scorer.score_group이 titles[0]로 쓰는 group[0])에 반대
+            # 축 대표 제목을 "_cross_axis_partner"로 붙여둔다. 앞에 _를
+            # 붙인 이유는 내부 전달용 임시 필드임을 표시하기 위함(storage.py
+            # 가 raw.json 저장 시 body와 함께 제거) - scorer.score_group()이
             # 이 필드를 읽어 정식 필드 cross_axis_partner로 승격시킨다.
             domestic_part[0]["_cross_axis_partner"] = international_part[0].get("title", "")
             international_part[0]["_cross_axis_partner"] = domestic_part[0].get("title", "")
@@ -254,7 +214,7 @@ def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list
 
 
 # ---------------------------------------------------------------------------
-# 2.1 이슈 그룹핑용 임베딩 모델 로드 (2026-07-15 신규)
+# 2.1 이슈 그룹핑용 임베딩 모델 로드
 # ---------------------------------------------------------------------------
 
 def _load_embedding_model():
@@ -268,7 +228,6 @@ def _load_embedding_model():
     모델 로드 실패(최초 실행 시 다운로드 실패, 패키지 미설치, 캐시 문제 등) 시에도 전체 파이프라인이 죽지 않도록 여기서 예외를 잡아 None을 반환한다.
     issue_grouper.group_issues(articles, model=None)이 이미 "2차(임베딩) 생략, 1차 사전 매칭 결과만 사용"으로 안전하게 fallback하도록 설계돼 있으므로(issue_grouper.py group_issues 참고),
     이 함수의 실패가 9.1 "소스별 독립 실행 구조"와 같은 철학으로 전체 중단 없이 흡수된다.
-    다만 이 경우 2.1의 2차(임베딩) 매칭 없이 1차 사전 매칭(현재 빈 리스트라 사실상 매칭 없음)만 적용되므로 사실상 이번 실행은 to_singleton_groups와 같은 결과가 된다는 점은 감안해야 한다.
     (완전한 자동 복구는 아님 - 다음 실행에서 모델 로드가 다시 성공하길 기대하는 정도의 완화책).
     """
     try:
@@ -303,8 +262,7 @@ def step4_category_llm_summary(domestic_category_ranked: dict[str, list[dict]],
                                 international_category_ranked: dict[str, list[dict]],
                                 ) -> tuple[dict[str, list[dict]], dict[str, list[dict]]]:
     """
-    2026-07-23 신규. step4_llm_summary와 같은 (A)/(A-1) 로직을 카테고리별
-    Top N 결과에도 적용한다.
+    step4_llm_summary와 같은 (A)/(A-1) 로직을 카테고리별 Top N 결과에도 적용한다.
 
     domestic_category_ranked/international_category_ranked는 각각
     {카테고리: [항목, ...]} 형태(scorer.score_by_category 반환값)라서,
@@ -326,17 +284,17 @@ def step4_category_llm_summary(domestic_category_ranked: dict[str, list[dict]],
 def step4_llm_summary(domestic_ranked: list[dict],
                        international_ranked: list[dict]) -> tuple[list[dict], list[dict]]:
     """
-    섹션 4 (A) 자체 요약 + (A-1) 얇은 재료 fallback 구현 완료 (2026-07-17).
-    실제 로직은 llm_summarizer.py에 있고, 이 함수는 국내/해외 축을 각각
-    넘겨주는 얇은 호출부다. (B) 그룹핑 보조는 2.1에서 이미 처리됨
-    (issue_grouper.stage3_llm_assist) - 여기서는 (A)/(A-1)만 다룬다.
+    섹션 4 (A) 자체 요약 + (A-1) 얇은 재료 fallback. 실제 로직은
+    llm_summarizer.py에 있고, 이 함수는 국내/해외 축을 각각 넘겨주는 얇은
+    호출부다. (B) 그룹핑 보조는 issue_grouper.stage3_llm_assist가 처리한다
+    - 여기서는 (A)/(A-1)만 다룬다.
 
     domestic_ranked/international_ranked는 score()에서 이미 top_n=5로 제한된
     상태로 들어온다 (7번 섹션 "초기엔 주간 Top 5로 제한 운영" 방침 그대로 -
     여기서 추가로 자르지 않음).
 
     반환값은 입력과 같은 형태(list[dict])에 "summary"/"summary_skipped_reason"
-    필드가 추가된 것 - 저장 레이어(5단계, 아직 미구현)에 그대로 넘길 수 있다.
+    필드가 추가된 것 - storage.py 저장 단계에 그대로 넘긴다.
     """
     domestic_summarized = llm_summarizer.summarize_top_issues(domestic_ranked, label="국내")
     international_summarized = llm_summarizer.summarize_top_issues(international_ranked, label="해외")
@@ -358,19 +316,19 @@ def run() -> None:
     keyword_tagger.print_uncategorized_sample(articles, sample_size=30)
 
     print("\n=== [2.5] 관련성 필터 (LLM - 사료·축산업 뉴스가 아닌 기사 제외) ===")
-    # 2026-07-22 신설. 키워드 매칭만으로는 못 거르는 오매칭(동음이의어, 기관명
-    # 일부로만 등장, 각주성 언급 등)을 LLM이 제목/요약 맥락으로 판단해 걸러낸다
-    # - 이후 단계(임베딩 계산, 3차 LLM 그룹핑 보조)의 대상도 함께 줄어드는
-    # 효과가 있음. 자세한 설계 배경은 relevance_filter.py 모듈 docstring 참고.
+    # 키워드 매칭만으로는 못 거르는 오매칭(동음이의어, 기관명 일부로만 등장,
+    # 각주성 언급 등)을 LLM이 제목/요약 맥락으로 판단해 걸러낸다 - 이후
+    # 단계(임베딩 계산, 3차 LLM 그룹핑 보조)의 대상도 함께 줄어드는 효과가
+    # 있음. 자세한 설계 배경은 relevance_filter.py 모듈 docstring 참고.
     articles = relevance_filter.filter_articles(articles)
 
     print("\n=== [2.6] 카테고리 재분류 (LLM - '기타'로 남았지만 관련성 확인된 기사) ===")
-    # 2026-07-25 신설(담당자 지적): keyword_tagger(사전 매칭)와 relevance_filter
-    # (LLM 관련성 판단)는 기준이 서로 달라서, 사전엔 안 걸려 category="기타"로
-    # 붙었는데 relevance_filter가 "관련 있음"으로 확정하는 기사가 생길 수 있음
-    # - 이 기사는 필터는 통과하는데 category는 계속 "기타"라, "기타"를 제외하는
-    # 카테고리별 Top N(3번 섹션)에는 영원히 못 들어가는 공백이 있었음. 이
-    # 단계로 그 기사들만 다시 LLM에 물어 재분류한다 - 자세한 설계 배경은
+    # keyword_tagger(사전 매칭)와 relevance_filter(LLM 관련성 판단)는 기준이
+    # 서로 달라서, 사전엔 안 걸려 category="기타"로 붙었는데 relevance_filter
+    # 가 "관련 있음"으로 확정하는 기사가 생길 수 있음 - 이 기사는 필터는
+    # 통과하는데 category는 계속 "기타"라, "기타"를 제외하는 카테고리별
+    # Top N(3번 섹션)에는 영원히 못 들어가는 공백이 있었음. 이 단계로 그
+    # 기사들만 다시 LLM에 물어 재분류한다 - 자세한 설계 배경은
     # relevance_filter.recategorize_uncategorized() docstring 참고.
     articles = relevance_filter.recategorize_uncategorized(articles)
 
@@ -385,16 +343,16 @@ def run() -> None:
     scorer.print_category_top_n("국내", domestic_category_ranked, n=CATEGORY_TOP_N)
     scorer.print_category_top_n("해외", international_category_ranked, n=CATEGORY_TOP_N)
 
-    print("\n=== [3-보조] 카테고리 전체 집계 (국내/해외, 2026-07-14 신규 / 2026-07-25 지난주 대비 증감 추가) ===")
-    # 2.1 이슈 그룹핑이 "동일 사건만" 묶는 좁은 정의라 큰 트렌드가 개별
-    # 이슈로 흩어져 보이는 공백을 메우는 거친(coarse) 보조 지표 - 순위(Top N)와는
+    print("\n=== [3-보조] 카테고리 전체 집계 (국내/해외, 지난주 대비 증감 포함) ===")
+    # 이슈 그룹핑이 "동일 사건만" 묶는 좁은 정의라 큰 트렌드가 개별 이슈로
+    # 흩어져 보이는 공백을 메우는 거친(coarse) 보조 지표 - 순위(Top N)와는
     # 별개로, 카테고리 자체가 이번 주 몇 건 다뤄졌는지만 보여준다.
     # (category_aggregator.py 모듈 docstring 참고)
     category_distribution = category_aggregator.aggregate(articles)
-    # 2026-07-25 추가: 지난주 scored.json이 있으면 카테고리별 증감을 같이
-    # 보여준다. 지난주 데이터가 없으면(첫 실행 등) compare_with_last_week가
-    # 안전하게 None을 반환하고, 아래 출력 함수는 그 경우 증감 없이 예전과
-    # 동일하게 출력한다(category_aggregator.py 함수 docstring 참고).
+    # 지난주 scored.json이 있으면 카테고리별 증감을 같이 보여준다. 지난주
+    # 데이터가 없으면(첫 실행 등) compare_with_last_week가 안전하게 None을
+    # 반환하고, 아래 출력 함수는 그 경우 증감 없이 출력한다(category_
+    # aggregator.py 함수 docstring 참고).
     category_comparison = category_aggregator.compare_with_last_week(category_distribution)
     category_aggregator.print_aggregate_with_comparison(category_distribution, category_comparison)
 
@@ -414,11 +372,11 @@ def run() -> None:
         llm_summarizer.print_summaries(f"해외-{category}", items)
 
     print("\n=== [5] 저장 (data/YYYY-WW/raw.json, scored.json, summary.md) ===")
-    # 2026-07-23 추가: storage.py 내부는 이미 파일 단위로 안전하게 실패를
-    # 흡수하도록 만들었지만(storage.py docstring 참고), 예상 못 한 예외까지
-    # 완벽히 막을 순 없으므로 9.1 "소스별 독립 실행 구조"와 같은 방향으로
-    # 마지막 방어선을 하나 더 둔다 - 저장이 통째로 실패해도 이미 콘솔에
-    # 다 출력된 이번 실행 결과(수집/스코어링/요약)는 그대로 남는다.
+    # storage.py 내부는 이미 파일 단위로 안전하게 실패를 흡수하도록
+    # 만들었지만(storage.py docstring 참고), 예상 못 한 예외까지 완벽히
+    # 막을 순 없으므로 9.1 "소스별 독립 실행 구조"와 같은 방향으로 마지막
+    # 방어선을 하나 더 둔다 - 저장이 통째로 실패해도 이미 콘솔에 다 출력된
+    # 이번 실행 결과(수집/스코어링/요약)는 그대로 남는다.
     try:
         saved_dir = storage.save_week(articles, domestic_summarized, international_summarized,
                                        domestic_category_summarized, international_category_summarized,
@@ -429,11 +387,10 @@ def run() -> None:
               f"{type(e).__name__} - {e!r}")
         saved_dir = None
     print("\n=== [6] 배포 (Gmail SMTP HTML 이메일) ===")
-    # 2026-07-24 신규: deploy.py 구현 완료. storage.py와 같은 방향으로
-    # 마지막 방어선을 둔다 - 배포 실패가 이미 끝난 나머지 단계 결과에
-    # 영향을 주면 안 됨. week_label은 저장이 성공했으면 그 디렉토리 이름을
-    # 그대로 쓰고(주차 계산 로직 중복 방지), 저장 자체가 실패한 드문
-    # 경우에만 직접 계산한다.
+    # storage.py와 같은 방향으로 마지막 방어선을 둔다 - 배포 실패가 이미
+    # 끝난 나머지 단계 결과에 영향을 주면 안 됨. week_label은 저장이
+    # 성공했으면 그 디렉토리 이름을 그대로 쓰고(주차 계산 로직 중복 방지),
+    # 저장 자체가 실패한 드문 경우에만 직접 계산한다.
     try:
         week_label = os.path.basename(saved_dir) if saved_dir else datetime.now(timezone.utc).strftime("%G-%V")
         deploy.send_weekly_email(week_label, domestic_summarized, international_summarized,
@@ -446,8 +403,7 @@ def run() -> None:
     if failed_sources:
         saved_dir_note = f"{saved_dir}/scored.json에도" if saved_dir else "(저장 실패로 파일에는 못 남았지만)"
         print(f"\n[main] 이번 실행 실패 소스: {failed_sources} (9.2 에러 리포트 - "
-              f"{saved_dir_note} failed_sources로 같이 저장됨, "
-              f"배포 레이어 완성 전까지는 콘솔 로그로도 확인 가능)")
+              f"{saved_dir_note} failed_sources로 같이 저장됨)")
 
 
 if __name__ == "__main__":

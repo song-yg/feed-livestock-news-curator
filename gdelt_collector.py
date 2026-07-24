@@ -8,57 +8,19 @@ naver_collector / watt_collector와 반환 형태가 다르다는 점이 핵심 
 그 둘은 list[dict] 하나만 반환하지만, 이 모듈은 tuple(articles, timeline)을 반환한다.
 이유:
   - articles: 기사 1건 = 레코드 1건 -> 공통 스키마 그대로, 정규화/이슈그룹핑으로 감
-  - timeline: 키워드 단위 시계열(timelinevol/timelinevolraw) -> 기사 단위가 아니라서 공통 스키마에 억지로 끼워넣지 않음.\
-    3.1 규칙대로 스코어링에는 안 들어가고 결과물에 참고 지표로만 별도 표시됨 (저장 레이어가 알아서 분리 저장)
-(2026-07-13 논의 후 확정 - "방식 A")
+  - timeline: 키워드 단위 시계열(timelinevol/timelinevolraw)
+  -> 기사 단위가 아니라서 공통 스키마에 억지로 끼워넣지 않음. 시계열 수집은 완전히 제거된 상태.
 
-~~2026-07-21 - 시계열 수집 완전 제거~~: 위 tuple(articles, timeline) 반환
-형태 자체는 하위호환을 위해 그대로 유지하지만, timeline은 이제 항상 빈
-딕셔너리(`{}`)다 - 실전 규모 테스트에서도 429로 16분 만에 실패하는 등
-불안정성이 해소가 안 됐고, 저장 레이어가 없어 이 데이터를 애초에 아무
-데도 안 쓰고 있었던 것도 제거 결정에 힘을 실음. 상세 → `collect()` 함수
-docstring 및 `_collect_timeline_for_keyword` 참고(코드는 남겨둠, 호출만 제거).
-
-*** 아직 검증 전 초안입니다 — "확인 필요" 표시된 부분(특히 seendate 파싱)은 실제 실행 결과를 보고 나서 다음 단계에서 고쳐야 함 (watt_collector와 동일한 방식) ***
-
---- 2026-07-14 실행 테스트 메모 ---
-5개 키워드 중 4개(avian influenza / foot and mouth disease / feed price / livestock market) 정상 수집 확인.
-"HPAI"만 GDELT API 자체 에러로 실패함 (ValueError: "The specified phrase is too short.") - 코드 버그 아니라 GDELT DOC API가 너무 짧은 검색어(약어 등)를 거부하는 것으로 추정.
-KEYWORDS_EN은 어차피 최종 확정 전 단계라 지금은 그대로 두고 메모만 남김 - 추후 키워드 리스트 확정 작업 때 "HPAI" 같은 짧은 약어는 더 긴 표현으로 바꾸거나 빼는 것을 함께 검토할 것.
-
-또한 실행 중 거의 매 호출마다 429(rate limit)가 발생해 재시도 백오프가 누적되며 총 실행 시간이 약 1시간 가까이 걸림
-- 아래 두 가지로 대응:
-  1. REQUEST_INTERVAL 8초 -> 15초 상향
-  2. _call_with_retry의 429 처리를 "호출별 개별 대기"에서 "전역 공유 쿨다운"
-     방식으로 변경 (자세한 이유는 _call_with_retry, _wait_for_cooldown 참고)
-
---- 2026-07-14(4차) 추가 메모 (GitHub Actions 실행 중 사용자 관찰) ---
-GDELT 접속량이 예상보다 훨씬 많아 보임(사용자 관찰) - MAX_RETRIES(4단계, 최대 900초)를 다 소진하고도 실패하는 키워드가 나오면 그 키워드만 편중되게 빠지는 결과물이 나올 위험이 있어, 키워드 단위 "외부 재시도"를 추가함:
-  1. article_search가 최종 실패한 키워드만 모아서, 한 라운드가 끝난 뒤 별도
-     라운드로 최대 OUTER_RETRY_PASSES(기본 2)번 더 재시도 (총 최대 3회 시도)
-  2. ~~429 발생 시각을 UTC로 기록해 실행 끝에 요약 출력~~ → 2026-07-15 제거함.
-     실행 트리거가 사람이 수동으로 누르는 버튼(GitHub Actions workflow_dispatch)
-     뿐이라, 애초에 "근무 시간대"로만 표본이 몰릴 수밖에 없어 "429가 특정
-     시간대에 몰리는지" 패턴을 알아내겠다는 이 기능의 전제 자체가 성립하기
-     어렵다는 판단으로 폐기 (아래 "429 시각 기록" 관련 코드 전체 삭제 -
-     실행 도중 그 순간 콘솔에 시각을 찍어주는 즉시성 로그 한 줄만 유지,
-     여러 실행에 걸쳐 모아서 요약하던 부분만 제거).
-
---- 2026-07-16 추가: 429 대응 2건 (문서 "7. 아직 결정 안 된 것들" 항목 처리) ---
-실측(main.py 실행 로그)에서 GDELT 429가 여전히 심함(키워드마다 백오프
-4단계를 다 소진하는 경우가 반복, 외부 재시도로 겨우 복구)이 확인돼 아래
-두 가지로 대응함 - 서로 배타적이지 않아 같이 적용:
-  1. User-Agent 헤더 주입: gdeltdoc 라이브러리 자체 이슈 트래커(#22)에서
-     "User-Agent 없이 요청하면 rate limit, 추가하면 해결"이라는 보고를
-     확인 - requests 기본 헤더를 오버라이드하는 방식으로 적용(아래
-     "User-Agent 미기재 가설 대응" 주석 참고). 효과는 아직 실측 전.
-  2. 키워드를 하나의 OR 쿼리로 결합: gdeltdoc의 Filters(keyword=[...])가
-     리스트를 자동으로 OR로 묶어준다는 걸 확인(공식 README) - 기존엔
-     키워드 4개를 각각 호출해 요청이 4번 나갔는데, 하나로 합쳐서 요청
-     횟수 자체를 줄임(429에 걸릴 기회 감소, 원인이 뭐든 도움이 됨).
-     시계열(timelinevol/timelinevolraw)은 3.1 원칙상 "키워드별 트렌드"가
-     의미가 있어야 하므로 이건 합치지 않고 기존처럼 키워드별로 유지함
-     (_collect_articles_for_keywords 및 collect() 참고).
+** GDELT 429(rate limit) 대응 정리 **
+GDELT 429가 구조적으로 심해서(요청 대부분에서 발생, 원인이 GDELT 서버 쪽 트래픽 총량으로 추정돼 우리 코드로 완전히 해결은 불가) 여러 겹의 완화책을 적용했다:
+  1. REQUEST_INTERVAL을 넉넉히 두고, 429 시 전역 공유 쿨다운으로 백오프
+     (호출별 개별 대기가 아니라 - 자세한 이유는 _call_with_retry, _wait_for_cooldown 참고)
+  2. 키워드 단위 "외부 재시도": article_search가 최종 실패한 키워드만 모아서,
+     한 라운드가 끝난 뒤 별도 라운드로 최대 OUTER_RETRY_PASSES 번 더 재시도
+  3. User-Agent 헤더 주입: gdeltdoc 라이브러리 자체 이슈 트래커(#22)에서 "User-Agent 없이 요청하면 rate limit, 추가하면 해결"이라는 보고를 확인
+     - requests 기본 헤더를 오버라이드하는 방식으로 적용(아래 "User-Agent 미기재 가설 대응" 주석 참고)
+  4. 키워드를 하나의 OR 쿼리로 결합: gdeltdoc의 Filters(keyword=[...])가 리스트를 자동으로 OR로 묶어준다는 걸 확인(공식 README)
+     - 요청 횟수 자체를 줄여 429에 걸릴 기회를 줄임.
 """
 
 import json
@@ -77,49 +39,31 @@ import keyword_source
 from gdeltdoc import GdeltDoc, Filters
 from gdeltdoc.errors import RateLimitError
 
-# --- 2026-07-16 추가: User-Agent 미기재 가설 대응 (7번 섹션 미결정 항목) ---
+# --- User-Agent 미기재 가설 대응 ---
 #
-# 배경: gdeltdoc 라이브러리 자체 GitHub 이슈(#22, alex9smith/gdelt-doc-api)에서
-# "요청 수가 적었는데도 rate limit 에러를 겪었고, 브라우저 요청은 정상 동작
-# 했다 - api_client.py에 User-Agent 헤더를 추가했더니 해결됐다"는 보고를
-# 실제로 확인함(우리가 쓰는 바로 그 라이브러리의 이슈 트래커). 이 패치가
-# 라이브러리에 병합됐다는 근거는 못 찾았고, README에도 헤더/세션을
-# 커스터마이징하는 공식 옵션이 없어 - 지금도 gdeltdoc이 User-Agent 없이
-# 요청을 보내고 있을 가능성이 높다고 판단.
+# gdeltdoc이 헤더 주입 방법을 공식 제공하지 않으므로, requests 라이브러리의 기본 헤더(default_headers()) 자체를 오버라이드하는 방식으로 우회.
 #
-# gdeltdoc이 헤더 주입 방법을 공식 제공하지 않으므로, requests 라이브러리의
-# 기본 헤더(default_headers()) 자체를 오버라이드하는 방식으로 우회한다 -
-# Session()이 생성될 때마다 이 함수가 호출되므로, gdeltdoc이 내부적으로
-# 만드는 Session에도 자연히 적용된다.
-#
-# ** 주의 - 이건 프로세스 전역에 영향을 준다 **: 이 모듈을 import하는 순간
+# ** 주의 - 이건 프로세스 전역에 영향을 준다 **
+# : 이 모듈을 import하는 순간
 # requests 기본 헤더가 바뀌어서, 같은 프로세스에서 실행되는 naver_collector의
-# requests.get 호출에도 이 User-Agent가 섞여 들어간다(naver_collector는
-# X-Naver-Client-Id 등 자기 인증 헤더만 명시적으로 쓰고 User-Agent는 따로
-# 지정 안 하므로 - 인증은 헤더 값 기반이라 UA가 섞여도 인증 자체엔 영향 없음,
-# 다만 "전역 부작용"이라는 점은 유지보수 시 반드시 인지할 것). WATT_collector
-# 가 이미 쓰고 있는 것과 동일한 UA 문자열을 재사용해 일관성을 맞춤.
-#
-# ** 효과 미확인 - 검증 필요 **: 위 이슈 보고는 신뢰도 높은 근거지만, 이
-# 프로젝트의 GDELT 429가 정확히 같은 원인인지는 아직 실측 안 됨. 다음
-# 실행에서 429 발생 빈도가 눈에 띄게 줄어드는지 로그로 직접 확인할 것.
+# requests.get 호출에도 이 User-Agent가 섞여 들어간다.
+# (인증 자체엔 영향 없음, 다만 "전역 부작용"이라는 점은 유지보수 시 반드시 인지할 것).
+# WATT_collector가 이미 쓰고 있는 것과 동일한 UA 문자열을 재사용해 일관성을 맞춤.
 _GDELT_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 )
 
-# 2026-07-16 버그 수정: requests.sessions 모듈이 `from .utils import
-# default_headers`로 자기 네임스페이스에 직접 바인딩해서 쓰기 때문에,
-# requests.utils.default_headers만 바꾸면 Session.__init__() 내부에서 부르는
-# 건 여전히 원래 함수다 (실측 확인 - Session().headers["User-Agent"]가
-# patch 후에도 그대로 "python-requests/x.y.z"였음). requests.sessions 쪽
-# 바인딩도 같이 덮어써야 실제 Session 생성에 반영된다.
+# requests.sessions 모듈이 `from .utils import default_headers`로 자기
+# 네임스페이스에 직접 바인딩해서 쓰기 때문에, requests.utils.default_headers
+# 만 바꾸면 Session.__init__() 내부에서 부르는 건 여전히 원래 함수다.
+# requests.sessions 쪽 바인딩도 같이 덮어써야 실제 Session 생성에 반영된다.
 #
 # 가드(_gdelt_ua_patched)를 두는 이유: 이 모듈이 어떤 경로로든 두 번 로드되면
 # (예: importlib.reload) "원본 함수 캡처"까지 다시 실행돼서 이미 패치된
 # 함수를 "원본"으로 잘못 캡처해버리고, 그걸 감싸는 새 wrapper가 자기 자신을
-# 무한 호출하는 RecursionError가 실제로 재현됨(실측 확인) - 원본 캡처부터
-# 최종 할당까지 전부 가드 안에 넣어서, 이미 패치돼 있으면 이 블록을 통째로
+# 무한 호출하는 RecursionError로 이어질 수 있음 - 원본 캡처부터 최종
+# 할당까지 전부 가드 안에 넣어서, 이미 패치돼 있으면 이 블록을 통째로
 # 건너뛴다.
 if not getattr(requests.utils, "_gdelt_ua_patched", False):
     _original_default_headers = _requests_utils.default_headers
@@ -134,20 +78,13 @@ if not getattr(requests.utils, "_gdelt_ua_patched", False):
     requests.utils._gdelt_ua_patched = True
 
 
-
-# 예시 키워드. 2026-07-17부터 구글 시트(KEYWORD_SHEET_CSV_URL)가 설정돼
-# 있으면 그쪽을 우선 쓰고, 없거나 읽기 실패하면 이 리스트로 대체된다
-# (keyword_source.py 참고, naver_collector.py와 동일 방침).
-# GDELT DOC API는 영문 검색이 기본이므로 영문 키워드로 구성 (스펙 "필요한 것" 항목 참조).
+# 예시 키워드. 구글 시트(KEYWORD_SHEET_CSV_URL)가 설정돼 있으면 그쪽을
+# 우선 쓰고, 없거나 읽기 실패하면 이 리스트로 대체된다(keyword_source.py
+# 참고, naver_collector.py와 동일 방침). GDELT DOC API는 영문 검색이
+# 기본이므로 영문 키워드로 구성한다.
 #
-# 2026-07-23 갱신: 시트 v5(카테고리당 1개 원칙 + 앵커 복합어, 알고리즘 문서
-# "키워드 시트 v5" 참고)의 현재 활성 en 키워드와 동기화함. 예전 값에 있던
-# "avian influenza"/"HPAI"/"livestock market"은 v5에서 다른 값으로 교체됐고,
-# 특히 "HPAI"는 SKIP_KEYWORDS(아래)로 이미 걸러지고 있어 실제 API 실패를
-# 일으키진 않지만(naver_collector.py의 "구제역"처럼 활성 위험은 아님),
-# fallback이 v5와 다른 기준으로 도는 불일치를 없애기 위해 동기화함. 시트가
-# 나중에 또 바뀌면 이 fallback도 수동으로 같이 갱신해줘야 함(자동 동기화
-# 아님 - naver_collector.py KEYWORDS 갱신 시와 동일한 주의사항).
+# 시트가 나중에 바뀌면 이 fallback도 수동으로 같이 갱신해줘야 한다(자동
+# 동기화 아님 - naver_collector.py KEYWORDS 갱신 시와 동일한 주의사항).
 KEYWORDS_EN = [
     "foot-and-mouth disease",
     "feed price",
@@ -161,40 +98,23 @@ KEYWORDS_EN = [
     "smart livestock barn",
 ]
 
-# --- 2026-07-14(2차) 추가: 이미 실패가 확인된 키워드 사전 스킵 ---
+# --- 이미 실패가 확인된 키워드 사전 스킵 ---
 #
-# "HPAI"는 2026-07-14 실행에서 GDELT API가 매번 ValueError("The specified phrase is too short.")로 거부하는 게 확인됨.
-# 문제는 이 에러가 429 재시도 루프를 다 태우고 나서야(최대 4단계 백오프, 아래 MAX_RETRIES 참고) 도달하는 진짜 에러라서, 매 실행마다 어차피 실패할 키워드에 수 분~십수 분을 낭비하고 있었음 (실측: 약 7분/키워드).
-#
-# "몇 글자부터 너무 짧다고 판단하는지"는 GDELT가 공식적으로 공개한 기준이 아니라서(추정으로 길이 임계값을 정하면 다른 정상 키워드까지 잘못 걸러낼 위험이 있음), 길이 기반 자동 필터 대신 "실제로 실패가 확인된 키워드"만 명시적으로 등록하는 스킵 리스트로 처리한다.
+# 길이 기반 자동 필터 대신 "실제로 실패가 확인된 키워드"만 명시적으로 등록하는 스킵 리스트로 처리한다.
 # 새 키워드를 추가했는데 계속 같은 ValueError로 실패하는 게 확인되면 여기 추가할 것.
 
 SKIP_KEYWORDS = {
-    "HPAI": "GDELT API가 'phrase too short'로 거부함 (2026-07-14 확인, 재현됨)",
+    "HPAI": "GDELT API가 'phrase too short'로 거부함 (재현 확인됨)",
 }
 
-# --- 2026-07-23 신규(담당자 결정): 학습형 스킵 목록 ---
-#
-# 위 SKIP_KEYWORDS는 사람이 로그를 보고 손으로 채워넣는 "수동" 목록이라,
-# 아직 안 등록된 짧은 키워드가 시트에 새로 추가되면 등록되기 전까지 매번
-# ValueError로 요청 1번씩 계속 낭비함(430줄 근처 "키워드가 처음부터 짧으면
-# 빼면 안 되나" 논의 참고 - 길이 기반 예방적 차단은 위험해서 안 씀).
-#
-# 대신 "실제로 같은 키워드가 2번 연속 ValueError(쿼리 자체 거부)로 실패하면
-# 자동으로 스킵 목록에 편입"하는 방식을 씀 - 사람이 손으로 안 건드려도 됨.
-# GitHub Actions 러너가 매번 새 VM이라(상태가 실행 간 유지 안 됨) 이 학습
-# 결과를 파일로 저장해서 리포에 git commit해야 다음 실행에도 이어짐 -
-# storage.py가 raw.json/scored.json을 저장하는 것과 같은 패턴을 재사용함.
-#
-# data/가 아니라 별도 state/ 디렉토리에 두는 이유: data/는 "주차별 결과물
-# 아카이브"라는 의미가 이미 확정돼 있는데(storage.py 참고), 이 파일은
-# 특정 주차에 속하지 않고 계속 누적되는 "파이프라인 자체의 학습된 상태"라
-# 성격이 달라 구분함.
+# --- 학습형 스킵 목록 ---
+# "실제로 같은 키워드가 2번 연속 ValueError(쿼리 자체 거부)로 실패하면 자동으로 스킵 목록에 편입"
+# GitHub Actions 러너가 매번 새 VM이라(상태가 실행 간 유지 안 됨) 이 학습 결과를 파일로 저장해서 리포에 git commit해야 다음 실행에도 이어짐
 #
 # 2번(SKIP_STATE_FAILURE_THRESHOLD)으로 잡은 이유: 1번 실패만으로 바로
 # 영구 등록하면, GDELT 쪽 일시적 문제로 어쩌다 한 번 오탐이 났을 때도
 # 영구히 막혀버릴 위험이 있음 - 2번 연속 확인돼야 "진짜 이 키워드 자체의
-# 문제"로 보는 게 안전하다고 판단(담당자 결정).
+# 문제"로 보는 게 안전하다고 판단.
 SKIP_STATE_PATH = "state/gdelt_skip_keywords.json"
 SKIP_STATE_FAILURE_THRESHOLD = 2
 
@@ -206,11 +126,8 @@ _value_error_keywords_this_run: list[str] = []
 
 def _load_skip_state(path: str = SKIP_STATE_PATH) -> dict:
     """
-    {키워드: {"fail_count": N, "reason": "...", "last_seen": "..."}} 형태로
-    저장된 학습된 스킵 상태를 읽어온다. 파일이 없거나(첫 실행) 읽기/파싱에
-    실패하면 빈 딕셔너리로 안전하게 시작한다 - 이 파일은 어디까지나 최적화용
-    보조 데이터라, 못 읽어도 파이프라인 자체가 죽으면 안 됨(9.4/9.5 원칙과
-    같은 방향).
+    {키워드: {"fail_count": N, "reason": "...", "last_seen": "..."}} 형태로 저장된 학습된 스킵 상태를 읽어온다.
+    파일이 없거나(첫 실행) 읽기/파싱에 실패하면 빈 딕셔너리로 안전하게 시작한다.
     """
     try:
         with open(path, encoding="utf-8") as f:
@@ -237,8 +154,7 @@ def _save_skip_state(state: dict, path: str = SKIP_STATE_PATH) -> None:
 
 def _update_skip_state_after_run() -> None:
     """
-    collect() 끝에서 호출 - 이번 실행 중 ValueError로 실패한 키워드들의
-    fail_count를 1씩 올리고, 변경이 있었으면 파일에 저장한다.
+    collect() 끝에서 호출 - 이번 실행 중 ValueError로 실패한 키워드들의 fail_count를 1씩 올리고, 변경이 있었으면 파일에 저장한다.
     """
     if not _value_error_keywords_this_run:
         return
@@ -257,39 +173,20 @@ def _update_skip_state_after_run() -> None:
 
     _save_skip_state(state)
 
-# --- 2026-07-14 추가: 키워드 오매칭(false positive) 필터 ---
+# --- 키워드 오매칭(false positive) 필터 ---
 #
-# GDELT article_search는 키워드를 "부분 문자열 포함" 방식으로 매칭하기 때문에, 의도한 키워드가 더 긴 무관한 구(phrase)의 일부로 들어있는 제목도 그대로 매칭돼버리는 구조적 문제가 있다.
-# 실제로 확인된 사례:
-#   "foot and mouth disease"(구제역) 검색 -> "hand, foot and mouth disease"
-#   (수족구병 - 어린이 질환, 전혀 다른 병)가 그대로 포함 매칭됨
-#   (test_gdelt_collector.py 진단 실행, 2026-07-14)
-#
-# 길이 기반이나 정규식 기반의 일반화된 해법 대신, "실제로 오매칭이 확인된 키워드"에 한해 제외 패턴을 명시적으로 등록하는 방식을 쓴다
-# (SKIP_KEYWORDS와 동일한 철학 - 추정으로 일반 규칙을 만들면 다른 정상 매칭까지 잘못 걸러낼 # 위험이 있음).
+# "실제로 오매칭이 확인된 키워드"에 한해 제외 패턴을 명시적으로 등록하는 방식
+# (SKIP_KEYWORDS와 동일한 철학 - 추정으로 일반 규칙을 만들면 다른 정상 매칭까지 잘못 걸러낼 위험이 있음).
 # 새 오매칭 패턴이 확인되면 여기 추가할 것.
 #
 # 형태: {검색 키워드: [제목에 이 문자열(대소문자 무시)이 포함되면 제외, ...]}
-#
-# 2026-07-23 버그 수정: 딕셔너리 키가 "foot and mouth disease"(하이픈 없음)로
-# 등록돼 있었는데, 실제로 시트(v5)에서 쓰는 키워드는 "foot-and-mouth disease"
-# (하이픈 있음)임 - FALSE_POSITIVE_FILTERS.get(keyword, [])가 정확히 일치하는
-# 문자열만 찾기 때문에, 이 불일치로 인해 이 필터가 v5 도입 이후 계속 조용히
-# 무력화돼 있었던 것으로 추정됨(담당자 지적으로 발견 - 언제부터였는지는
-# 특정 못 함). 아래처럼 실제 키워드와 동일한 문자열로 키를 맞춰 복구함.
 FALSE_POSITIVE_FILTERS = {
     "foot-and-mouth disease": ["hand, foot and mouth", "hand foot and mouth"],
 }
 
-# --- 2026-07-15 버그 수정: 구두점 앞 공백 정규화 ---
+# --- 구두점 앞 공백 정규화 ---
 #
-# FALSE_POSITIVE_FILTERS를 처음 등록했을 때(2026-07-14)는 "hand, foot and mouth"(쉼표 뒤에만 공백)와 "hand foot and mouth"(쉼표 없음) 두 형태만 가정했다.
-# 그런데 실제 GDELT article_search가 돌려주는 제목은 쉼표/마침표 "앞"에도 공백이 들어간 토크나이즈된 형식이었다.
-# (실측 확인, 2026-07-15 재검증 - calibration_raw_2026-W29.json): "Westmoreland sees increase in hand , foot and mouth disease"
-# 즉 실제 제목은 "hand SPACE , SPACE foot" 형태라, 등록해둔 두 패턴 중 어느 것과도 안 맞아서 필터가 만들어진 이후 단 한 번도 실제로 걸러낸 적이 없었다.
-# (같은 재검증에서 "hand , foot and mouth disease" 오매칭 3건이 필터를 그대로 통과해 원본 데이터에 남아있는 게 확인됨)
-#
-# 패턴을 계속 늘리는 대신(제목 형식이 또 달라지면 또 놓칠 위험), 비교 전에 "구두점 앞 공백"을 없애는 정규화를 한 번 거치는 쪽을 택함.
+# 비교 전에 "구두점 앞 공백"을 없애는 정규화를 한 번 거치는 쪽을 택함.
 # 이러면 "hand, foot and mouth"/"hand , foot and mouth"/"hand  , foot and mouth" 등 공백 개수가 달라져도 전부 같은 문자열로 취급돼 안전하다.
 _SPACE_BEFORE_PUNCT = _re.compile(r"\s+([,.;:!?])")
 
@@ -306,8 +203,8 @@ def _is_false_positive(keyword: str, title: str) -> bool:
     있으면 수족구병 오매칭으로 판단해 제외)
 
     비교 전 제목과 패턴 양쪽 다 _normalize_spacing을 거쳐, GDELT 제목의
-    "구두점 앞 공백" 형식(위 2026-07-15 버그 수정 주석 참고) 때문에 매칭이
-    실패하는 일이 없도록 한다.
+    "구두점 앞 공백" 형식(위 정규화 주석 참고) 때문에 매칭이 실패하는
+    일이 없도록 한다.
     """
     patterns = FALSE_POSITIVE_FILTERS.get(keyword, [])
     if not patterns or not title:
@@ -322,21 +219,20 @@ DAYS_BACK = 7
 # (GDELT 공식 블로그 "GDELT DOC 2.0 API Debuts!" 기준 - 검색으로 검증함)
 TIMESPAN = f"{DAYS_BACK}d"
 
-# --- 2026-07-21 추가: 시계열 전용 기간 (article_search와 분리) ---
+# --- 시계열 전용 기간 (article_search와 분리) ---
 #
 # GDELT 공식 문서 확인: timeline_search는 요청 기간 길이에 따라 해상도가
 # 자동으로 바뀐다 - 72시간 미만이면 15분 단위, 72시간~1주일이면 1시간
-# 단위, "1주일 초과"면 1일 단위. 지금 TIMESPAN(7d, 정확히 "1주일")을 그대로
-# 쓰면 1시간 단위(7일치 실측 결과 166행)로 나오는데, 이 프로젝트는 주
-# 1회 실행되는 주간 다이제스트라 시간 단위 디테일이 애초에 필요 없다는
-# 담당자 지적으로 8일(1주일 "초과")로 바꿔서 일 단위(약 8행)로 받도록 함.
+# 단위, "1주일 초과"면 1일 단위. TIMESPAN(7d, 정확히 "1주일")을 그대로
+# 쓰면 1시간 단위로 나오는데, 이 프로젝트는 주 1회 실행되는 주간
+# 다이제스트라 시간 단위 디테일이 애초에 필요 없어 8일(1주일 "초과")로
+# 바꿔서 일 단위로 받도록 함.
 #
 # ** article_search와 상수를 공유하지 않는 이유 **: TIMESPAN을 그냥
 # 8d로 바꾸면 article_search도 8일치를 가져오게 되는데, 그러면 (a) "최근
 # 7일" 원칙이 깨지고 (b) 어차피 나중에 DAYS_BACK 기준으로 걸러질 여분의
-# 기사가 GDELT 250건 상한 경쟁에 불필요하게 끼어들어 크라우딩만 심해짐
-# (7. 아직 결정 안 된 것들의 크라우딩 이슈와 같은 맥락). 그래서 시계열만
-# 쓰는 별도 상수로 분리.
+# 기사가 GDELT 250건 상한 경쟁에 불필요하게 끼어들어 크라우딩만 심해짐.
+# 그래서 시계열만 쓰는 별도 상수로 분리.
 #
 # ** 429 감소 효과는 미확인 **: GDELT의 "함대 전체 QPS" 가설이 맞다면
 # 429는 응답 데이터量이 아니라 요청 "빈도" 때문에 걸리는 거라, 해상도를
@@ -348,21 +244,21 @@ TIMELINE_TIMESPAN = "8d"
 # (naver처럼 start 파라미터로 추가 페이지네이션하는 기능 자체가 없음 - API 레벨 한계)
 MAX_RECORDS = 250
 
-# --- 2026-07-20 추가: 적응형 배치 수집 (담당자 3안 채택) ---
+# --- 적응형 배치 수집 ---
 #
-# 배경: 키워드를 전부 OR로 합치면(2026-07-16) 250건 상한을 광범위한 키워드
-# 하나가 독차지하는 문제가 실측 확인됨(`vaccination`이 250건 중 60건/24%
-# 차지). 반대로 키워드를 전부 개별 요청하면(2026-07-20 1차 대응) 크라우딩은
-# 안 생기지만 키워드 수가 늘수록 요청 횟수가 그대로 비례해서 늘어나
-# 429/런타임 부담이 커짐.
+# 배경: 키워드를 전부 OR로 합치면 250건 상한을 광범위한 키워드 하나가
+# 독차지하는 문제가 생길 수 있다(예: `vaccination`이 250건 중 상당 비율을
+# 차지). 반대로 키워드를 전부 개별 요청하면 크라우딩은 안 생기지만
+# 키워드 수가 늘수록 요청 횟수가 그대로 비례해서 늘어나 429/런타임
+# 부담이 커진다.
 #
-# 담당자가 제시한 두 대안(① 키워드를 미리 "위험/안전"으로 수동 분류해서
-# 위험한 것만 개별 처리, ② 무작위로 고정 묶음을 나눠서 그냥 돌리기) 둘 다
-# 기각함: ①은 "지금은 널널한데 갑자기 뜨는 키워드"를 못 잡고 사람이 계속
-# 재분류해야 하는 유지보수 부담이 있고, ②는 하필 두 인기 키워드가 같은
-# 고정 묶음에 우연히 들어가면 그 조합이 계속 나쁜 채로 반복됨.
+# 검토했다가 기각한 대안: ① 키워드를 미리 "위험/안전"으로 수동 분류해서
+# 위험한 것만 개별 처리 - "지금은 널널한데 갑자기 뜨는 키워드"를 못 잡고
+# 사람이 계속 재분류해야 하는 유지보수 부담이 있음. ② 무작위로 고정
+# 묶음을 나눠서 그냥 돌리기 - 하필 두 인기 키워드가 같은 고정 묶음에
+# 우연히 들어가면 그 조합이 계속 나쁜 채로 반복됨.
 #
-# 채택한 3안: 일단 작게 묶어서(BATCH_SIZE) 보내보고, 그 배치 결과에서
+# 채택한 방식: 일단 작게 묶어서(BATCH_SIZE) 보내보고, 그 배치 결과에서
 # 상한(MAX_RECORDS) 근처까지 찼는데 특정 키워드가 결과의 상당 비율을
 # 차지했으면("크라우딩 감지") 그 배치의 나머지 키워드만 그 자리에서
 # 개별로 추가 요청해서 보충한다. 사람이 미리 분류할 필요도 없고, 그
@@ -381,46 +277,49 @@ CROWDING_CAP_TRIGGER_RATIO = 0.9
 CROWDING_SHARE_THRESHOLD = 0.4
 
 # 키워드 사이 요청 간격.
-# GDELT는 공식적으로 "몇 초에 몇 건"인지 수치를 공개하지 않음. 기존엔 8초로 설정했었으나 (2026-07-14 확인) 실제 실행에서 거의 매 호출마다 429가 발생해 재시도 백오프가 누적되는 문제가 있어 15초로 상향.
-# 그래도 429가 잦으면 추가 상향 검토 필요 (정확한 공식 수치는 여전히 비공개라 경험적으로 조정하는 값).
+# GDELT는 공식적으로 "몇 초에 몇 건"인지 수치를 공개하지 않는다. 경험적으로
+# 조정한 값 - 너무 짧으면 거의 매 호출마다 429가 발생해 재시도 백오프가
+# 누적되는 문제가 있다.
 REQUEST_INTERVAL = 15.0
 
 
 # RateLimitError(HTTP 429) 전용 재시도 횟수/대기시간.
-# 2026-07-13 확인됨: GDELT는 실제로 서버 사이드 요청 제한이 있음(공식 블로그에 ElasticSearch 클러스터 보호 목적이라고 명시).
-# 정확한 윈도우 수치는 비공개지만, 실사용 보고(HackerNoon, 2026-04, 공식 확정 아님·참고치)에 따르면 짧은 시간에 요청이 몰리면 15분가량 지속되는 차단이 걸릴 수 있다고 함.
-#
-# 2026-07-14(2차) 변경: 기존 3단계(60→120→240초, 누적 7분)로는 실측 429 로그를 보면 여전히 거의 매 키워드마다 재시도가 소진되는 걸 확인함.
-# 위에서 언급한 "15분가량 지속 차단" 참고치보다 누적 대기시간이 짧아서, 실제 차단이 안 풀린 시점에 재시도를 반복하고 있었을 가능성이 있음.
-# 4단계(60→120→240→480초, 누적 900초=15분)로 늘려서 참고치와 누적 대기시간을 맞춤.
-# 그래도 계속 429가 뜬다면 이건 백오프 튜닝으로 해결할 문제가 아니라 실행 자체를 미루는 게 맞다는 신호.
+# GDELT는 실제로 서버 사이드 요청 제한이 있음(공식 블로그에 ElasticSearch
+# 클러스터 보호 목적이라고 명시). 정확한 윈도우 수치는 비공개지만, 실사용
+# 보고(공식 확정 아님·참고치)에 따르면 짧은 시간에 요청이 몰리면 15분가량
+# 지속되는 차단이 걸릴 수 있다고 함 - 4단계(60→120→240→480초, 누적
+# 900초=15분)로 이 참고치와 누적 대기시간을 맞췄다. 그래도 계속 429가
+# 뜬다면 이건 백오프 튜닝으로 해결할 문제가 아니라 실행 자체를 미루는 게
+# 맞다는 신호.
 MAX_RETRIES = 4
 BACKOFF_BASE_SECONDS = 60  # 60 -> 120 -> 240 -> 480초로 증가 (누적 900초)
 
 
 # 일시적 네트워크 에러(ConnectTimeout 등) 재시도 횟수/대기시간.
-# 2026-07-13 확인됨: 429(rate limit)와 ConnectTimeout이 같은 실행 안에서 섞여 나오는 걸 확인함.
-# 이건 요청 제한과는 별개로, 순간적인 접속 실패일 가능성이 높아(정황상 추정, GDELT 서버가 그 시점에 불안정했을 수 있음) 429보다는 훨씬 짧게 재시도.
-# 이것도 다 실패하면 429 때와 마찬가지로 그 키워드는 포기.
+# 429(rate limit)와 ConnectTimeout이 같은 실행 안에서 섞여 나올 수 있다.
+# 이건 요청 제한과는 별개로 순간적인 접속 실패일 가능성이 높아 429보다는
+# 훨씬 짧게 재시도한다. 이것도 다 실패하면 429 때와 마찬가지로 그
+# 키워드는 포기.
 NETWORK_ERROR_MAX_RETRIES = 2
 NETWORK_ERROR_WAIT_SECONDS = 10
 
 
 # 429 발생 시각을 모아뒀다가 실행 끝에 "시간대별 패턴 요약"으로 출력하던
-# 기능(_rate_limit_log, _print_rate_limit_summary)은 2026-07-15 제거함.
-# 실행 트리거가 사람이 수동으로 누르는 버튼뿐이라 표본이 근무 시간대로만
-# 몰릴 수밖에 없어,애초에 "시간대 패턴을 알아낸다"는 목적을 달성할 수 없다는
-# 판단. 429가 발생한 그 순간 콘솔에 UTC 시각을 찍는 즉시성 로그(아래
-# _call_with_retry 안의 print)는 지금 실행 중인 로그를 읽을 때 유용해서 그대로 둠 -
-# 여러 실행에 걸쳐 모아서 분석하려던 부분만 제거한 것.
+# 기능은 제거했다. 실행 트리거가 사람이 수동으로 누르는 버튼뿐이라 표본이
+# 근무 시간대로만 몰릴 수밖에 없어, 애초에 "시간대 패턴을 알아낸다"는
+# 목적을 달성할 수 없다는 판단. 429가 발생한 그 순간 콘솔에 UTC 시각을
+# 찍는 즉시성 로그(아래 _call_with_retry 안의 print)는 지금 실행 중인
+# 로그를 읽을 때 유용해서 그대로 둔다 - 여러 실행에 걸쳐 모아서
+# 분석하려던 부분만 제거한 것.
 
 
-# --- 2026-07-14(4차) 추가: 키워드 단위 외부 재시도 (outer retry) ---
+# --- 키워드 단위 외부 재시도 (outer retry) ---
 #
-# 사용자 관찰(2026-07-14, GitHub Actions 실행 중): GDELT 자체 접속량이 예상보다 많아 보임.
-#  MAX_RETRIES=4(최대 900초 대기)를 다 소진하고도 article_search가 실패하는 키워드가 나올 수 있는데, 기존엔 이 경우 그 키워드가 그대로 기사 0건으로 끝나버렸음.
-# 9.1 "소스 실패 대응" 원칙상 키워드 하나 실패가 전체 실행을 막진 않지만, 그 결과 "이번 주엔 유독 어떤 키워드만 몰린" 편중된 결과물이 나올 위험이 있음.
-# 이건 실제 이슈 분포가 아니라 순전히 그 시점 레이트리밋 운에 좌우되는 편중이라 문제.
+# MAX_RETRIES=4(최대 900초 대기)를 다 소진하고도 article_search가 실패하는
+# 키워드가 나올 수 있는데, 이 경우 그 키워드가 그대로 기사 0건으로 끝나면
+# "이번 주엔 유독 어떤 키워드만 몰린" 편중된 결과물이 나올 위험이 있다.
+# 이건 실제 이슈 분포가 아니라 순전히 그 시점 레이트리밋 운에 좌우되는
+# 편중이라 문제.
 #
 # 대응: 한 라운드(전체 키워드 순회)가 끝난 뒤, article_search가 최종 실패한 키워드만 모아서 별도 라운드로 재시도한다.
 # 이미 성공한 키워드는 다시 건드리지 않음(중복 수집 방지 + 불필요한 API 호출 절약).
@@ -430,16 +329,18 @@ NETWORK_ERROR_WAIT_SECONDS = 10
 # 쿨다운이 실제로는 덜 지난 채 다음 라운드가 시작될 수 있어 안전 마진으로 추가함.
 #
 # 총 시도 횟수 = 1(최초) + OUTER_RETRY_PASSES(추가 라운드) = 기본 3회.
-# 이 프로젝트는 주 1회 배치라 실행 시간이 늘어나는 것보다 "쏠린 결과물"을 피하는 쪽을 우선함 (사용자 판단, 2026-07-14).
+# 이 프로젝트는 주 1회 배치라 실행 시간이 늘어나는 것보다 "쏠린 결과물"을 피하는 쪽을 우선함.
 OUTER_RETRY_PASSES = 2
 OUTER_RETRY_WAIT_SECONDS = 90
 
 
-# --- 2026-07-14 추가: 전역(프로세스 공유) 쿨다운 ---
+# --- 전역(프로세스 공유) 쿨다운 ---
 #
-# 기존엔 _call_with_retry가 429를 만나면 "그 호출 안에서만" time.sleep으로 대기했음.
-# 문제는 이 프로젝트가 키워드 하나당 API를 3번(article_search, timelinevol, timelinevolraw) 따로 호출하는데,
-# 재시도 카운터가 호출마다 완전히 독립이라 같은 차단 구간 안에서도 호출마다 처음부터(1/3) 다시 60초부터 백오프를 시작하는 낭비가 발생함 (2026-07-14 실행에서 총 실행 시간이 1시간 가까이 걸린 주된 원인으로 추정).
+# _call_with_retry가 429를 만났을 때 "그 호출 안에서만" 대기하면, 이
+# 프로젝트가 키워드 하나당 API를 여러 번(article_search, timelinevol,
+# timelinevolraw) 따로 호출하는 구조상 재시도 카운터가 호출마다 완전히
+# 독립이라 같은 차단 구간 안에서도 호출마다 처음부터 다시 60초부터
+# 백오프를 시작하는 낭비가 발생한다.
 #
 # 그래서 429를 한 번이라도 만나면 "지금부터 N초간은 전체 프로세스가 아예 요청을 안 보낸다"는 정보를 전역으로 공유하도록 변경.
 # 이후의 모든 호출은 실행 전에 먼저 이 쿨다운이 끝났는지 확인하고, 안 끝났으면 그만큼 먼저 기다린 뒤에 실제 요청을 시도함.
@@ -472,19 +373,14 @@ def _trigger_cooldown(seconds: float):
 
 def _parse_retry_after(response) -> float | None:
     """
-    2026-07-23 추가(담당자 확인 요청으로 조사): gdeltdoc의 RateLimitError는
-    requests.HTTPError를 상속해서 원본 응답을 response 속성에 그대로 담고
-    있음(gdeltdoc/errors.py의 `raise RateLimitError(response=response)`) -
-    이 함수는 거기서 `Retry-After` 헤더를 읽어본다.
+    gdeltdoc의 RateLimitError는 requests.HTTPError를 상속해서 원본 응답을 response 속성에 그대로 담고 있음(gdeltdoc/errors.py의 `raise RateLimitError(response=response)`)
+    - 이 함수는 거기서 `Retry-After` 헤더를 읽어본다.
 
-    ** 중요 - GDELT가 실제로 이 헤더를 주는지는 미확인 **: 이 환경에서
-    GDELT API로 직접 네트워크 접근이 안 돼서 실측을 못 했다. 헤더가
-    있으면 그 값을 쓰고, 없으면(또는 파싱 실패하면) None을 반환해서
-    호출부가 기존 방식(BACKOFF_BASE_SECONDS 지수 백오프 추측)으로 안전하게
-    fallback하도록 설계 - 있으면 이득, 없어도 손해 없는 변경.
+    ** 중요 - GDELT가 실제로 이 헤더를 주는지는 미확인 **:
+    헤더가 있으면 그 값을 쓰고, 없으면(또는 파싱 실패하면) None을 반환해서 호출부가 기존 방식(BACKOFF_BASE_SECONDS 지수 백오프 추측)으로 안전하게 fallback하도록 설계
+    - 있으면 이득, 없어도 손해 없는 변경.
 
-    HTTP 표준상 Retry-After는 초 단위 정수 또는 HTTP-date 형식일 수 있어
-    (RFC 9110) 둘 다 시도한다.
+    HTTP 표준상 Retry-After는 초 단위 정수 또는 HTTP-date 형식일 수 있어(RFC 9110) 둘 다 시도한다.
     """
     if response is None:
         return None
@@ -514,26 +410,25 @@ def _call_with_retry(func, *args, label: str = "", **kwargs):
     정책으로 재시도한다 (429는 길게, 네트워크 에러는 짧게). 그 외 예외는 바로
     올려보낸다 - 단수형 경로(_collect_articles_for_keyword)에서는 그 키워드만
     건너뛰지만, 결합 경로(_collect_articles_for_keywords)에서는 ValueError를
-    별도로 잡아 키워드별 개별 요청으로 격리한다(2026-07-17 추가, 아래
-    _collect_articles_individually 참고) - "그 키워드만"이라는 이 문단의
-    원래 전제는 키워드를 하나로 합치기 전(2026-07-16 이전) 기준이었음.
+    별도로 잡아 키워드별 개별 요청으로 격리한다(아래
+    _collect_articles_individually 참고).
 
-    2026-07-14 변경: 429는 이 함수 호출 하나만 기다리고 마는 게 아니라,
-    전역 쿨다운(_trigger_cooldown)을 걸어서 이후에 오는 모든 호출(다른
-    키워드/다른 엔드포인트 포함)이 같은 차단 구간을 공유해서 기다리게 함.
-    호출 시작 시 _wait_for_cooldown()으로 남아있는 쿨다운을 먼저 소진한다.
+    429는 이 함수 호출 하나만 기다리고 마는 게 아니라, 전역 쿨다운
+    (_trigger_cooldown)을 걸어서 이후에 오는 모든 호출(다른 키워드/다른
+    엔드포인트 포함)이 같은 차단 구간을 공유해서 기다리게 함. 호출 시작
+    시 _wait_for_cooldown()으로 남아있는 쿨다운을 먼저 소진한다.
 
     두 카운터(rate_limit_attempt, network_attempt)를 독립적으로 관리 - 하나의
     반복문에서 같이 세면 "429 한 번 + 네트워크에러 한 번"을 겪었을 때 429 쪽
     백오프 계산이 실제 429 횟수와 안 맞아지는 문제가 있어서 분리함.
 
     label: 로그에 찍을 식별자 (예: "avian influenza / article_search").
-    2026-07-13 확인됨 - 키워드 하나당 API를 3번(article_search, timelinevol,
-    timelinevolraw) 따로 호출하는데, 재시도 카운터가 호출마다 독립적으로 리셋되다
-    보니 로그만 보면 "(1/3)"이 반복되는 것처럼 헷갈릴 수 있어서 label을 붙였다.
+    키워드 하나당 API를 여러 번(article_search, timelinevol, timelinevolraw)
+    따로 호출하는데, 재시도 카운터가 호출마다 독립적으로 리셋되다 보니
+    로그만 보면 "(1/3)"이 반복되는 것처럼 헷갈릴 수 있어서 label을 붙였다.
 
-    2026-07-23 추가: 429 응답에 `Retry-After` 헤더가 실려 있으면(_parse_retry_after
-    참고) 그 값을 BACKOFF_BASE_SECONDS 지수 백오프 추측보다 우선 사용한다 -
+    429 응답에 `Retry-After` 헤더가 실려 있으면(_parse_retry_after 참고)
+    그 값을 BACKOFF_BASE_SECONDS 지수 백오프 추측보다 우선 사용한다 -
     서버가 정확히 알려준 시간이라면 우리 추측보다 정확할 수 있음. 헤더가
     없으면(GDELT가 실제로 이 헤더를 주는지 여전히 미확인 상태) 기존 방식
     그대로 fallback - 있으면 이득, 없어도 손해 없는 변경.
@@ -617,17 +512,17 @@ def _extract_domain(url: str) -> str:
 def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, list[dict]]:
     """
     한 키워드에 대해 article_search만 수행하고 (성공 여부, 기사 리스트)를 반환한다.
-    2026-07-14(4차) - 외부 재시도 라운드(OUTER_RETRY_PASSES)에서 실패한 키워드만
-    다시 돌릴 수 있도록 기존 collect() 안에 있던 로직을 분리함.
+    외부 재시도 라운드(OUTER_RETRY_PASSES)에서 실패한 키워드만 다시 돌릴
+    수 있도록 collect()와는 별도 함수로 분리돼 있다.
 
     성공 여부는 article_search 호출 자체가 예외 없이 끝났는지 기준 (기사가
     0건이어도 호출 자체가 정상이면 True - 그 키워드는 그냥 최근 기사가 없는
     것이므로 재시도 대상이 아님).
 
-    ** 2026-07-16 - collect()의 정식 실행 경로에서는 더 이상 안 씀 **:
-    요청 횟수를 줄이려고 아래 _collect_articles_for_keywords(복수형, OR 결합)
-    로 교체됨(모듈 docstring "429 대응 2건" 참고). 이 단수형 함수는 키워드
-    하나만 따로 확인해보고 싶은 진단/디버깅 용도로 남겨둠 - 삭제하지 않음.
+    ** collect()의 정식 실행 경로에서는 더 이상 안 씀 **: 요청 횟수를
+    줄이려고 아래 _collect_articles_for_keywords(복수형, OR 결합)로
+    교체됨. 이 단수형 함수는 키워드 하나만 따로 확인해보고 싶은
+    진단/디버깅 용도로 남겨둠 - 삭제하지 않음.
     """
     f = Filters(keyword=keyword, timespan=TIMESPAN, num_records=MAX_RECORDS)
     keyword_articles = []
@@ -664,8 +559,8 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
                     "category": None,   # 정제 단계에서 채움 (naver_collector와 동일 방침)
                     "body": None,        # GDELT는 본문 미제공 (스펙에 명시된 그대로)
                     "press": _extract_domain(row["url"]),  # naver의 press 필드와 동일 목적
-                    # 2026-07-14 추가: 언어/국가 분포 진단용.
-                    # gdeltdoc이 원래 반환하는 필드인데 지금까지 받아만 놓고 안 쓰고 있었음.
+                    # 언어/국가 분포 진단용. gdeltdoc이 원래 반환하는
+                    # 필드인데 지금까지 받아만 놓고 안 쓰고 있었음.
                     # GDELT 공식 문서 확인 - JSON/article_search 모드에서는 title이 번역 없이 원문 그대로 옴 (TRANS 옵션은 HTML 모드 전용 위젯이라 여기 안 해당).
                     # 즉 이 title 값은 중국어/독일어 등 원문 스크립트 그대로일 수 있음. (12번 언어처리방침에서 다뤄야 할 지점.)
                     "language": row.get("language", ""),
@@ -678,10 +573,10 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
         return True, keyword_articles
 
     except ValueError as e:
-        # 2026-07-23 추가: 쿼리 자체가 거부된 경우(예: "phrase too short")는
-        # 시간이 지나도 안 풀리는 확정적 실패라, 위 SKIP_KEYWORDS/학습형
-        # 스킵 목록(_update_skip_state_after_run 참고)의 대상이 됨 - 여기서
-        # 발생 시점에 바로 기록해둔다. 일반 Exception과 구분해서 잡는 이유는
+        # 쿼리 자체가 거부된 경우(예: "phrase too short")는 시간이 지나도
+        # 안 풀리는 확정적 실패라, 위 SKIP_KEYWORDS/학습형 스킵 목록
+        # (_update_skip_state_after_run 참고)의 대상이 됨 - 여기서 발생
+        # 시점에 바로 기록해둔다. 일반 Exception과 구분해서 잡는 이유는
         # 네트워크 오류 같은 일시적 실패까지 "이 키워드가 문제"로 학습되면
         # 안 되기 때문(오탐 방지).
         print(f"[gdelt] '{keyword}' article_search 실패(쿼리 자체 거부로 추정 - "
@@ -690,7 +585,8 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
         return False, []
 
     except Exception as e:
-        # 기사 수집 자체가 실패한 경우 - 호출부(collect())가 이 키워드를 failed_keywords에 담아 외부 재시도 라운드로 넘긴다 (2026-07-14(4차))
+        # 기사 수집 자체가 실패한 경우 - 호출부(collect())가 이 키워드를
+        # failed_keywords에 담아 외부 재시도 라운드로 넘긴다.
         print(f"[gdelt] '{keyword}' article_search 실패: {type(e).__name__} - {e!r}")
         return False, []
 
@@ -698,7 +594,7 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
 def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple[bool, list[dict]]:
     """
     여러 키워드를 하나의 OR 쿼리로 묶어서 article_search를 "한 번만" 호출한다.
-    (2026-07-16 추가 - 위 모듈 docstring "429 대응 2건" 참고)
+    (모듈 docstring "GDELT 429 대응 정리" 참고)
 
     gdeltdoc의 Filters(keyword=[...])는 리스트를 넘기면 값들을 boolean OR로
     묶어준다(공식 README 확인) - 기존엔 키워드 개수만큼 요청이 나갔는데
@@ -709,13 +605,9 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
     를 유지한다.
 
     ** MAX_RECORDS 상한이 이제 "키워드 조합 전체"에 걸린다는 점 주의 **:
-    기존엔 키워드 하나당 최대 250건씩(키워드 4개면 이론상 최대 1000건)
-    받을 수 있었는데, OR로 합치면 이 조합 전체에서 최대 250건까지만
-    돌아온다. 지금 실측 키워드별 건수(avian influenza ~53, foot and mouth
-    disease ~49, feed price ~12, livestock market ~26 - 합쳐도 250 미만)로는
-    문제가 없지만, 나중에 키워드가 늘거나 특정 키워드가 급증하면 조용히
-    잘려나갈 수 있다는 걸 염두에 둘 것 (7번 섹션 "키워드 리스트 확정" 작업
-    때 같이 재검토 권장).
+    키워드 하나당 최대 250건씩 받던 개별 요청과 달리, OR로 합치면 이
+    조합 전체에서 최대 250건까지만 돌아온다. 키워드가 늘거나 특정
+    키워드가 급증하면 조용히 잘려나갈 수 있다는 걸 염두에 둘 것.
 
     ** 오매칭 필터를 여러 키워드에 걸쳐 확인 **: OR로 묶으면 반환된 기사
     하나가 정확히 어느 키워드에 매칭돼서 나온 건지 API가 알려주지 않는다.
@@ -764,12 +656,11 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
         print(f"[gdelt] '{label}' article_search -> 최근 {DAYS_BACK}일 이내 "
               f"{len(combined_articles)}건 수집 완료{fp_note}")
 
-        # --- 2026-07-17 추가: 키워드별 매칭 현황 (제목 기준 근사치) ---
-        # 배경: OR로 합친 뒤로는 "4개 키워드가 각각 실제로 얼마나 수집됐는지"
-        # 로그로 전혀 구분이 안 돼서, "키워드 하나만 성공하면 나머지는
-        # 조용히 스킵되는 것 아니냐"는 의심이 실제로 제기됨. 추가 API 호출
-        # 없이(429 부담을 다시 늘리지 않으려고), 이미 받아온 기사 제목에
-        # 각 키워드가 부분 문자열로 들어있는지만 사후 대조해서 근사치를 보여준다.
+        # --- 키워드별 매칭 현황 (제목 기준 근사치) ---
+        # 배경: OR로 합친 뒤로는 "각 키워드가 실제로 얼마나 수집됐는지"
+        # 로그로 전혀 구분이 안 된다. 추가 API 호출 없이(429 부담을 다시
+        # 늘리지 않으려고), 이미 받아온 기사 제목에 각 키워드가 부분
+        # 문자열로 들어있는지만 사후 대조해서 근사치를 보여준다.
         #
         # ** 주의 - 이건 정확한 집계가 아니라 근사치다 **: GDELT 검색은
         # 제목뿐 아니라 본문 전체를 대상으로 매칭하는데, 우리는 본문을
@@ -789,16 +680,15 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
         return True, combined_articles
 
     except ValueError as e:
-        # 2026-07-17 추가: "phrase too short" 등 GDELT가 쿼리 자체를 거부하는
-        # 에러(RateLimitError/네트워크 에러와 달리 시간이 지나도 절대 안
-        # 풀림)는 결합 쿼리 안에 문제 키워드가 "섞여 있는 한" 재시도해도
-        # 100% 같은 이유로 또 실패한다 - 그런데 collect()의 외부 재시도
-        # 로직은 원래 429처럼 "시간이 지나면 풀리는 실패"를 염두에 두고
-        # 만든 거라, 이 경우엔 재시도 2번을 그대로 낭비하고 결국 GDELT
-        # 기사 전체가 0건으로 끝나버린다(키워드 4개를 OR로 합친 뒤 생긴
-        # 새로운 위험 - 예전엔 키워드마다 따로 요청해서 하나가 거부돼도
-        # 그 키워드만 실패했음). 재시도 대신 그 즉시 키워드별 개별 요청으로
-        # 내려가서 문제 키워드만 격리하고, 나머지는 정상적으로 살린다.
+        # "phrase too short" 등 GDELT가 쿼리 자체를 거부하는 에러
+        # (RateLimitError/네트워크 에러와 달리 시간이 지나도 절대 안 풀림)는
+        # 결합 쿼리 안에 문제 키워드가 "섞여 있는 한" 재시도해도 100% 같은
+        # 이유로 또 실패한다 - collect()의 외부 재시도 로직은 원래 429처럼
+        # "시간이 지나면 풀리는 실패"를 염두에 두고 만든 거라, 이 경우엔
+        # 재시도를 그대로 낭비하고 결국 GDELT 기사 전체가 0건으로 끝나버릴
+        # 수 있다(키워드를 OR로 합친 구조에서 생기는 위험 - 개별 요청이면
+        # 문제 키워드 하나만 실패로 끝났을 것). 재시도 대신 그 즉시 키워드별
+        # 개별 요청으로 내려가서 문제 키워드만 격리하고, 나머지는 정상적으로 살린다.
         print(f"[gdelt] '{label}' article_search 실패(쿼리 자체 거부로 추정 - "
               f"{type(e).__name__}: {e}) - 재시도 대신 키워드별 개별 요청으로 즉시 전환")
         return _collect_articles_individually(gd, keywords)
@@ -811,17 +701,16 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
 def _collect_articles_individually(gd: "GdeltDoc", keywords: list[str]) -> tuple[bool, list[dict]]:
     """
     결합 쿼리(_collect_articles_for_keywords)가 "phrase too short"류 - 재시도로
-    해결 안 되는 - 에러로 실패했을 때 호출되는 격리 폴백 (2026-07-17 추가).
+    해결 안 되는 - 에러로 실패했을 때 호출되는 격리 폴백.
 
     키워드를 하나씩 따로 요청해서(기존 _collect_articles_for_keyword 재사용)
     문제 있는 키워드만 그 자리에서 실패로 남기고, 나머지는 정상적으로
     결과에 포함시킨다 - 결합 요청 방식이 가진 "하나가 전체를 잠식하는"
     위험을 이 경로에서만 다시 키워드 1개 단위로 좁혀서 상쇄한다.
 
-    구글 시트(keyword_source.py)로 키워드를 등록하게 되면서, 담당자가
-    모르는 사이 짧은 영문 키워드가 추가돼 이 상황이 실제로 발생할 수
-    있는 조건이 갖춰졌다 - 이 폴백이 없으면 그 실행의 GDELT 기사가
-    전부 0건으로 끝나버릴 수 있음.
+    구글 시트(keyword_source.py)로 키워드를 등록하는 구조라, 사람이
+    모르는 사이 짧은 영문 키워드가 추가돼 이 상황이 발생할 수 있다 - 이
+    폴백이 없으면 그 실행의 GDELT 기사가 전부 0건으로 끝나버릴 수 있음.
     """
     all_articles = []
     any_success = False
@@ -836,9 +725,9 @@ def _collect_articles_individually(gd: "GdeltDoc", keywords: list[str]) -> tuple
 
 def _detect_crowded_keywords(articles: list[dict], keywords: list[str]) -> list[str]:
     """
-    2026-07-20 추가 (담당자 3안 - 적응형 배치). 배치(OR 결합) 요청 결과에서
-    특정 키워드가 결과를 과도하게 차지해서, 상한(MAX_RECORDS) 때문에 같은
-    배치의 다른 키워드가 밀려났을 가능성이 있는지 감지한다.
+    배치(OR 결합) 요청 결과에서 특정 키워드가 결과를 과도하게 차지해서,
+    상한(MAX_RECORDS) 때문에 같은 배치의 다른 키워드가 밀려났을 가능성이
+    있는지 감지한다.
 
     반환값: "크라우딩을 일으킨 것으로 보이는" 키워드 리스트. 호출부는 이
     리스트에 없는(=밀려났을 가능성이 있는) 나머지 배치 키워드를 개별로
@@ -875,19 +764,19 @@ def _detect_crowded_keywords(articles: list[dict], keywords: list[str]) -> list[
 def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
     """
     한 키워드에 대해 timelinevol/timelinevolraw를 수집한다. 실패 시 None.
-    (2026-07-14(4차) - collect() 안에 있던 로직을 분리, 동작은 기존과 동일)
+    (collect() 안에 있던 로직을 분리한 별도 함수)
 
-    ** 2026-07-21 - `collect()`에서 더 이상 호출 안 함 **
+    ** `collect()`에서 더 이상 호출 안 함 **
     시계열 수집 자체를 완전히 제거하기로 결정(실전 규모 테스트에서도 429
-    백오프를 다 쓰고 16분 만에 실패하는 등 불안정성이 해소가 안 됨, 저장
-    레이어가 없어 데이터를 애초에 아무 데도 안 쓰고 있었던 것도 근거).
-    함수 자체는 참고/향후 복원 가능성을 위해 코드에 남겨둠 - 죽은 코드지만
-    실행되지 않으므로 부작용은 없음.
+    백오프를 다 쓰고 실패하는 등 불안정성이 해소가 안 됨, 저장 레이어가
+    이 데이터를 애초에 아무 데도 안 쓰고 있었던 것도 근거). 함수 자체는
+    참고/향후 복원 가능성을 위해 코드에 남겨둠 - 죽은 코드지만 실행되지
+    않으므로 부작용은 없음.
 
-    2026-07-21: article_search용 TIMESPAN(7d) 대신 TIMELINE_TIMESPAN(8d)을
-    쓴다 - "1주일 초과"부터 GDELT가 일 단위 해상도로 전환해주는 걸 이용해,
-    이 프로젝트에 필요 없는 시간 단위 디테일(7d 그대로 쓰면 166행/시간
-    단위) 대신 일 단위(~8행)로 받는다 - 위 TIMELINE_TIMESPAN 정의 주석 참고.
+    article_search용 TIMESPAN(7d) 대신 TIMELINE_TIMESPAN(8d)을 쓴다 -
+    "1주일 초과"부터 GDELT가 일 단위 해상도로 전환해주는 걸 이용해, 이
+    프로젝트에 필요 없는 시간 단위 디테일 대신 일 단위로 받는다 - 위
+    TIMELINE_TIMESPAN 정의 주석 참고.
     """
     f = Filters(keyword=keyword, timespan=TIMELINE_TIMESPAN, num_records=MAX_RECORDS)
     try:
@@ -898,16 +787,18 @@ def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
                                       label=f"{keyword} / timelinevolraw")
         print(f"[gdelt] '{keyword}' 시계열 수집 완료")
         return {
-            # 2026-07-13 확인됨(실행 결과로 검증) - 실제 컬럼 구조:
+            # 실제 컬럼 구조:
             #   vol:    {"datetime": Timestamp, "Volume Intensity": float}
             #   volraw: {"datetime": Timestamp, "Article Count": int, "All Articles": int}
-            # Timestamp 객체는 그대로 JSON 직렬화가 안 되므로, 저장 레이어(5번 섹션) 쪽 raw.json에 넣기 전 문자열로 변환하는 처리가 필요함 (다음 단계 작업)
+            # Timestamp 객체는 그대로 JSON 직렬화가 안 되므로, 저장 레이어
+            # 쪽에서 raw.json에 넣기 전 문자열로 변환하는 처리가 필요함.
             "vol": vol_df.to_dict("records") if vol_df is not None else [],
             "volraw": volraw_df.to_dict("records") if volraw_df is not None else [],
         }
     except Exception as e:
-        # 시계열만 실패한 경우 - 기사는 이미 확보돼 있으므로(성공했다면) 데이터 손실 없음. 
-        # 과물에서는 참고 지표(3.1)가 빠지는 것뿐이라 외부 재시도 대상에는 넣지 않는다. (article_search만큼 치명적이지 않음, 2026-07-14(4차))
+        # 시계열만 실패한 경우 - 기사는 이미 확보돼 있으므로(성공했다면)
+        # 데이터 손실 없음. 결과물에서는 참고 지표(3.1)가 빠지는 것뿐이라
+        # 외부 재시도 대상에는 넣지 않는다(article_search만큼 치명적이지 않음).
         print(f"[gdelt] '{keyword}' 시계열 수집 실패: {type(e).__name__} - {e!r}")
         return None
 
@@ -917,28 +808,25 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     KEYWORDS_EN을 대상으로 GDELT에서 기사 메타데이터를 수집한다.
     이 함수가 gdelt_collector의 '진입점'.
 
-    keywords: 지정하면 모듈 기본값(KEYWORDS_EN) 대신 이 리스트로 순회한다.
-              (2026-07-14(3차) 추가 - 테스트 스크립트에서 키워드 수를 줄여
-              빠르게 확인해보기 위한 용도. main.py의 정식 실행은 인자 없이
-              collect()를 호출하므로 기존 동작과 완전히 동일함)
+    keywords: 지정하면 모듈 기본값(KEYWORDS_EN) 대신 이 리스트로 순회한다
+              - 테스트 스크립트에서 키워드 수를 줄여 빠르게 확인해보기
+              위한 용도. main.py의 정식 실행은 인자 없이 collect()를
+              호출하므로 기존 동작과 완전히 동일함.
 
-    ** 2026-07-21 - 시계열 수집 완전 제거 **
-    예전엔 `skip_timeline` 파라미터로 시계열(timelinevol/timelinevolraw)
-    수집 여부를 껐다 켰다 했는데, 이제 아예 파라미터 자체를 없앴다 -
-    시계열을 완전히 뺀 결정이라 "켜고 끄는 스위치"가 필요 없어짐. 상세
-    배경은 아래 반환값 설명 및 함수 본문의 "2026-07-21 결정" 주석 참고.
+    ** 시계열 수집은 완전히 제거된 상태 **
+    반환값의 timeline은 항상 빈 딕셔너리(`{}`)다. `main.py`가 여전히
+    `(articles, timeline)` 튜플 형태로 언패킹하므로 반환값 개수는 그대로
+    유지 - 호출부 수정 없이 안전하게 제거하려는 의도.
 
-    ** 2026-07-20 재구성(2차) - 적응형 배치 수집 (담당자 3안 채택) **
-    2026-07-16에 키워드를 OR로 전부 묶었다가(250건 상한을 한 키워드가
-    독차지하는 문제 발생) 2026-07-20에 전부 개별 요청으로 되돌렸는데
-    (요청 횟수가 키워드 수에 비례해서 늘어남), 담당자가 "키워드가 최종
-    단계에서 훨씬 많아질 텐데 이대로면 요청이 너무 많아지지 않냐"고 지적함.
+    ** 적응형 배치 수집 **
+    키워드를 전부 OR로 묶으면 250건 상한을 한 키워드가 독차지하는 문제가
+    생길 수 있고, 전부 개별 요청하면 요청 횟수가 키워드 수에 비례해서
+    늘어난다. 검토했다가 기각한 대안: ① 위험 키워드를 미리 수동으로
+    분류 - "갑자기 뜬 키워드"를 못 잡고 계속 재분류해야 함. ② 무작위
+    고정 묶음 - 나쁜 조합이 우연히 고정되면 계속 반복될 수 있음.
 
-    담당자가 제시한 두 대안(① 위험 키워드를 미리 수동으로 분류, ② 무작위
-    고정 묶음)을 함께 검토한 뒤 기각하고 3안(적응형 배치)을 채택함 - ①은
-    "갑자기 뜬 키워드"를 못 잡고 사람이 계속 재분류해야 하며, ②는 나쁜
-    조합이 우연히 고정되면 계속 반복될 수 있음. 3안은 사람이 미리 분류할
-    필요 없이, **그 실행 안에서 실시간으로 크라우딩을 감지해서 보정**한다:
+    대신 채택한 방식은 사람이 미리 분류할 필요 없이 **그 실행 안에서
+    실시간으로 크라우딩을 감지해서 보정**한다:
 
       1단계: 활성 키워드를 BATCH_SIZE(기본 5)개씩 묶어 각 배치를 OR로
              결합해 요청(_collect_articles_for_keywords 재사용) - 배치가
@@ -949,10 +837,9 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
              판단하고, 그 배치의 **나머지** 키워드만 개별 재요청 대상으로
              남겨둔다.
       3단계: 배치 자체가 실패한 경우(429 등)는 **같은 배치로** 외부 재시도
-             라운드(OUTER_RETRY_PASSES)를 돈다(2026-07-23 변경, 담당자 결정 -
-             자세한 이유는 아래 본문 "2026-07-23 변경" 주석 참고). 크라우딩으로
-             밀려난 키워드(진짜 "상한 초과"류 문제)만 개별 재요청 대상으로
-             모아 별도로 재시도한다.
+             라운드(OUTER_RETRY_PASSES)를 돈다. 크라우딩으로 밀려난
+             키워드(진짜 "상한 초과"류 문제)만 개별 재요청 대상으로 모아
+             별도로 재시도한다.
 
     _collect_articles_for_keywords(복수형, OR 결합)와
     _collect_articles_individually(전체 개별 폴백)는 이 배치 로직에서
@@ -960,20 +847,17 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
 
     반환값:
       articles: 공통 스키마 리스트. 다음 단계(정규화/이슈그룹핑)로 그대로 전달됨
-      timeline: 2026-07-21부터 시계열 수집을 완전히 제거해서 **항상 빈
-                딕셔너리(`{}`)**. `main.py`가 여전히 `(articles, timeline)`
-                튜플 형태로 언패킹하므로 반환값 개수는 그대로 유지 - 호출부
-                수정 없이 안전하게 제거하려는 의도.
+      timeline: 시계열 수집을 완전히 제거해서 **항상 빈 딕셔너리(`{}`)**.
     """
     gd = GdeltDoc()
     # keywords 인자로 명시적으로 넘겨준 게 있으면(테스트용) 그걸 그대로 쓰고,
-    # 없으면 2026-07-17부터 구글 시트에 등록된 활성 키워드를 우선 사용,
-    # 시트 미설정/읽기 실패 시 KEYWORDS_EN(하드코딩)으로 안전하게 대체
-    # (keyword_source.py 참고 - 이 함수는 예외를 던지지 않음)
+    # 없으면 구글 시트에 등록된 활성 키워드를 우선 사용, 시트 미설정/읽기
+    # 실패 시 KEYWORDS_EN(하드코딩)으로 안전하게 대체(keyword_source.py
+    # 참고 - 이 함수는 예외를 던지지 않음)
     target_keywords = keywords if keywords is not None else keyword_source.get_keywords("en", KEYWORDS_EN)
 
-    # 2026-07-23 추가: 이번 실행의 학습 기록을 새로 시작 (모듈이 테스트 등에서
-    # 재사용될 수 있어 이전 실행의 잔여물이 안 섞이도록 매번 비움)
+    # 이번 실행의 학습 기록을 새로 시작 (모듈이 테스트 등에서 재사용될 수
+    # 있어 이전 실행의 잔여물이 안 섞이도록 매번 비움)
     _value_error_keywords_this_run.clear()
     skip_state = _load_skip_state()
 
@@ -999,7 +883,7 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     # --- 1단계: 배치 단위 수집 + 크라우딩 감지 ---
     batches = [active_keywords[i:i + BATCH_SIZE] for i in range(0, len(active_keywords), BATCH_SIZE)]
     pending_individual: list[str] = []  # 크라우딩/상한 근접으로 밀려나 개별 확인이 필요한 키워드
-    pending_batches: list[list[str]] = []  # 배치 요청 자체가 실패해서 배치로 재시도할 것들 (2026-07-23 신규)
+    pending_batches: list[list[str]] = []  # 배치 요청 자체가 실패해서 배치로 재시도할 것들
 
     for batch in batches:
         if len(batch) == 1:
@@ -1009,17 +893,16 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
 
         success, batch_articles = _collect_articles_for_keywords(gd, batch)
         if not success:
-            # 2026-07-23 변경(담당자 결정): 예전엔 배치 요청 자체가 실패하면
-            # (429 등) 바로 개별 요청(5배 요청)으로 전환했는데, 429는 쿼리
-            # 복잡도가 아니라 "요청을 얼마나 자주 보내는지"에 걸리는 것으로
-            # 추정돼서(GDELT가 공식적으로 밝힌 기준은 아니지만, 지금까지의
-            # 실측 패턴과 일치) 실패했다고 요청 수를 5배로 늘리는 건 상황을
-            # 악화시킬 뿐이라는 지적이 있었음. 대신 같은 배치를 그대로
+            # 배치 요청 자체가 실패하면(429 등) 바로 개별 요청(5배 요청)으로
+            # 전환하지 않는다 - 429는 쿼리 복잡도가 아니라 "요청을 얼마나
+            # 자주 보내는지"에 걸리는 것으로 추정돼서(GDELT가 공식적으로
+            # 밝힌 기준은 아니지만 관측 패턴과 일치), 실패했다고 요청 수를
+            # 5배로 늘리면 상황을 악화시킬 뿐이다. 대신 같은 배치를 그대로
             # pending_batches에 담아 두고, 아래에서 배치 단위로 재시도한다 -
             # 정말 "250건 상한을 넘어서" 문제가 되는 경우(크라우딩)만 여전히
             # 개별로 격리한다(바로 아래 크라우딩 분기는 그대로 유지).
             print(f"[gdelt] 배치 {batch} 요청 실패 - 같은 배치로 재시도 예정 "
-                  f"(개별 전환 아님 - 2026-07-23 변경)")
+                  f"(개별 전환 아님)")
             pending_batches.append(batch)
         else:
             all_articles.extend(batch_articles)
@@ -1031,14 +914,12 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
                       f"나머지 키워드 {others} 개별 재요청으로 보충 예정")
                 pending_individual.extend(others)
             elif len(batch_articles) >= MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
-                # 2026-07-22 추가: 특정 키워드 하나가 독차지한 건 아니지만(그래서
+                # 특정 키워드 하나가 독차지한 건 아니지만(그래서
                 # _detect_crowded_keywords는 아무도 못 잡음), 배치 결과가 상한
                 # 근처까지 찼다는 사실 자체는 여전히 위험 신호다 - 여러 키워드가
                 # "골고루" 상한에 밀려서 다들 조금씩 손실을 봤을 수 있는데, 이
                 # 경우 제목 기준 근사치 비율로는 아무도 40%(CROWDING_SHARE_THRESHOLD)를
-                # 못 넘어서 기존 로직은 "크라우딩 없음"으로 오판하고 그냥 지나쳤음
-                # (담당자 실측 지적으로 발견 - 기존엔 "한 키워드가 독차지"하는
-                # 패턴만 상정하고 설계돼서 이 케이스가 누락돼 있었음).
+                # 못 넘어서 단순 비율 판정만으로는 "크라우딩 없음"으로 오판할 수 있다.
                 # 특정 원인 키워드를 지목할 수 없으므로, 안전하게 배치 전체를
                 # 개별 재요청 대상으로 보충한다.
                 print(f"[gdelt] 배치 {batch} 결과가 상한 근처까지 참({len(batch_articles)}건) - "
@@ -1048,12 +929,11 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
         time.sleep(REQUEST_INTERVAL)
 
     # --- 1-보조단계: 배치 요청 자체가 실패한 것들을 "배치 그대로" 재시도 ---
-    # (2026-07-23 신규, 담당자 결정) - 크라우딩(상한 초과류 문제)과 달리
-    # 이건 단순히 그 순간 요청이 안 됐던 것뿐이라, 개별로 쪼개서 요청 수를
-    # 5배로 늘리는 대신 같은 배치로 다시 시도한다. 여기서도 계속 실패하면
-    # (OUTER_RETRY_PASSES를 다 써도 안 되면) 마지막 안전망으로만 개별
-    # 전환한다 - 무한정 배치로만 매달리다 데이터를 아예 못 건지는 것보다는
-    # 낫다는 판단.
+    # 크라우딩(상한 초과류 문제)과 달리 이건 단순히 그 순간 요청이 안 됐던
+    # 것뿐이라, 개별로 쪼개서 요청 수를 5배로 늘리는 대신 같은 배치로 다시
+    # 시도한다. 여기서도 계속 실패하면(OUTER_RETRY_PASSES를 다 써도 안
+    # 되면) 마지막 안전망으로만 개별 전환한다 - 무한정 배치로만 매달리다
+    # 데이터를 아예 못 건지는 것보다는 낫다는 판단.
     # pending_batches는 이미 1단계에서 1차 시도가 끝난 뒤 실패한 것들이라,
     # 여기서는 재시도 라운드를 1부터 센다(0부터 다시 세면 원래 개별 재시도
     # 섹션(아래)의 "OUTER_RETRY_PASSES+1번 시도"와 총 시도 횟수 기준이
@@ -1122,22 +1002,20 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
         print(f"[gdelt] 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
               f"기사 0건으로 처리됨): {failed_keywords}")
 
-    # --- 2026-07-21 결정: 시계열 수집 완전 제거 ---
+    # --- 시계열 수집 완전 제거 결정 ---
     # timelinevol 단독(키워드 5개) 실전 규모 테스트에서도 429 백오프 4단계를
-    # 다 쓰고 16분 만에 실패하는 사례가 나옴 - 시계열은 원래도 "켰을 때 몇
-    # 시간, 끄면 10분" 수준으로 무거웠던 게 8일/일 단위 해상도(2026-07-21,
-    # TIMELINE_TIMESPAN)로 완화를 시도했음에도 여전히 불안정하다고 판단해
-    # 담당자가 최종적으로 제거를 결정함. 저장 레이어(5단계)가 아직 없어서
-    # 이 데이터를 애초에 아무 데도 안 쓰고 있었던 것도 제거 결정에 힘을 실음
-    # (9.5 섹션과 같은 결의 판단 - 안 쓰는 기능에 429/런타임 부담을 계속
-    # 감수할 이유가 없음).
+    # 다 쓰고 실패하는 사례가 나옴 - 시계열은 원래도 무거운 편이었는데
+    # 8일/일 단위 해상도(TIMELINE_TIMESPAN)로 완화를 시도했음에도 여전히
+    # 불안정하다고 판단해 최종적으로 제거함. 저장 레이어가 이 데이터를
+    # 애초에 아무 데도 안 쓰고 있었던 것도 제거 결정에 힘을 실음(안 쓰는
+    # 기능에 429/런타임 부담을 계속 감수할 이유가 없음).
     #
     # _collect_timeline_for_keyword 함수 자체는 코드에 남겨둔다(아래 참고) -
     # 필요시 이 블록에서 다시 호출하기만 하면 복원 가능.
 
-    # 2026-07-23 추가: 이번 실행에서 ValueError로 실패한 키워드들의 학습
-    # 상태를 파일에 반영(2번 연속되면 다음 실행부터 자동 스킵). git
-    # commit/push는 main.py/run-pipline.yml 쪽 책임 - 여기는 파일 생성까지만.
+    # 이번 실행에서 ValueError로 실패한 키워드들의 학습 상태를 파일에
+    # 반영(2번 연속되면 다음 실행부터 자동 스킵). git commit/push는
+    # main.py/run-pipline.yml 쪽 책임 - 여기는 파일 생성까지만.
     _update_skip_state_after_run()
 
     return all_articles, timeline_by_keyword
@@ -1145,9 +1023,9 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
 
 def _print_distribution(articles: list[dict]) -> None:
     """
-    2026-07-14 추가 - 진단용 전용 함수.
+    진단용 전용 함수.
 
-    목적: "영어 키워드만으로 중국/유럽 기사가 실제로 얼마나 잡히는지"를 확인하기 위한 1회성 진단.
+    목적: "영어 키워드만으로 중국/유럽 기사가 실제로 얼마나 잡히는지"를 확인하기 위한 진단.
     이슈 그룹핑이나 스코어링에는 안 들어가고, 사람이 눈으로 보고 "키워드 사전을 다국어로 확장할 필요가 있는지" 판단하는 데만 씀.
     language/sourcecountry 값이 비어있는 항목이 있을 수 있음(gdeltdoc이 항상 채워주는지 확인 안 된 상태)
     - 그런 경우 "(미상)"으로 묶어서 표시.
@@ -1179,11 +1057,8 @@ def _print_distribution(articles: list[dict]) -> None:
 
 if __name__ == "__main__":
     # 터미널에서 python gdelt_collector.py 로 직접 실행했을 때만 동작.
-    # 2026-07-21: 시계열 수집을 완전히 제거해서(collect() 자체가 항상
-    # timeline={}를 반환) 여기서도 시계열 관련 출력을 뺐다 - 예전엔
-    # "시계열 수집된 키워드: []"처럼 매번 빈 리스트가 찍혀서 "이번엔 안
-    # 잡혔나?"로 헷갈릴 수 있었는데, 실제로는 애초에 안 부르는 거라 그
-    # 오해를 없앴다.
+    # 시계열 수집을 완전히 제거해서(collect() 자체가 항상 timeline={}를
+    # 반환) 여기서도 시계열 관련 출력을 뺐다.
     articles, timeline = collect()
     print(f"\n총 {len(articles)}건 기사 수집 완료")
     for a in articles[:3]:

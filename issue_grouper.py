@@ -2,17 +2,16 @@
 issue_grouper.py
 "2.1 이슈 그룹핑" 담당 모듈 (알고리즘 문서 "2.1 이슈 그룹핑" 참조)
 
-문서에 정의된 하이브리드 파이프라인 중 지금 이 파일에서 구현하는 범위:
+문서에 정의된 하이브리드 파이프라인을 전부 구현:
   1차 - KR<->EN 키워드 사전 매칭         -> 구현은 됐으나 현재 사전을 비워둠
-                                          (2026-07-14, ISSUE_SYNONYM_GROUPS 주석 참조)
+                                          (ISSUE_SYNONYM_GROUPS 주석 참조)
   2차 - BGE-M3 임베딩 코사인 유사도       -> 구현
-  3차 - LLM 그룹핑 보조 (임계값 애매 구간) -> 구현 완료 (2026-07-15, 아래
-                                          "3차: LLM 그룹핑 보조" 섹션 참조).
-                                          Anthropic API(Haiku 4.5)를 호출해
-                                          borderline_pairs만 최종 판단한다.
+  3차 - LLM 그룹핑 보조 (임계값 애매 구간) -> 구현 완료 (아래 "3차: LLM
+                                          그룹핑 보조" 섹션 참조). LLM을
+                                          호출해 borderline_pairs만 최종
+                                          판단한다.
 
-3차까지 전부 구현되면서 group_issues()가 1~3차를 순서대로 실행해 최종
-그룹 리스트를 만든다 (아래 group_issues 참조).
+group_issues()가 1~3차를 순서대로 실행해 최종 그룹 리스트를 만든다.
 """
 
 import csv
@@ -46,22 +45,21 @@ from keyword_tagger import EXCLUDED_TERMS
 # 예를 들어 keyword_tagger는 "조류독감"과 "구제역"을 둘 다 "질병명" 카테고리
 # 하나로 묶지만, 여기서는 서로 다른 이슈이므로 별개 그룹이어야 한다.
 #
-# ** 2026-07-14 세션 결정: 이슈 그룹핑의 정의를 "동일 사건만"으로 확정 **
+# ** 이슈 그룹핑의 정의: "동일 사건만" **
 # (예: 한국 조류독감 발생과 미국 조류독감 발생은 같은 질병이어도 별도 이슈)
 # 이유: 세계적으로 큰 이슈면 각 발생건이 각자 랭킹에 자연스럽게 올라올 테니
 # 억지로 합칠 필요 없음.
 #
-# 이 정의 확정으로 아래처럼 "질병명" 단위로 묶던 기존 1차 사전 매칭은
-# 국가/사건을 구분 못해서 정의와 안 맞는다는 게 실제 재검증(2026-07-14,
-# calibrate_issue_grouper.py 실행)에서 확인됨 - 예를 들어 "조류독감" 묶음은
+# 이 정의 때문에 "질병명" 단위로 묶던 사전 매칭은 국가/사건을 구분 못해서
+# 정의와 안 맞는다는 게 재검증에서 확인됨 - 예를 들어 "조류독감" 묶음은
 # 국내 기사 1건과 필리핀/캄보디아/호주/미국 등 전혀 다른 나라의 bird flu
 # 기사들을 전부 한 그룹으로 묶어버렸고, "구제역" 묶음도 한국 예천 발생
-# 기사들과 South Africa의 FMD 백신 관련 기사가 섞여버렸다 (실측 로그
-# calibration_log.txt 참조). 그래서 이 사전은 비워둔다 - "완전 동일 사건"
-# 매칭은 국가/장소/시점까지 구분해야 하는 훨씬 좁은 단위라 질병명 키워드
-# 매칭으로는 애초에 표현이 불가능함. 2차(BGE-M3 임베딩)에만 의존하는
-# 구조로 전환 - 임베딩은 제목 전체의 의미를 보므로 "어느 나라 사건인지"
-# 같은 맥락도 (완벽하진 않아도) 어느 정도 반영됨.
+# 기사들과 South Africa의 FMD 백신 관련 기사가 섞여버렸다. 그래서 이
+# 사전은 비워둔다 - "완전 동일 사건" 매칭은 국가/장소/시점까지 구분해야
+# 하는 훨씬 좁은 단위라 질병명 키워드 매칭으로는 애초에 표현이 불가능함.
+# 2차(BGE-M3 임베딩)에만 의존하는 구조로 전환 - 임베딩은 제목 전체의
+# 의미를 보므로 "어느 나라 사건인지" 같은 맥락도 (완벽하진 않아도) 어느
+# 정도 반영됨.
 #
 # 아래 함수(_stage1_match_keys, stage1_group)는 인프라 자체는 남겨둔다 -
 # 나중에 "완전 동일 사건"을 표현할 수 있는 더 구체적인 키(예: 특정 지명+
@@ -181,18 +179,16 @@ def stage1_group(articles: list[dict]) -> tuple[list[list[dict]], list[dict]]:
 # 유사도를 계산해서 threshold 이상이면 그룹핑한다.
 #
 # 임계값(THRESHOLD)은 문서 "7. 아직 결정 안 된 것들"에 명시된 대로 아직
-# 미확정 값이다 (예상 범위 0.7~0.8대). scorer.py의 PRESS_DEDUP_CAP과 같은
-# 성격의 "잠정 상수".
-# 2026-07-24 조정: 0.75 -> 0.7. issue_grouper.export_similarity_scores()로
-# 뽑은 유사도 디버그 CSV를 담당자가 직접 눈으로 보고 결정함.
+# 미확정 값이다. scorer.py의 PRESS_DEDUP_CAP과 같은 성격의 "잠정 상수" -
+# issue_grouper.export_similarity_scores()로 뽑은 유사도 디버그 CSV를
+# 직접 보고 조정한다.
 THRESHOLD = 0.7
 
 # threshold 근처 "애매한 구간"의 폭. 예를 들어 THRESHOLD=0.7,
 # BORDERLINE_MARGIN=0.06이면 0.64~0.70 사이가 애매 구간 -> 문서 3차(LLM 보조)
-# 대상. 2026-07-15부터 3차(stage3_llm_assist)가 실제로 이 borderline_pairs를
-# 입력받아 처리한다 - LLM이 "같은 사건"으로 확정한 쌍만 병합되고, 그 외
-# (API 키 없음/호출 실패 등)는 여전히 "안 묶는" 보수적 기본값으로 fallback.
-# 2026-07-24 조정: 0.05 -> 0.06 (THRESHOLD 조정과 함께 담당자가 결정).
+# 대상. 3차(stage3_llm_assist)가 실제로 이 borderline_pairs를 입력받아
+# 처리한다 - LLM이 "같은 사건"으로 확정한 쌍만 병합되고, 그 외(API 키
+# 없음/호출 실패 등)는 여전히 "안 묶는" 보수적 기본값으로 fallback.
 BORDERLINE_MARGIN = 0.06
 
 
@@ -229,11 +225,11 @@ def export_similarity_scores(articles: list[dict], sim_matrix, threshold: float,
                               borderline_margin: float, path: str = "similarity_debug/similarity_scores.csv",
                               min_score: float = 0.4) -> str | None:
     """
-    2026-07-23 신규(담당자 요청): THRESHOLD/BORDERLINE_MARGIN을 눈으로 보고
-    직접 튜닝하고 싶다는 요청으로 추가 - stage2_group이 계산한 유사도 행렬
-    전체를 CSV로 내보낸다. 지금은 threshold-margin ~ threshold 구간(borderline)
-    만 로그에 남기는데, 그 좁은 구간 밖의 값들도 봐야 "임계값을 어디로
-    옮기면 어떤 쌍들이 추가/제외되는지"를 판단할 수 있어서 훨씬 넓게 뽑음.
+    THRESHOLD/BORDERLINE_MARGIN을 눈으로 보고 직접 튜닝할 수 있도록,
+    stage2_group이 계산한 유사도 행렬 전체를 CSV로 내보낸다. threshold-margin
+    ~ threshold 구간(borderline)만이 아니라 그 좁은 구간 밖의 값들도 봐야
+    "임계값을 어디로 옮기면 어떤 쌍들이 추가/제외되는지"를 판단할 수 있어서
+    훨씬 넓게 뽑는다.
 
     min_score: 이 값 미만인 쌍은 아예 제외한다. 기사 수가 n이면 쌍이
     n*(n-1)/2개라 전부 다 내보내면(대부분 0에 가까운 무관한 쌍) 파일이
@@ -320,24 +316,20 @@ def stage2_group(
     vectors = model.encode(texts, normalize_embeddings=True)
     sim_matrix = _cosine_similarity_matrix(vectors)
 
-    # 2026-07-23 추가: 임계값 튜닝용 디버그 CSV (담당자 요청) - 그룹핑 로직
-    # 자체와는 무관, 실패해도 안전하게 로그만 남기고 계속 진행함.
+    # 임계값 튜닝용 디버그 CSV - 그룹핑 로직 자체와는 무관, 실패해도
+    # 안전하게 로그만 남기고 계속 진행함.
     export_similarity_scores(articles, sim_matrix, threshold, borderline_margin)
 
     n = len(articles)
     uf = UnionFind(n)
 
-    # ** 2026-07-14 버그 수정: 2-pass로 분리 **
-    # 기존엔 한 pass 안에서 "threshold 이상이면 union, 아니면 borderline"을
-    # 같이 처리했는데, 이러면 i-j가 서로 직접은 threshold 미만이라도 다른
-    # 기사 k를 거쳐 간접적으로(transitively) 이미 같은 그룹으로 묶인 경우까지
-    # borderline에 중복으로 기록되는 문제가 있었다. 실제 재검증(2026-07-14,
-    # calibrate_issue_grouper.py)에서 확인된 사례: "농협 2200억" 기사 54건이
-    # 이미 다른 엣지들로 전부 한 그룹에 묶였는데도, 그 54건 내부의 쌍들이
-    # threshold 바로 아래(0.70~0.75)라는 이유만으로 446개 borderline 쌍 중
-    # 342개(77%)를 차지함 - 이미 그룹핑 결과가 확정된 쌍인데도 LLM 보조
-    # 대상으로 잡혀서, 4번 섹션 "전수 호출 아님, 비용 고려" 설계 의도가
-    # 실제 스케일에서 깨지는 원인이 됐다.
+    # ** 2-pass로 분리한 이유 **
+    # 한 pass 안에서 "threshold 이상이면 union, 아니면 borderline"을 같이
+    # 처리하면, i-j가 서로 직접은 threshold 미만이라도 다른 기사 k를 거쳐
+    # 간접적으로(transitively) 이미 같은 그룹으로 묶인 경우까지 borderline에
+    # 중복으로 기록되는 문제가 생긴다 - 이미 그룹핑 결과가 확정된 쌍인데도
+    # LLM 보조 대상으로 잡혀서, "전수 호출 아님, 비용 고려" 설계 의도가
+    # 실제 스케일에서 깨질 수 있다.
     #
     # 그래서 1st pass에서 union만 먼저 전부 끝내고(간접 연결까지 확정), 2nd
     # pass에서 borderline 후보를 검사할 때 "두 기사가 이미 같은 그룹인가"를
@@ -375,15 +367,14 @@ def stage2_group(
 #
 # 문서 4번 섹션 (B) 그대로: 2차(임베딩) 유사도가 threshold 근처 애매 구간에
 # 걸린 쌍만 LLM에 물어봐서 "같은 사건인지 아닌지" 최종 판단한다.
-# (전수 호출 아님 - stage2_group에서 이미 borderline_pairs로 걸러진 소수만
-# 대상이라, 2026-07-14 2-pass 버그 수정으로 446개 -> 70개까지 줄어든 규모.)
+# (전수 호출 아님 - stage2_group에서 이미 borderline_pairs로 걸러진 소수만 대상)
 #
-# 판정 기준은 2.1에서 확정한 이슈 그룹핑 정의(2026-07-14)를 그대로 따른다:
-# "같은 사건"이란 같은 질병/주제여도 국가·장소·시점이 다르면 별개 이슈다
-# (예: 한국 조류독감 발생과 미국 조류독감 발생은 별개). 이 기준을 LLM에게도
-# 시스템 프롬프트로 명시한다.
+# 판정 기준은 2.1에서 확정한 이슈 그룹핑 정의를 그대로 따른다: "같은 사건"
+# 이란 같은 질병/주제여도 국가·장소·시점이 다르면 별개 이슈다(예: 한국
+# 조류독감 발생과 미국 조류독감 발생은 별개). 이 기준을 LLM에게도 시스템
+# 프롬프트로 명시한다.
 #
-# ** 프로바이더 스위치 (2026-07-15 추가) **
+# ** 프로바이더 스위치 **
 # 기본은 Anthropic(Haiku 4.5) - 9.5 섹션 결론대로 이 프로젝트 규모에서
 # 유료 API 비용은 무시 가능한 수준이고, 은퇴 공지 의무가 있어 장기 운영에
 # 안전하다. 다만 API 키 발급 결재가 아직 안 난 상태에서 로컬 개발/검증을
@@ -406,17 +397,15 @@ def stage2_group(
 # openrouter/free는 그 라우팅 자체를 OpenRouter가 대신 처리해준다. 특정
 # 모델을 고정하고 싶으면 OPENROUTER_MODEL 환경변수로 덮어쓸 수 있다.
 #
-# ** 2026-07-15 버그 수정 - os.environ.get(key, default) 대신 or 사용 **
+# ** os.environ.get(key, default) 대신 or를 쓰는 이유 **
 # GitHub Actions에서 리포에 등록 안 된 Variable을 `${{ vars.X }}`로 참조하면
 # "아예 안 넘어옴"이 아니라 "빈 문자열로 채워진 환경변수"가 된다(GitHub 공식
 # 문서: "설정 안 된 configuration variable을 참조하면 빈 문자열로 평가됨").
 # `os.environ.get(key, default)`의 default는 키가 "아예 없을 때"만 적용되고
 # 빈 문자열이 있으면 그 빈 문자열을 그대로 돌려주므로, OPENROUTER_MODEL을
-# Variables에 등록 안 한 상태로 workflow의 `OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}`
-# 를 그대로 두면 LLM_MODEL_OPENROUTER가 빈 문자열이 되어 OpenRouter API가
-# "model" 필드 없음으로 400 Bad Request를 던지는 게 실제로 재현됨(실측
-# 로그: "model=, 대상 66쌍" 다음 400 에러 26회). `or` 연산자를 쓰면 빈
-# 문자열도 falsy라 기본값으로 자연스럽게 대체된다.
+# Variables에 등록 안 한 상태로 두면 LLM_MODEL_OPENROUTER가 빈 문자열이
+# 되어 OpenRouter API가 "model" 필드 없음으로 400 Bad Request를 던진다.
+# `or` 연산자를 쓰면 빈 문자열도 falsy라 기본값으로 자연스럽게 대체된다.
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER") or "anthropic"
 
 LLM_MODEL_ANTHROPIC = "claude-haiku-4-5-20251001"
@@ -429,15 +418,14 @@ LLM_BATCH_SIZE = 20  # 한 번의 API 호출에 몇 쌍까지 같이 물어볼�
                       # OpenRouter 무료 티어 분당/일 요청 한도 감안해도 안전한 크기)
 
 # OpenRouter 요청에 붙이는 선택적 식별 헤더. HTTP 헤더 값은 latin-1(ASCII 계열)
-# 인코딩만 허용되므로 반드시 ASCII 문자열이어야 한다 - 2026-07-16, 여기 한글을
-# 넣었다가 매 배치가 UnicodeEncodeError로 죽는 게 실측으로 확인된 적 있음
-# (아래 자체 테스트에 이 상수의 ASCII 여부를 검증하는 assert가 있음).
+# 인코딩만 허용되므로 반드시 ASCII 문자열이어야 한다 - 한글을 넣으면 매
+# 배치가 UnicodeEncodeError로 죽는다(아래 자체 테스트에 이 상수의 ASCII
+# 여부를 검증하는 assert가 있음).
 _OPENROUTER_X_TITLE = "feed-livestock-news-issue-grouping-stage3"
 
 _LLM_SYSTEM_PROMPT = (
-    # 2026-07-25 영어로 번역(담당자 요청, relevance_filter.py와 같은 이유).
-    # 규칙/예시는 한국어 버전과 완전히 동일 - 국가 구분(한국-미국), 국내
-    # 지역 구분(경남-제주), 단신 vs 종합기사 구분 규칙 모두 그대로 옮김.
+    # 영어로 작성 - relevance_filter.py와 같은 이유(무료 소형 모델의 형식
+    # 지시 준수율, 다국어 입력과의 일관성).
     "You are a judge that assists news issue grouping. Given two article "
     "titles, decide whether the two articles cover \"exactly the same "
     "event\". "
@@ -472,7 +460,7 @@ _LLM_SYSTEM_PROMPT = (
 
 
 def _build_llm_user_prompt(pairs: list[tuple[dict, dict, float]]) -> str:
-    # 2026-07-25 지시문 영어로 번역(시스템 프롬프트와 같은 이유).
+    # 지시문은 영어로 작성(시스템 프롬프트와 같은 이유).
     lines = ["Judge whether each of the following pairs of article titles covers exactly the same event.\n"]
     for idx, (a, b, _sim) in enumerate(pairs, start=1):
         lines.append(f"{idx}. A: \"{a.get('title', '')}\" / B: \"{b.get('title', '')}\"")
@@ -492,9 +480,8 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
     다르지만(Anthropic: content 블록 리스트, OpenRouter: OpenAI 호환
     choices[0].message.content), 이후 파싱/검증 로직은 공통이다.
 
-    session: 2026-07-23 추가 - stage3_llm_assist가 배치마다 반복 호출하므로,
-    세션을 재사용해 커넥션 오버헤드를 줄인다(relevance_filter.py와 동일한
-    개선을 여기에도 적용).
+    session: stage3_llm_assist가 배치마다 반복 호출하므로, 세션을
+    재사용해 커넥션 오버헤드를 줄인다(relevance_filter.py와 동일한 방식).
 
     입력/출력 개수 불일치, JSON 파싱 실패, API 에러, 항목 형식 이상 등
     신뢰할 수 없는 응답이면 None을 반환한다 - 9.4 "출력 형식을 코드로 자동
@@ -509,11 +496,9 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
                 "Authorization": f"Bearer {api_key}",
                 "content-type": "application/json",
                 # OpenRouter 권장 헤더(선택) - 프로젝트 식별용, 없어도 동작함.
-                # 2026-07-16 수정: HTTP 헤더 값은 latin-1 인코딩만 허용되는데
-                # 한글 문자열을 넣었다가 UnicodeEncodeError로 매 배치가 실패
-                # 하는 게 실측으로 확인됨(3차가 시작은 됐지만 모든 배치가
-                # 이 예외로 죽어서 결과적으로 이전 버그와 똑같이 0쌍 병합됨).
-                # ASCII 전용 문자열로 교체.
+                # HTTP 헤더 값은 latin-1 인코딩만 허용되므로 ASCII 전용
+                # 문자열이어야 함(한글이 섞이면 UnicodeEncodeError로 매
+                # 배치가 실패함).
                 "X-Title": _OPENROUTER_X_TITLE,
             }
             body = {
@@ -565,14 +550,12 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
               f"비어있음, 실제 {actual}) - 이 배치({len(pairs)}쌍) 전부 '안 묶음' fallback")
         return None
 
-    # 2026-07-23 변경: relevance_filter.py에 먼저 적용했던 id 기반 부분 복구를
-    # 여기에도 이식(담당자 지적) - 기존엔 "출력 개수 != 입력 개수"면 배치
-    # 전체를 버렸는데, 실측 결과(2026-07-22) 52쌍이 429로 전멸하는 등 이
-    # 구조의 손실이 컸음. id를 명시적으로 주고받게 해서, 어긋나도 "일치하는
-    # 것만 살리고, 안 맞는 것만 개별적으로 안전한 기본값(안 묶음)으로
-    # 처리"하도록 개선. relevance_filter.py와는 기본값 방향이 다름에 주의 -
-    # 거기는 "애매하면 통과(true)"가 안전하지만, 여기는 "애매하면 안 묶음
-    # (false)"이 안전하다(9.4 원칙 - 잘못 묶는 것보다 안 묶는 게 안전).
+    # id 기반 부분 복구 - "출력 개수 != 입력 개수"면 배치 전체를 버리는
+    # 대신, id를 명시적으로 주고받게 해서 어긋나도 "일치하는 것만 살리고,
+    # 안 맞는 것만 개별적으로 안전한 기본값(안 묶음)으로 처리"한다.
+    # relevance_filter.py와는 기본값 방향이 다름에 주의 - 거기는 "애매하면
+    # 통과(true)"가 안전하지만, 여기는 "애매하면 안 묶음(false)"이
+    # 안전하다(잘못 묶는 것보다 안 묶는 게 안전).
     by_id: dict[int, bool] = {}
     for item in parsed:
         try:
@@ -653,9 +636,7 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
     리스트를 만든다.
 
     이 함수의 반환값은 scorer.score_and_rank()가 받는 입력과 형태가 동일하다
-    (list[list[dict]]) - main.py에서 scorer.to_singleton_groups(articles) 호출을
-    이 함수 호출로 그대로 바꿔치기하면 된다 (scorer.py 상단 docstring에 이미
-    이렇게 하라고 적혀 있음).
+    (list[list[dict]]) - main.py의 score()가 이 함수를 호출해서 씀.
 
     ** 3차 병합 방식 **
     stage2_group의 결과(stage2_grouped 각 그룹 + still_unmatched 각 기사)를
@@ -667,16 +648,15 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
     url은 항상 존재하고 고유하다 (2번 섹션 "완전 동일 기사 제거" 로직도
     같은 전제로 URL을 키로 씀).
 
-    ** 2026-07-24 추가 - 연쇄(사슬) 병합 방지 **
+    ** 연쇄(사슬) 병합 방지 **
     확정된 쌍을 Union-Find로 그냥 다 묶으면, "A~B 확정 + B~C 확정"이라는
     이유만으로 A~C를 LLM에 직접 물어본 적 없는데도 A+B+C가 한 그룹이 되는
-    문제가 있음(담당자 지적으로 발견) - 특히 "지역이 다르면 별개 사건",
-    "단신 vs 종합기사는 별개 사건" 같은 판정은 두 기사를 직접 비교했을
-    때만 유효해서, 간접 연결만으로 셋 이상을 묶으면 위험함. 3개 이상이
-    연결된 경우, 그 안의 모든 쌍이 실제로 LLM에게 직접 확인됐는지(완전
-    그래프/클리크인지) 검증하고, 클리크가 아니면(사슬로만 연결됐으면)
-    병합하지 않고 개별 컴포넌트로 유지한다(9.4 "애매하면 안 묶는 게
-    안전하다" 원칙과 같은 방향).
+    문제가 있음 - 특히 "지역이 다르면 별개 사건", "단신 vs 종합기사는 별개
+    사건" 같은 판정은 두 기사를 직접 비교했을 때만 유효해서, 간접 연결만
+    으로 셋 이상을 묶으면 위험함. 3개 이상이 연결된 경우, 그 안의 모든
+    쌍이 실제로 LLM에게 직접 확인됐는지(완전 그래프/클리크인지) 검증하고,
+    클리크가 아니면(사슬로만 연결됐으면) 병합하지 않고 개별 컴포넌트로
+    유지한다(9.4 "애매하면 안 묶는 게 안전하다" 원칙과 같은 방향).
     """
     stage1_grouped, stage1_unmatched = stage1_group(articles)
 
@@ -710,14 +690,12 @@ def _merge_confirmed_components(components: list[list[dict]],
     stage3_llm_assist가 확정한 쌍(confirmed_pairs)을 이용해 components(각각
     이미 확정된 이슈 그룹 혹은 단독 기사)를 추가로 병합한다.
 
-    2026-07-24 발견/수정: confirmed_pairs를 그냥 Union-Find로만 병합하면
-    "A~B가 확정되고 B~C가 확정됐다"는 이유만으로 A~C를 LLM에 한 번도 직접
-    물어본 적 없는데도 A+B+C가 통째로 한 그룹이 되는 연쇄(transitive
-    chaining) 문제가 있었음(담당자 지적으로 발견). _LLM_SYSTEM_PROMPT의
-    "지역이 다르면 별개 사건", "단신 vs 종합기사는 별개 사건" 같은 판정은
-    두 기사를 직접 비교했을 때만 유효한 결론이라, 간접 연결만으로 셋 이상을
-    한 그룹으로 넘겨짚으면 위험함 - 이 두 규칙을 추가하면서 문제가 실제로
-    발생할 여지가 커져서 지금 같이 고침.
+    confirmed_pairs를 그냥 Union-Find로만 병합하면 "A~B가 확정되고 B~C가
+    확정됐다"는 이유만으로 A~C를 LLM에 한 번도 직접 물어본 적 없는데도
+    A+B+C가 통째로 한 그룹이 되는 연쇄(transitive chaining) 문제가 있다.
+    _LLM_SYSTEM_PROMPT의 "지역이 다르면 별개 사건", "단신 vs 종합기사는
+    별개 사건" 같은 판정은 두 기사를 직접 비교했을 때만 유효한 결론이라,
+    간접 연결만으로 셋 이상을 한 그룹으로 넘겨짚으면 위험하다.
 
     수정 방식: edges(확정된 쌍)를 집합으로 따로 보관해두고, Union-Find
     결과로 나온 각 연결 그룹에 대해 "그 그룹 안의 모든 쌍이 실제로 전부
@@ -790,21 +768,18 @@ class _FakeEmbeddingModel:
     위한 가짜 모델. 미리 정해둔 제목들에는 의도적으로 비슷한 벡터를,
     나머지는 서로 확실히 먼 벡터를 부여한다.
 
-    ** 2026-07-15 수정 - 무관한 텍스트끼리 "우연히" 비슷해지는 문제 제거 **
-    기존엔 매칭 안 되는 텍스트에 그냥 rng.normal(size=4) (4차원 랜덤 벡터)를
-    부여했는데, 차원이 낮으면 랜덤 벡터끼리도 코사인 유사도가 threshold(0.75)
-    를 우연히 넘는 경우가 실제로 발생했다 - 실측: seed=42 기준 "조류독감"
-    기사와 "구제역" 기사에 우연히 0.967이 나와서 실제로는 안 묶여야 할 두
-    기사(질병명 자체가 다름)가 잘못 묶이는 게 확인됨. 이 자체 테스트에는 그걸
-    잡아낼 assert도 없었어서(merged_ok만 확인, 잘못된 병합은 검사 안 함)
-    조용히 통과해버리는 문제가 있었음.
+    ** 무관한 텍스트끼리 "우연히" 비슷해지는 문제를 피하는 설계 **
+    매칭 안 되는 텍스트에 그냥 낮은 차원의 랜덤 벡터를 부여하면, 랜덤
+    벡터끼리도 코사인 유사도가 threshold를 우연히 넘는 경우가 생길 수
+    있다(차원이 낮을수록 이 위험이 커짐) - 실제로 안 묶여야 할 두 기사가
+    잘못 묶이는 사고로 이어질 수 있어 아래처럼 설계했다.
 
-    수정 방식: 매칭 안 되는 텍스트마다 서로 직교(orthogonal)하는 전용 축을
-    하나씩 배정한다(원-핫 벡터 + 아주 작은 노이즈). 직교 벡터는 코사인
-    유사도가 정확히 0에 가깝게 나오도록 수학적으로 보장되므로, 랜덤 시드가
-    뭐가 됐든 "무관한 텍스트끼리 우연히 유사해지는" 일 자체가 구조적으로
-    발생할 수 없다. 곡물/사료 그룹은 기존처럼 0번 축에 다 같이 모아서
-    "의미가 비슷한 문장은 가까운 벡터" 라는 원래 취지는 그대로 유지.
+    매칭 안 되는 텍스트마다 서로 직교(orthogonal)하는 전용 축을 하나씩
+    배정한다(원-핫 벡터 + 아주 작은 노이즈). 직교 벡터는 코사인 유사도가
+    정확히 0에 가깝게 나오도록 수학적으로 보장되므로, 랜덤 시드가 뭐가
+    됐든 "무관한 텍스트끼리 우연히 유사해지는" 일 자체가 구조적으로
+    발생할 수 없다. 곡물/사료 그룹은 0번 축에 다 같이 모아서 "의미가
+    비슷한 문장은 가까운 벡터"라는 원래 취지는 그대로 유지.
 
     실제 모델(model.encode(texts, normalize_embeddings=True))과 같은
     인터페이스(encode 메서드, 텍스트 리스트 -> 벡터 리스트)만 흉내낸다.
@@ -873,10 +848,10 @@ if __name__ == "__main__":
     print(f"\n[검증] 2차 임베딩으로 사료가격 이슈 그룹핑 성공: {merged_ok}")
     assert merged_ok, "2차 임베딩 그룹핑 로직에 문제가 있음"
 
-    # ** 2026-07-15 추가 - 음성(negative) 검증 **
+    # ** 음성(negative) 검증 **
     # "무관한 기사는 절대 안 묶여야 한다"를 명시적으로 확인. 이게 없으면
-    # _FakeEmbeddingModel이 우연히 이상한 벡터를 내놔도(과거 실제로 발생함 -
-    # 위 클래스 docstring 참고) 테스트가 조용히 통과해버린다.
+    # _FakeEmbeddingModel이 우연히 이상한 벡터를 내놔도 테스트가 조용히
+    # 통과해버린다.
     def _same_group(title_a: str, title_b: str) -> bool:
         return any({title_a, title_b} <= {a["title"] for a in g} for g in final_groups)
 
@@ -894,10 +869,9 @@ if __name__ == "__main__":
     # === 3차 LLM 보조가 실제로 배선(wiring)돼 있는지 mock으로 확인 ===
     # (실제 API 키 없이도, borderline_pairs가 있으면 stage3_llm_assist가
     # 정말 호출되고 응답을 파싱해 병합까지 이어지는지 구조만 검증한다.
-    # 앞선 세션에서 "지금 LLM이 작동 안 한 거 아니냐"는 질문이 나온 이유가
-    # 바로 이 실행에서는 borderline_pairs 자체가 한 번도 안 생겨서 stage3가
-    # 호출조차 안 됐기 때문 - 이 스모크 테스트는 stage3 배선 자체는 정상임을
-    # borderline_pairs를 강제로 만들어서 확인한다.)
+    # borderline_pairs 자체가 안 생기면 stage3가 호출조차 안 되므로, 이
+    # 스모크 테스트는 borderline_pairs를 강제로 만들어서 배선이 정상임을
+    # 확인한다.)
     print("\n\n=== 3차 LLM 보조 배선 확인 (mock API, 실제 네트워크 호출 없음) ===")
     import os as _os
     import requests as _requests
@@ -905,16 +879,14 @@ if __name__ == "__main__":
     _mock_calls = []
 
     def _mock_session_post(self, url, headers=None, json=None, timeout=None):
-        # 2026-07-23 변경: _call_llm이 이제 requests.post가 아니라
-        # session.post(Session 인스턴스 메서드)를 호출하므로, 모듈 레벨
-        # requests.post를 바꿔치기하던 예전 방식은 더 이상 이 호출을 못
-        # 가로챈다. requests.Session.post(클래스 메서드) 자체를 바꿔치기해서,
-        # 어떤 Session 인스턴스에서 호출되든 잡히게 한다(self는 무시).
+        # _call_llm은 requests.post가 아니라 session.post(Session 인스턴스
+        # 메서드)를 호출하므로, requests.Session.post(클래스 메서드) 자체를
+        # 바꿔치기해서 어떤 Session 인스턴스에서 호출되든 잡히게 한다(self는 무시).
         _mock_calls.append(url)
         pairs_count = json["messages"][0]["content"].count('A: "')
-        # 2026-07-23 변경: _call_llm이 이제 id 기반 매칭을 쓰므로, mock
-        # 응답에도 id를 넣어야 한다(안 넣으면 전부 파싱 실패로 처리돼
-        # False 기본값이 되면서 이 테스트의 assert가 깨짐).
+        # _call_llm이 id 기반 매칭을 쓰므로, mock 응답에도 id를 넣어야
+        # 한다(안 넣으면 전부 파싱 실패로 처리돼 False 기본값이 되면서
+        # 이 테스트의 assert가 깨짐).
         results = [{"id": i, "same_event": True} for i in range(1, pairs_count + 1)]  # 이 스모크 테스트는 전부 True로 응답
         text = __import__("json").dumps(results)
 
@@ -945,16 +917,15 @@ if __name__ == "__main__":
         _requests.Session.post = _original_session_post
         del _os.environ["ANTHROPIC_API_KEY"]
 
-    # === OpenRouter 요청 헤더가 실제로 인코딩 가능한지 확인 (2026-07-16 추가) ===
-    # 배경: X-Title 헤더에 한글을 넣었다가 UnicodeEncodeError로 3차 LLM 보조의
-    # 모든 배치가 실패하는 게 실측으로 확인된 적 있음 (requests.post를 통째로
-    # mock으로 바꿔치기하는 위 스모크 테스트는 실제 HTTP 헤더 인코딩 단계를
-    # 건너뛰기 때문에 이 버그를 못 잡았음). HTTP 헤더 인코딩은 실제로는
-    # urllib3/http.client가 소켓에 쓰기 직전(더 아래 레이어)에서 수행하고
-    # requests.models.PreparedRequest.prepare_headers()는 값만 저장할 뿐 이
-    # 검증을 안 한다는 게 실제로 확인됨(테스트해봤더니 한글이 통과해버림) -
-    # 그래서 실제 실패와 동일한 지점인 str.encode("latin-1")을 직접 호출해서
-    # 검증한다. 앞으로 헤더에 비-ASCII 문자가 섞이면 여기서 바로 실패해야 한다.
+    # === OpenRouter 요청 헤더가 실제로 인코딩 가능한지 확인 ===
+    # 배경: X-Title 헤더에 한글이 섞이면 UnicodeEncodeError로 3차 LLM 보조의
+    # 모든 배치가 실패한다(requests.post를 통째로 mock으로 바꿔치기하는 위
+    # 스모크 테스트는 실제 HTTP 헤더 인코딩 단계를 건너뛰기 때문에 이 버그를
+    # 못 잡음). HTTP 헤더 인코딩은 실제로는 urllib3/http.client가 소켓에
+    # 쓰기 직전(더 아래 레이어)에서 수행하고 requests.models.PreparedRequest.
+    # prepare_headers()는 값만 저장할 뿐 이 검증을 안 하므로, 실제 실패와
+    # 동일한 지점인 str.encode("latin-1")을 직접 호출해서 검증한다. 헤더에
+    # 비-ASCII 문자가 섞이면 여기서 바로 실패해야 한다.
     for header_name, header_value in {
         "Authorization": "Bearer dummy-key-for-header-encoding-check",
         "content-type": "application/json",

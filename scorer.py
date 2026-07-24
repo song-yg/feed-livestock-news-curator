@@ -3,27 +3,23 @@ scorer.py
 "3. 언급빈도 x 최신가중치 계산 (Scoring)" 담당 모듈.
 (알고리즘 문서 "3. 언급빈도 x 최신가중치 계산" 참조)
 
-이 레이어는 순수 계산만 한다 - LLM 안 씀 (문서에 "이 레이어도 LLM 안 씀. 순수
-계산." 이라고 3.2 끝에 명시돼 있음).
+이 레이어는 순수 계산만 한다 - LLM 안 씀.
 
-** 중요 - 2.1 이슈 그룹핑과의 의존 관계 **
-이 모듈의 함수들은 전부 "이슈 그룹"(같은 사건을 다루는 기사 묶음, list[dict])을
-입력으로 받도록 설계했다 - issue_score 공식 자체가 "그룹 내 기사 각각 계산 후
-합산"이기 때문에(3번 섹션 수식 참조) 애초에 그룹 단위가 자연스러운 입력이다.
+** 이슈 그룹핑과의 관계 **
+이 모듈의 함수들은 전부 "이슈 그룹"(같은 사건을 다루는 기사 묶음,
+list[dict])을 입력으로 받도록 설계했다 - issue_score 공식 자체가 "그룹 내
+기사 각각 계산 후 합산"이기 때문에(3번 섹션 수식 참조) 그룹 단위가
+자연스러운 입력이다. 실제 그룹핑(BGE-M3 임베딩 기반)은 issue_grouper.py의
+group_issues()가 담당하고, 여기서는 결과로 받은 그룹 리스트를 스코어링만
+한다.
 
-문제는 2.1(BGE-M3 임베딩 기반 이슈 그룹핑)이 아직 구현 전이라, 지금 당장은
-"진짜 이슈 그룹"을 넘겨줄 수 있는 곳이 없다는 것. 그래서 임시로
-`to_singleton_groups()`를 하나 만들어 "기사 1건 = 그룹 1개"로 취급하게 했다.
-이렇게 하면:
-  - recency_weight, issue_score 계산 로직 자체는 지금 바로 검증 가능
-  - 3.2의 "동일 언론사 도배 dedup"은 그룹 크기가 항상 1이라 사실상 작동할
-    일이 없음(도배가 성립하려면 같은 그룹 안에 같은 언론사 기사가 여러 건
-    있어야 하는데, 지금은 애초에 그룹이 기사 1건뿐이라 캡에 걸릴 대상이 없음)
-  - 3.2의 국내-해외 교차 매칭 🔗 태그는 2026-07-25 구현 완료(score_group의
-    cross_axis_partner 필드, main.py의 score()가 채워줌 - 상세는 score_group
-    docstring 참고)
-2.1이 실제로 붙으면 `to_singleton_groups` 대신 진짜 그룹 리스트를 넘기기만
-하면 되고, score_group/score_and_rank 쪽 로직은 바꿀 필요 없다.
+`to_singleton_groups()`는 이슈 그룹핑이 없던 초기 개발 단계에 "기사 1건 =
+그룹 1개"로 취급해 스코어링 로직만 먼저 검증하려고 만든 함수로, 지금은
+실제 그룹핑 결과를 바로 넘기기 때문에 사용되지 않는다.
+
+3.2의 국내-해외 교차 매칭 🔗 태그는 score_group의 cross_axis_partner
+필드로 구현돼 있다(main.py의 score()가 채워줌 - 상세는 score_group
+docstring 참고).
 """
 
 from collections import Counter, defaultdict
@@ -113,12 +109,12 @@ def score_group(group: list[dict], reference: datetime | None = None) -> dict:
       titles: 그룹에 속한 기사 제목 전부 (LLM 요약 단계에서 사용, 2.1 7번 항목)
       urls: 그룹에 속한 기사 원문 링크 전부
       press_list: 참여 언론사 목록 (발행매체 다양성 참고용, 11번 섹션 아이디어 2)
-      cross_axis_partner: 2026-07-25 신규(3.2 "국내-해외 교차 매칭 🔗" 구현) -
-                   같은 이슈가 국내/해외 양쪽 축에서 동시에 다뤄진 경우, 반대
-                   축 대표 제목이 여기 담긴다(없으면 None). main.py의 score()가
-                   그룹을 국내/해외로 나누기 전에 article dict에
-                   "_cross_axis_partner"(내부용, storage에 저장 안 됨)를 미리
-                   붙여두면 여기서 꺼내 정식 필드로 올려준다.
+      cross_axis_partner: 같은 이슈가 국내/해외 양쪽 축에서 동시에 다뤄진
+                   경우, 반대 축 대표 제목이 여기 담긴다(없으면 None).
+                   main.py의 score()가 그룹을 국내/해외로 나누기 전에
+                   article dict에 "_cross_axis_partner"(내부용, storage에
+                   저장 안 됨)를 미리 붙여두면 여기서 꺼내 정식 필드로
+                   올려준다.
     """
     raw_mention_count = len(group)
     deduped = dedup_group_by_press(group)
@@ -164,12 +160,10 @@ def score_and_rank(groups: list[list[dict]], top_n: int | None = None,
 
 def to_singleton_groups(articles: list[dict]) -> list[list[dict]]:
     """
-    ** 임시 placeholder - 2.1 이슈 그룹핑이 구현되기 전까지만 쓴다 **
-
-    "기사 1건 = 그룹 1개"로 취급해서, 진짜 그룹핑이 아직 없어도 스코어링
-    로직(score_group/score_and_rank)을 지금 바로 검증할 수 있게 해준다.
-    2.1이 실제로 구현되면 이 함수 대신 임베딩 매칭 결과(진짜 그룹 리스트)를
-    score_and_rank에 바로 넘기면 되고, scorer.py 쪽 코드는 안 바꿔도 된다.
+    "기사 1건 = 그룹 1개"로 취급해서 그룹 리스트 형태로 변환한다. 실제
+    파이프라인은 issue_grouper.group_issues()가 만든 진짜 그룹을 쓰므로
+    이 함수는 현재 사용되지 않는다 - 단독으로 스코어링 로직만 테스트하고
+    싶을 때 쓸 수 있는 유틸로 남겨둔다.
     """
     return [[a] for a in articles]
 

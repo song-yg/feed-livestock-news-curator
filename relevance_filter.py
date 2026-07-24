@@ -3,13 +3,12 @@ relevance_filter.py
 "2.5 관련성 필터" - 정규화(URL dedup + 키워드 태깅) 직후, 2.1 이슈 그룹핑
 (임베딩 로드) 전에 실행한다.
 
-배경 (2026-07-22 담당자 논의): 키워드 매칭만으로는 걸러지지 않는 오매칭
-유형이 실측으로 다수 확인됨 - 동음이의어(질병명이 유튜버 닉네임인 경우),
-검색어가 기관명/법안명 등 고유명사의 일부로만 등장하는 경우, 기사의 핵심
-주제는 따로 있고 축산 관련 내용은 통계 나열 중 한 줄로만 등장하는 "각주성
-언급" 등. 이런 유형은 키워드를 아무리 좁혀도(복합어, near() 등) 구조적으로
-해결이 안 되는데, LLM이 제목/요약 맥락을 읽으면 정확히 구분 가능한 문제라
-필터 단계로 신설.
+배경: 키워드 매칭만으로는 걸러지지 않는 오매칭 유형이 다수 확인됨 -
+동음이의어(질병명이 유튜버 닉네임인 경우), 검색어가 기관명/법안명 등
+고유명사의 일부로만 등장하는 경우, 기사의 핵심 주제는 따로 있고 축산 관련
+내용은 통계 나열 중 한 줄로만 등장하는 "각주성 언급" 등. 이런 유형은
+키워드를 아무리 좁혀도(복합어, near() 등) 구조적으로 해결이 안 되는데,
+LLM이 제목/요약 맥락을 읽으면 정확히 구분 가능한 문제라 필터 단계로 신설.
 
 설계는 issue_grouper.py의 "3차 LLM 보조"와 동일한 패턴을 그대로 재사용한다
 (provider 스위치, 배치 호출, 출력 개수/형식 검증, 실패 시 안전한 기본값
@@ -20,13 +19,11 @@ fallback) - 두 모듈이 서로 다른 판정을 하지만 LLM 호출 방식 �
 false(안 묶음)"가 안전하지만, 이 필터는 "애매하면 true(통과)"가 안전하다 -
 관련 있는 기사를 잘못 걸러내는 것보다, 무관한 기사가 몇 개 더 통과하는 편이
 손실이 적다. 배치 호출 자체가 실패해도 마찬가지 이유로 그 배치는 전부
-통과시킨다(안 걸러진 채로 이후 단계로 넘어감 - 오늘까지의 동작과 동일하니
-파이프라인이 더 나빠지지는 않음).
+통과시킨다(안 걸러진 채로 이후 단계로 넘어감).
 
 소스별로 LLM에 줄 수 있는 컨텍스트 양이 다르다는 한계가 있음 - 네이버는
 description(짧은 요약), WATT는 body(본문 앞부분), GDELT는 제목뿐(GDELT는
-스펙상 본문을 안 줌). GDELT 기사는 상대적으로 판정 근거가 부족하니 첫 실행
-결과에서 GDELT 쪽 판정 정확도를 특히 눈여겨봐야 한다.
+스펙상 본문을 안 줌). GDELT 기사는 상대적으로 판정 근거가 부족하다.
 """
 
 import json
@@ -57,9 +54,9 @@ LLM_API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
 _OPENROUTER_X_TITLE = "feed-livestock-news-relevance-filter"
 
 # 한 번의 API 호출에 몇 건까지 같이 물어볼지. issue_grouper의 LLM_BATCH_SIZE(20,
-# 페어 단위)와 맞춤. 원래 30으로 시작했으나 실측 결과 무료 라우터가 30건
-# 배치에서 개수를 자주 못 맞춰서(29건/31건 등) 20으로 하향 - id 기반 매칭
-# (아래 _call_llm 참고)으로 어긋나도 배치 전체를 안 버리게 됐지만, 애초에
+# 페어 단위)와 맞춤. 무료 라우터가 배치가 클 때 개수를 자주 못 맞추는
+# 경향이 있어(예: 30건 배치에서 29건/31건 등) 20으로 유지 - id 기반 매칭
+# (아래 _call_llm 참고)으로 어긋나도 배치 전체를 안 버리지만, 애초에
 # 어긋나는 빈도 자체를 줄이는 것도 유효한 보강이라 같이 적용.
 BATCH_SIZE = 20
 
@@ -70,14 +67,11 @@ SNIPPET_MAX_CHARS = 150
 
 
 _SYSTEM_PROMPT = (
-    # 2026-07-25 영어로 번역(담당자 요청) - 특히 작은 무료 모델일수록 학습
-    # 데이터가 영어 위주라 형식 지시(JSON만 출력 등) 준수율이 더 안정적인
-    # 경향이 있고, 판단 대상(기사 제목) 자체도 다국어라 지시문을 영어로
-    # 통일하는 게 더 자연스럽다는 판단. 규칙/예시 내용은 한국어 버전과
-    # 완전히 동일 - 실측으로 확인된 오매칭 유형(동음이의어, 고유명사 일부,
-    # 각주성 언급, 사료 아닌 곡물)과 반드시 통과시켜야 할 예시(로켓계란
-    # 사례)를 그대로 옮김. 요약 생성 프롬프트(llm_summarizer.py)는 결과물이
-    # 한국어여야 하므로 번역 대상에서 제외.
+    # 영어로 작성 - 특히 작은 무료 모델일수록 학습 데이터가 영어 위주라
+    # 형식 지시(JSON만 출력 등) 준수율이 더 안정적인 경향이 있고, 판단
+    # 대상(기사 제목) 자체도 다국어라 지시문을 영어로 통일하는 게 더
+    # 자연스럽다는 판단. 요약 생성 프롬프트(llm_summarizer.py)는 결과물이
+    # 한국어여야 하므로 한국어로 유지.
     "You are a relevance classifier for a feed and livestock industry news "
     "curation system. For each article, decide whether it substantively "
     "covers the \"feed industry\" or \"livestock industry\" (animal "
@@ -158,8 +152,8 @@ def _snippet(article: dict) -> str | None:
 
 
 def _build_user_prompt(batch: list[dict]) -> str:
-    # 2026-07-25 지시문 영어로 번역(시스템 프롬프트와 같은 이유). "카테고리"
-    # 값 자체(예: "기타", "질병명")는 keyword_tagger.py가 정하는 프로젝트
+    # 지시문은 영어로 작성(시스템 프롬프트와 같은 이유). "카테고리" 값
+    # 자체(예: "기타", "질병명")는 keyword_tagger.py가 정하는 프로젝트
     # 전역 한글 라벨이라 번역 대상 아님 - 지시문 안에 한글 값이 섞여 들어가는
     # 건 정상(모델이 다국어 입력을 다루는 데는 문제없음).
     lines = ["Judge whether each of the following articles is relevant to feed/livestock industry news.\n"]
@@ -185,8 +179,8 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
     실패(호출 에러/JSON 파싱 실패/개수 불일치)하면 None을 반환한다 - 호출부
     (filter_articles)는 None이면 그 배치를 전부 통과시킨다.
 
-    session: 2026-07-23 추가 - filter_articles가 배치마다 반복 호출하므로,
-    매번 requests.post()로 새 연결을 맺는 대신 세션 하나를 재사용해 커넥션
+    session: filter_articles가 배치마다 반복 호출하므로, 매번
+    requests.post()로 새 연결을 맺는 대신 세션 하나를 재사용해 커넥션
     오버헤드를 줄인다.
     """
     user_prompt = _build_user_prompt(batch)
@@ -248,11 +242,10 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
               f"아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 통과 처리")
         return None
 
-    # 2026-07-22 변경: 기존엔 "출력 개수 != 입력 개수"면 배치 전체를 버렸는데,
-    # 실측 결과 30건 중 1건만 빠지거나 하나 더 생기는 경미한 어긋남에도
-    # 배치 전체(29~31건)가 통째로 낭비되는 게 확인됨(담당자 지적). id를
-    # 명시적으로 주고받게 해서, 어긋나도 "일치하는 것만 살리고, 안 맞는 것만
-    # 개별적으로 안전한 기본값(통과)으로 처리"하도록 개선.
+    # "출력 개수 != 입력 개수"면 배치 전체를 버리는 대신, id를 명시적으로
+    # 주고받게 해서 어긋나도 "일치하는 것만 살리고, 안 맞는 것만 개별적으로
+    # 안전한 기본값(통과)으로 처리"한다 - 경미한 개수 어긋남에도 배치
+    # 전체가 낭비되는 걸 방지.
     by_id: dict[int, bool] = {}
     for item in parsed:
         try:
@@ -286,7 +279,7 @@ def filter_articles(articles: list[dict]) -> list[dict]:
     실패하면, 안전하게 원본 articles를 그대로 반환한다(필터를 그냥 안 거친
     것과 동일 - 9.4/9.5 원칙과 같은 방향의 안전한 기본값).
 
-    ** WATT 소스는 LLM 호출 없이 자동 통과 (2026-07-23 추가, 담당자 제안) **
+    ** WATT 소스는 LLM 호출 없이 자동 통과 **
     WATT(WATTAgNet/Feed Strategy)는 그 자체가 사료·축산업 전문지라, 이
     필터가 잡으려는 오매칭 유형(동음이의어, 기관명 일부로만 등장, 각주성
     언급)은 "키워드 검색으로 긁어온" 네이버/GDELT에서만 발생하는 구조적
@@ -331,11 +324,9 @@ def filter_articles(articles: list[dict]) -> list[dict]:
     with requests.Session() as session:
         for batch_num, i in enumerate(range(0, len(llm_target_articles), BATCH_SIZE), start=1):
             batch = llm_target_articles[i:i + BATCH_SIZE]
-            # 2026-07-22 추가: 어떤 기사가 어느 배치에 속했는지 로그로 안 남아서,
-            # 특정 기사가 "LLM이 판정했는데 놓친 것"인지 "429 등으로 애초에 판정
-            # 자체를 못 받은 것"인지 사후에 구분이 안 되는 문제가 있었음(담당자
-            # 지적). 배치 시작 시점에 포함된 기사 제목을 남겨서, 바로 다음 줄에
-            # 나오는 성공/실패 로그와 대조하면 추적 가능하게 함.
+            # 배치 시작 시점에 포함된 기사 제목을 남겨서, 특정 기사가 "LLM이
+            # 판정했는데 놓친 것"인지 "429 등으로 애초에 판정 자체를 못 받은
+            # 것"인지 바로 다음 줄의 성공/실패 로그와 대조해 사후 추적 가능하게 함.
             titles_preview = " / ".join(a.get("title", "")[:40] for a in batch)
             print(f"[relevance_filter] 배치 {batch_num}/{total_batches} 처리 중 "
                   f"({len(batch)}건): {titles_preview}")
@@ -362,7 +353,7 @@ def filter_articles(articles: list[dict]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# 카테고리 재분류 (2026-07-25 신규, 담당자 지적)
+# 카테고리 재분류
 # ---------------------------------------------------------------------------
 #
 # keyword_tagger.py는 사전(CATEGORY_KEYWORDS) 단어가 제목에 있는지만 보고
@@ -371,7 +362,7 @@ def filter_articles(articles: list[dict]) -> list[dict]:
 # category="기타"로 붙었는데 relevance_filter가 "관련 있음"으로 확정한
 # 기사가 생길 수 있다. 이 기사는 필터를 통과해 살아남지만 category는
 # 여전히 "기타"라서, "카테고리별 Top N"(기타 제외 설계)에는 영원히 못
-# 들어가는 공백이 있었음(담당자 발견) - 이 함수로 그 공백을 메운다.
+# 들어가는 공백이 있었음 - 이 함수로 그 공백을 메운다.
 #
 # 관련성 판정(filter_articles)의 이진 true/false 스키마는 안 건드리고
 # (더 복잡한 스키마를 물어보면 무료 모델의 JSON 파싱 실패율이 올라갈

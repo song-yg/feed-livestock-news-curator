@@ -2,23 +2,22 @@
 llm_summarizer.py
 "4. LLM 사용 지점" 중 (A) 자체 요약 생성 + (A-1) 얇은 재료 fallback 담당 모듈.
 (알고리즘 문서 "4. LLM 사용 지점" 표 참조. (B) 그룹핑 보조는
-issue_grouper.stage3_llm_assist로 이미 구현 완료 - 2026-07-15)
+issue_grouper.stage3_llm_assist가 담당)
 
 ** 프로바이더 설정을 issue_grouper.py에서 그대로 재사용 **
 LLM_PROVIDER/모델명/API URL/X-Title 상수를 새로 정의하지 않고
-issue_grouper.py에서 import해서 쓴다. 이유: 3차(그룹핑 보조)를 만들면서
-이 설정값들 자체에서 실제로 버그를 세 번 겪었다(① GitHub Actions에서
-미등록 Variable을 참조하면 "안 넘어옴"이 아니라 "빈 문자열"로 넘어와서
-os.environ.get(key, default)가 기본값을 못 쓰는 문제, ② X-Title 헤더에
-한글을 넣었다가 HTTP 헤더는 latin-1만 허용돼 UnicodeEncodeError). 이미
-고쳐서 검증까지 끝난 값을 그대로 재사용하면 여기서 또 같은 버그가
-재현되는 걸 원천적으로 막을 수 있다 (issue_grouper.py 쪽 코드는 이 모듈이
-전혀 건드리지 않음 - 이미 동작 확인된 3차 로직에 영향 없음).
+issue_grouper.py에서 import해서 쓴다. 이 설정값들 자체에서 실제로 버그를
+겪은 적이 있어서(① GitHub Actions에서 미등록 Variable을 참조하면 "안
+넘어옴"이 아니라 "빈 문자열"로 넘어와서 os.environ.get(key, default)가
+기본값을 못 쓰는 문제, ② X-Title 헤더에 한글을 넣었다가 HTTP 헤더는
+latin-1만 허용돼 UnicodeEncodeError), 이미 고쳐서 검증까지 끝난 값을
+그대로 재사용하면 같은 버그가 재현되는 걸 원천적으로 막을 수 있다
+(issue_grouper.py 쪽 코드는 이 모듈이 전혀 건드리지 않음).
 
 ** (A)/(A-1) 안전장치 (9.4 원칙 재사용) **
 API 키가 없거나 LLM 호출/응답이 실패해도 요약을 생략하고 원문 제목만
 노출하는 쪽으로 fallback한다 - 3차와 동일한 철학, "요약 없이 원문 링크만
-발송"이 9.5 섹션이 이미 권장한 무료 모델 대응책과도 일치한다.
+발송"이 9.5 섹션이 권장한 무료 모델 대응책과도 일치한다.
 """
 
 import os
@@ -55,8 +54,8 @@ def _build_user_prompt(item: dict) -> str:
     필드를 가짐)를 LLM 입력 프롬프트로 만든다.
 
     문서 4번 섹션 (A) 입력 정의 그대로: 제목 + (본문 확보된 경우) 본문에서
-    뽑은 핵심 문장 + (네이버 소스인 경우) description을 참고 컨텍스트로 추가
-    (2026-07-13 확정 - 그대로 인용하지 않고 참고용으로만 사용).
+    뽑은 핵심 문장 + (네이버 소스인 경우) description을 참고 컨텍스트로
+    추가한다(그대로 인용하지 않고 참고용으로만 사용).
     """
     titles = item.get("titles", [])
     lines = ["다음은 같은 이슈를 다룬 기사 제목들이다:"]
@@ -94,17 +93,18 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: reque
     별도 함수로 둔다 - 파싱 방식이 다른데 억지로 하나로 합치면 오히려
     코드가 더 헷갈림.
 
-    session: 2026-07-23 추가 - summarize_top_issues가 이슈마다 반복
-    호출하므로, 세션을 재사용해 커넥션 오버헤드를 줄인다(relevance_filter.py/
-    issue_grouper.py와 동일한 개선을 여기에도 적용).
+    session: summarize_top_issues가 이슈마다 반복 호출하므로, 세션을
+    재사용해 커넥션 오버헤드를 줄인다(relevance_filter.py/issue_grouper.py
+    와 동일한 방식).
     """
     try:
         if _ig.LLM_PROVIDER == "openrouter":
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "content-type": "application/json",
-                # ASCII 전용이어야 함 - 2026-07-16 X-Title 한글 인코딩 버그 교훈,
-                # issue_grouper의 검증된 상수를 그대로 재사용
+                # ASCII 전용이어야 함 - HTTP 헤더는 latin-1만 허용되므로
+                # 한글이 섞이면 UnicodeEncodeError. issue_grouper의
+                # 검증된 상수를 그대로 재사용
                 "X-Title": _ig._OPENROUTER_X_TITLE,
             }
             body = {
@@ -145,18 +145,15 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: reque
 
 def _is_suspicious_summary(text: str) -> bool:
     """
-    2026-07-17 추가: 실측 확인된 문제 대응 - 오픈라우터 무료 라우터
-    (openrouter/free)로 요약을 생성했더니, 정상 요약 대신 콘텐츠 안전성
-    판정 결과로 보이는 텍스트("User Safety: safe")를 그대로 반환한 사례가
-    해외 Top5 중 2건 발견됨(기사 수 2건/4건으로 서로 다름 - 재료 부족과는
-    무관한 별개 현상으로 확인). 정확한 원인은 미확인(오픈라우터 무료
+    오픈라우터 무료 라우터(openrouter/free)로 요약을 생성하면, 정상 요약
+    대신 콘텐츠 안전성 판정 결과로 보이는 텍스트("User Safety: safe")를
+    그대로 반환하는 경우가 있다. 정확한 원인은 미확인(오픈라우터 무료
     라우터가 요청마다 다른 실제 모델로 라우팅될 수 있어, 그중 일부가
-    콘텐츠 안전성 필터 응답을 요약 대신 반환한 것으로 추정할 뿐).
+    콘텐츠 안전성 필터 응답을 요약 대신 반환하는 것으로 추정할 뿐).
 
-    "확실히 요약이 아니라고 판단할 수 있는 좁은 패턴만" 걸러낸다(요청 -
-    과도하게 넓히면 정상 요약도 걸러질 위험이 있어, 실제로 관측된 문구
-    ("user safety")만 좁게 대응. 품질이 낮거나 짧은 요약까지 거르는 건
-    이번 범위 밖).
+    "확실히 요약이 아니라고 판단할 수 있는 좁은 패턴만" 걸러낸다 - 과도하게
+    넓히면 정상 요약도 걸러질 위험이 있어, 실제로 관측된 문구("user
+    safety")만 좁게 대응한다. 품질이 낮거나 짧은 요약까지 거르는 건 범위 밖.
     """
     return "user safety" in text.lower()
 
@@ -167,9 +164,9 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     요약을 붙인다. 원본 item은 변경하지 않고 얕은 복사본을 반환한다
     (호출부가 리스트를 여러 번 다룰 수 있어 부작용 없는 편이 안전).
 
-    session: 2026-07-23 추가. 안 넘기면(예: 이 함수를 단독으로 부를 때)
-    호출 하나짜리 임시 세션을 만들어 안전하게 동작 - summarize_top_issues처럼
-    여러 건을 반복 처리할 때만 세션을 만들어 넘겨주면 재사용 이득이 있다.
+    session: 안 넘기면(예: 이 함수를 단독으로 부를 때) 호출 하나짜리 임시
+    세션을 만들어 안전하게 동작 - summarize_top_issues처럼 여러 건을
+    반복 처리할 때만 세션을 만들어 넘겨주면 재사용 이득이 있다.
 
     반환값에 추가되는 필드:
       summary: LLM이 생성한 2~3문장 요약, 또는 None(요약 생략된 경우)
@@ -178,10 +175,10 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     result = dict(item)
     titles = item.get("titles", [])
 
-    # (A-1) 얇은 재료 fallback (문서 4번 섹션 (A-1), 2026-07-13 확정):
-    # 이슈 그룹핑이 안 되고(그룹 크기 1) 언론사 1곳만 보도한 단독 기사는
-    # 재료(제목 하나뿐)가 너무 얇아 LLM이 요약을 만들면 사실상 제목을
-    # 부풀리는 것과 다름없으므로, 애초에 LLM 호출 자체를 생략한다.
+    # (A-1) 얇은 재료 fallback (문서 4번 섹션 (A-1)): 이슈 그룹핑이 안
+    # 되고(그룹 크기 1) 언론사 1곳만 보도한 단독 기사는 재료(제목 하나뿐)가
+    # 너무 얇아 LLM이 요약을 만들면 사실상 제목을 부풀리는 것과 다름없으므로,
+    # 애초에 LLM 호출 자체를 생략한다.
     if len(titles) == 1:
         result["summary"] = None
         result["summary_skipped_reason"] = (
@@ -228,12 +225,10 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict
     scorer.score_and_rank()가 만든 상위 이슈 리스트 전체에 summarize_issue를
     적용한다. main.py의 4단계 호출부에서 국내/해외 각각 부른다.
 
-    ** 2026-07-17 진행상황 로그 추가 **: 원래는 전체가 끝난 뒤
-    print_summaries로 한꺼번에만 출력했는데, 이슈 하나당 LLM 호출이 몇 초~
-    몇십 초 걸릴 수 있어(특히 오픈라우터 무료 모델은 느리거나 대기열이 걸릴
-    수 있음) 그 사이 로그가 조용해서 "멈춘 건지 도는 건지 구분이 안 된다"는
-    문제가 실제로 있었음. GDELT/WATT collector처럼 항목 하나 처리할 때마다
-    바로바로 로그를 찍도록 수정 - 실행 상태를 실시간으로 볼 수 있게 함.
+    이슈 하나당 LLM 호출이 몇 초~몇십 초 걸릴 수 있어(특히 무료 모델은
+    느리거나 대기열이 걸릴 수 있음), 전체가 끝난 뒤 한꺼번에 출력하지 않고
+    GDELT/WATT collector처럼 항목 하나 처리할 때마다 바로바로 로그를
+    찍는다 - 실행 상태를 실시간으로 볼 수 있게 함.
     """
     results = []
     total = len(ranked_items)
@@ -257,8 +252,8 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict
 
 def print_summaries(label: str, summarized: list[dict]) -> None:
     """
-    결과를 사람이 읽기 좋게 콘솔에 출력한다 (저장 레이어(5단계, 아직
-    미구현) 완성 전까지의 확인용 - scorer.print_top_n과 같은 톤).
+    결과를 사람이 읽기 좋게 콘솔에 출력한다(scorer.print_top_n과 같은 톤 -
+    storage.py 저장 결과와 별개로 실행 중 진행 확인용).
 
     9.4 안전장치 2번("출력에 항상 원문 링크 강제 부착") 그대로 적용 -
     요약이 있든 없든 원문 링크는 항상 같이 보여준다.

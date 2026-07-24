@@ -1,5 +1,5 @@
 """
-storage.py - 5단계 저장 레이어 (2026-07-23 신규 구현).
+storage.py - 5단계 저장 레이어.
 
 알고리즘 문서 섹션 5 정의 그대로: data/YYYY-WW/ 아래에 raw.json / scored.json /
 summary.md 세 파일을 저장한다. main.py의 run() 마지막 단계에서 이 모듈의
@@ -7,10 +7,10 @@ save_week()를 호출한다.
 
 ** 저장 방식 결정 (repo 커밋 vs Actions 아티팩트) **
 repo 커밋 쪽으로 결정함 - 이유는 두 가지:
-1. category_aggregator.py 등에서 이미 언급된 "지난주 대비 증감" 비교 기능이
-   나중에 구현되려면, 지난주 데이터가 다음 실행 시점에도 checkout된 리포
-   안에 남아있어야 한다. Actions 아티팩트는 보존 기간이 지나면 사라지고
-   다음 실행에서 자동으로 안 딸려오므로 이 용도에 안 맞음.
+1. category_aggregator.py의 "지난주 대비 증감" 비교 기능이 지난주 데이터를
+   다음 실행 시점에도 checkout된 리포 안에서 읽어와야 한다. Actions
+   아티팩트는 보존 기간이 지나면 사라지고 다음 실행에서 자동으로 안
+   딸려오므로 이 용도에 안 맞음.
 2. data/ 폴더 자체가 "매주 큐레이션 결과의 아카이브"라는 프로젝트 취지에
    맞게 리포 히스토리에 남는 게 자연스러움.
 이 결정에 따라 run-pipline.yml에 git commit/push 스텝을 추가함(이 모듈은
@@ -41,11 +41,10 @@ from datetime import datetime, timedelta, timezone
 
 def previous_week_dir(base_dir: str = "data", reference: datetime | None = None) -> str:
     """
-    2026-07-25 신규("지난주 대비 증감" 기능용). 지난주의 'data/YYYY-WW'
-    경로를 계산만 해서 반환한다 - week_dir()과 달리 존재 여부와 무관하게
-    경로 문자열만 계산하고, 디렉토리를 만들지도 않는다(읽기 전용 조회
-    용도라 없는 경로를 새로 만들 이유가 없음 - 있으면 읽고, 없으면 호출부가
-    "지난주 데이터 없음"으로 처리).
+    지난주의 'data/YYYY-WW' 경로를 계산만 해서 반환한다("지난주 대비 증감"
+    기능용) - week_dir()과 달리 존재 여부와 무관하게 경로 문자열만 계산하고,
+    디렉토리를 만들지도 않는다(읽기 전용 조회 용도라 없는 경로를 새로 만들
+    이유가 없음 - 있으면 읽고, 없으면 호출부가 "지난주 데이터 없음"으로 처리).
 
     지난주 계산은 "오늘 날짜 - 7일"의 ISO 주차를 그대로 쓴다 - 연도
     경계(예: 올해 1주차의 지난주 = 작년 마지막 주차)도 날짜 뺄셈이
@@ -66,11 +65,11 @@ def week_dir(base_dir: str = "data", reference: datetime | None = None) -> str |
     연도 경계에서도 주차가 안 꼬임"이 보장돼서, 이 프로젝트처럼 매주
     월요일 실행을 상정한 파이프라인과 자연스럽게 맞는다.
 
-    2026-07-23 안정성 보완: 디렉토리 생성 자체가 실패하면(권한 문제, 디스크
-    공간 부족 등) 예외를 그대로 던지는 대신 로그를 남기고 None을 반환한다 -
-    호출부(save_week)가 이걸 보고 저장 전체를 안전하게 건너뛸 수 있게 함
-    (9.1 "소스별 독립 실행 구조"와 같은 방향 - 저장 실패가 이미 끝난
-    수집/스코어링/요약 결과까지 통째로 날려버리면 안 됨).
+    디렉토리 생성 자체가 실패하면(권한 문제, 디스크 공간 부족 등) 예외를
+    그대로 던지는 대신 로그를 남기고 None을 반환한다 - 호출부(save_week)가
+    이걸 보고 저장 전체를 안전하게 건너뛸 수 있게 함(9.1 "소스별 독립 실행
+    구조"와 같은 방향 - 저장 실패가 이미 끝난 수집/스코어링/요약 결과까지
+    통째로 날려버리면 안 됨).
     """
     now = reference or datetime.now(timezone.utc)
     iso = now.isocalendar()
@@ -84,11 +83,11 @@ def week_dir(base_dir: str = "data", reference: datetime | None = None) -> str |
 
 
 def _strip_body(article: dict) -> dict:
-    # 2026-07-25 추가: "_cross_axis_partner"는 main.py의 score()가 국내/해외
-    # 교차 매칭 표시를 scorer.score_group()에 전달하려고 잠깐 붙이는 내부용
-    # 임시 필드(앞의 _가 그 표시) - raw.json에 남길 필요 없어 body와 함께
-    # 제거. 정식 결과는 scored.json의 각 이슈 항목에 cross_axis_partner로
-    # 이미 승격돼 저장됨(save_scored 참고).
+    # "_cross_axis_partner"는 main.py의 score()가 국내/해외 교차 매칭
+    # 표시를 scorer.score_group()에 전달하려고 잠깐 붙이는 내부용 임시
+    # 필드(앞의 _가 그 표시) - raw.json에 남길 필요 없어 body와 함께 제거.
+    # 정식 결과는 scored.json의 각 이슈 항목에 cross_axis_partner로 이미
+    # 승격돼 저장됨(save_scored 참고).
     return {k: v for k, v in article.items() if k not in ("body", "_cross_axis_partner")}
 
 
@@ -104,12 +103,11 @@ def save_raw(directory: str, articles: list[dict]) -> str | None:
     의미. 수집 직후 원본(필터링 전)은 지금은 별도로 안 남긴다 - 필요해지면
     추후 raw_unfiltered.json 등으로 분리 추가 가능.
 
-    2026-07-23 안정성 보완: 파일 쓰기(디스크 공간 부족, 권한 문제, JSON
-    직렬화 불가능한 값 섞임 등) 실패 시 예외를 그대로 던지지 않고 로그만
-    남기고 None을 반환한다 - 이 시점엔 이미 수집/스코어링/요약이 다 끝난
-    뒤라, 저장 하나 실패했다고 전체 실행을 죽여서 콘솔에 남은 결과 확인
-    기회까지 뺏으면 안 된다는 판단(save_week이 이 None을 보고 나머지
-    파일 저장은 계속 시도함).
+    파일 쓰기(디스크 공간 부족, 권한 문제, JSON 직렬화 불가능한 값 섞임
+    등) 실패 시 예외를 그대로 던지지 않고 로그만 남기고 None을 반환한다 -
+    이 시점엔 이미 수집/스코어링/요약이 다 끝난 뒤라, 저장 하나 실패했다고
+    전체 실행을 죽여서 콘솔에 남은 결과 확인 기회까지 뺏으면 안 된다는
+    판단(save_week이 이 None을 보고 나머지 파일 저장은 계속 시도함).
     """
     cleaned = [_strip_body(a) for a in articles]
     path = os.path.join(directory, "raw.json")
@@ -134,11 +132,11 @@ def save_scored(directory: str, domestic_summarized: list[dict],
     지표를 scored.json 하나로 묶어 저장한다.
 
     category_distribution을 여기 같이 저장해두는 이유는 category_aggregator.py
-    모듈 docstring에 이미 명시돼 있음 - 다음 주 실행에서 "지난주 대비 증감"을
-    계산하려면 지난주 집계 결과가 파일로 남아있어야 하기 때문(2.1 이슈
-    그룹핑 자체는 매주 새로 도니, 주 단위 비교는 이 파일을 통해서만 가능).
+    모듈 docstring에 명시돼 있음 - 다음 주 실행에서 "지난주 대비 증감"을
+    계산하려면 지난주 집계 결과가 파일로 남아있어야 하기 때문(이슈 그룹핑
+    자체는 매주 새로 도니, 주 단위 비교는 이 파일을 통해서만 가능).
 
-    2026-07-23 신규: 카테고리별 Top N(국내/해외 각각 {카테고리: [항목, ...]})도
+    카테고리별 Top N(국내/해외 각각 {카테고리: [항목, ...]})도
     domestic_by_category/international_by_category로 같이 저장한다 -
     scorer.score_by_category()가 이미 각 항목에 "category" 필드를 남겨두므로
     (main.py의 _regroup_by_category 참고) 여기서는 그대로 저장만 하면 됨.
@@ -146,8 +144,8 @@ def save_scored(directory: str, domestic_summarized: list[dict],
     키를 붙임 - category_distribution은 개수만 세는 3-보조 지표이고, 이건
     카테고리별 실제 Top N 이슈 목록이라 성격이 다름.
 
-    2026-07-23 안정성 보완: save_raw와 동일한 이유로 파일 쓰기 실패를
-    안전하게 흡수한다(로그 + None 반환).
+    save_raw와 동일한 이유로 파일 쓰기 실패를 안전하게 흡수한다(로그 +
+    None 반환).
     """
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -186,7 +184,6 @@ def _format_issue_section(item: dict) -> str:
         + (f" (그룹 내 추가 {len(titles) - 1}건 생략)" if len(titles) > 1 else ""),
     ]
     if item.get("cross_axis_partner"):
-        # 2026-07-25 추가(3.2 "국내-해외 교차 매칭 🔗" 구현)
         lines.append(f"- 🔗 반대 축에서도 다뤄짐: {item['cross_axis_partner']}")
     if item.get("summary"):
         lines.append(f"\n{item['summary']}\n")
@@ -215,11 +212,10 @@ def _format_category_sections(by_category: dict[str, list[dict]]) -> list[str]:
 
 def _format_category_comparison_section(category_comparison: dict[str, dict[str, dict]] | None) -> list[str]:
     """
-    2026-07-25 신규. category_aggregator.compare_with_last_week()의 결과를
-    summary.md용 마크다운 줄 리스트로 만든다. 콘솔의
-    category_aggregator.print_aggregate_with_comparison()과 같은 정보를
-    담는다 - 이슈 목록보다 위, 문서 맨 앞부분에 배치해서 "이번 주 큰 흐름"을
-    먼저 보여주는 구성.
+    category_aggregator.compare_with_last_week()의 결과를 summary.md용
+    마크다운 줄 리스트로 만든다. 콘솔의 category_aggregator.
+    print_aggregate_with_comparison()과 같은 정보를 담는다 - 이슈 목록보다
+    위, 문서 맨 앞부분에 배치해서 "이번 주 큰 흐름"을 먼저 보여주는 구성.
 
     category_comparison이 None이면(지난주 데이터 없음) 빈 리스트 반환 -
     호출부가 이 경우 섹션 자체를 아예 안 넣도록.
@@ -248,24 +244,23 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
     """
     사람이 바로 읽을 배포용 요약본. llm_summarizer.print_summaries와 같은
     내용을 마크다운 파일로 남긴다(9.4 안전장치 - 요약 유무와 무관하게 원문
-    링크는 항상 같이 남김, 그대로 유지).
+    링크는 항상 같이 남김).
 
     문서 작업 시 언더바(_) 등 앞의 이스케이프는 넣지 않는다(마크다운 렌더링
     시 불필요한 백슬래시가 그대로 노출되는 문제 방지 - 프로젝트 방침).
 
-    2026-07-23 안정성 보완: save_raw/save_scored와 동일한 이유로 파일 쓰기
-    실패를 안전하게 흡수한다(로그 + None 반환).
+    save_raw/save_scored와 동일한 이유로 파일 쓰기 실패를 안전하게
+    흡수한다(로그 + None 반환).
 
-    2026-07-23 신규: 국내/해외 각 섹션 밑에 "카테고리별 Top N" 하위 섹션을
-    추가한다(##### 대신 #### 레벨 - 국내/해외(##)보다 한 단계, 개별 이슈
-    제목(###)과도 겹치지 않게 구분). 카테고리가 하나도 없으면(이번 주 그
-    축에 "기타" 아닌 카테고리 이슈가 전혀 없었던 경우) 하위 섹션 자체를
-    생략한다.
+    국내/해외 각 섹션 밑에 "카테고리별 Top N" 하위 섹션을 추가한다(#####
+    대신 #### 레벨 - 국내/해외(##)보다 한 단계, 개별 이슈 제목(###)과도
+    겹치지 않게 구분). 카테고리가 하나도 없으면(이번 주 그 축에 "기타"
+    아닌 카테고리 이슈가 전혀 없었던 경우) 하위 섹션 자체를 생략한다.
 
-    2026-07-25 신규: category_comparison(카테고리별 지난주 대비 증감,
+    category_comparison(카테고리별 지난주 대비 증감,
     category_aggregator.compare_with_last_week() 결과)이 있으면 문서 맨
     앞(생성 시각 바로 다음)에 "카테고리별 지난주 대비 증감" 섹션을 추가한다.
-    None(지난주 데이터 없음)이면 섹션 자체를 생략 - 예전 문서 형태와 동일.
+    None(지난주 데이터 없음)이면 섹션 자체를 생략한다.
     """
     lines = [f"# 사료·축산업 뉴스 큐레이션 - {week_label}", ""]
     lines.append(f"생성 시각(UTC): {datetime.now(timezone.utc).isoformat()}")
@@ -321,14 +316,14 @@ def save_week(articles: list[dict], domestic_summarized: list[dict],
     main.py에서 부르는 단일 진입점. raw.json/scored.json/summary.md를 한
     디렉토리에 다 저장하고 그 디렉토리 경로를 반환한다.
 
-    2026-07-23 안정성 보완: 디렉토리 생성 자체가 실패하면 저장을 아예
-    포기하고 None을 반환한다(로그는 week_dir이 이미 남김). 디렉토리는
-    만들어졌는데 파일 하나가 실패하는 경우엔 - 나머지 파일 저장은 계속
-    시도하고, 끝나고 나서 뭐가 저장되고 뭐가 안 됐는지 요약 로그를 남긴다
-    (부분 성공도 사람이 바로 알 수 있게).
+    디렉토리 생성 자체가 실패하면 저장을 아예 포기하고 None을 반환한다
+    (로그는 week_dir이 이미 남김). 디렉토리는 만들어졌는데 파일 하나가
+    실패하는 경우엔 - 나머지 파일 저장은 계속 시도하고, 끝나고 나서 뭐가
+    저장되고 뭐가 안 됐는지 요약 로그를 남긴다(부분 성공도 사람이 바로
+    알 수 있게).
 
-    2026-07-23 신규: domestic_by_category/international_by_category(카테고리별
-    Top N, main.py의 step4_category_llm_summary 결과)도 같이 받아서
+    domestic_by_category/international_by_category(카테고리별 Top N,
+    main.py의 step4_category_llm_summary 결과)도 같이 받아서
     scored.json/summary.md에 반영한다.
     """
     directory = week_dir(base_dir)
@@ -384,8 +379,8 @@ if __name__ == "__main__":
             "articles": sample_articles,  # scored.json엔 빠져야 함
             "summary": "테스트 요약입니다.",
         }]
-        # 2026-07-23 추가: 카테고리별 결과 샘플 (score_by_category가 각 항목에
-        # 남기는 "category" 필드 포함해서 구성)
+        # 카테고리별 결과 샘플 (score_by_category가 각 항목에 남기는
+        # "category" 필드 포함해서 구성)
         sample_by_category = {
             "질병명": [{
                 "issue_score": 3.5, "mention_count": 2, "raw_mention_count": 2,
