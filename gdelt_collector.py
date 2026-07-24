@@ -8,19 +8,36 @@ naver_collector / watt_collector와 반환 형태가 다르다는 점이 핵심 
 그 둘은 list[dict] 하나만 반환하지만, 이 모듈은 tuple(articles, timeline)을 반환한다.
 이유:
   - articles: 기사 1건 = 레코드 1건 -> 공통 스키마 그대로, 정규화/이슈그룹핑으로 감
-  - timeline: 키워드 단위 시계열(timelinevol/timelinevolraw)
-  -> 기사 단위가 아니라서 공통 스키마에 억지로 끼워넣지 않음. 시계열 수집은 완전히 제거된 상태.
+  - timeline: 키워드 단위 시계열(timelinevol/timelinevolraw) -> 기사 단위가 아니라서 공통 스키마에 억지로 끼워넣지 않음.
+    3.1 규칙대로 스코어링에는 안 들어가고 결과물에 참고 지표로만 별도 표시됨 (저장 레이어가 알아서 분리 저장)
+
+시계열 수집은 완전히 제거된 상태다: tuple(articles, timeline) 반환 형태
+자체는 하위호환을 위해 그대로 유지하지만, timeline은 이제 항상 빈
+딕셔너리(`{}`)다 - 실전 규모 테스트에서도 429로 오래 실패하는 등 불안정성이
+해소가 안 됐고, 저장 레이어가 이 데이터를 애초에 안 쓰고 있었던 것도 제거
+결정에 힘을 실었다. 상세 → `collect()` 함수 docstring 및
+`_collect_timeline_for_keyword` 참고(코드는 남겨둠, 호출만 제거).
 
 ** GDELT 429(rate limit) 대응 정리 **
-GDELT 429가 구조적으로 심해서(요청 대부분에서 발생, 원인이 GDELT 서버 쪽 트래픽 총량으로 추정돼 우리 코드로 완전히 해결은 불가) 여러 겹의 완화책을 적용했다:
+GDELT 429가 구조적으로 심해서(요청 대부분에서 발생, 원인이 GDELT 서버
+쪽 트래픽 총량으로 추정돼 우리 코드로 완전히 해결은 불가) 여러 겹의
+완화책을 적용했다:
   1. REQUEST_INTERVAL을 넉넉히 두고, 429 시 전역 공유 쿨다운으로 백오프
-     (호출별 개별 대기가 아니라 - 자세한 이유는 _call_with_retry, _wait_for_cooldown 참고)
-  2. 키워드 단위 "외부 재시도": article_search가 최종 실패한 키워드만 모아서,
-     한 라운드가 끝난 뒤 별도 라운드로 최대 OUTER_RETRY_PASSES 번 더 재시도
-  3. User-Agent 헤더 주입: gdeltdoc 라이브러리 자체 이슈 트래커(#22)에서 "User-Agent 없이 요청하면 rate limit, 추가하면 해결"이라는 보고를 확인
-     - requests 기본 헤더를 오버라이드하는 방식으로 적용(아래 "User-Agent 미기재 가설 대응" 주석 참고)
-  4. 키워드를 하나의 OR 쿼리로 결합: gdeltdoc의 Filters(keyword=[...])가 리스트를 자동으로 OR로 묶어준다는 걸 확인(공식 README)
-     - 요청 횟수 자체를 줄여 429에 걸릴 기회를 줄임.
+     (호출별 개별 대기가 아니라 - 자세한 이유는 _call_with_retry,
+     _wait_for_cooldown 참고)
+  2. 키워드 단위 "외부 재시도": article_search가 최종 실패한 키워드만
+     모아서, 한 라운드가 끝난 뒤 별도 라운드로 최대 OUTER_RETRY_PASSES
+     번 더 재시도
+  3. User-Agent 헤더 주입: gdeltdoc 라이브러리 자체 이슈 트래커(#22)에서
+     "User-Agent 없이 요청하면 rate limit, 추가하면 해결"이라는 보고를
+     확인 - requests 기본 헤더를 오버라이드하는 방식으로 적용(아래
+     "User-Agent 미기재 가설 대응" 주석 참고)
+  4. 키워드를 하나의 OR 쿼리로 결합: gdeltdoc의 Filters(keyword=[...])가
+     리스트를 자동으로 OR로 묶어준다는 걸 확인(공식 README) - 요청 횟수
+     자체를 줄여 429에 걸릴 기회를 줄임. 시계열은 3.1 원칙상 "키워드별
+     트렌드"가 의미가 있어야 하므로(지금은 항상 빈 값이라 실질적 영향은
+     없음) 이건 합치지 않고 키워드별로 유지하는 구조를 남겨둠
+     (_collect_articles_for_keywords 및 collect() 참고).
 """
 
 import json
@@ -41,14 +58,26 @@ from gdeltdoc.errors import RateLimitError
 
 # --- User-Agent 미기재 가설 대응 ---
 #
-# gdeltdoc이 헤더 주입 방법을 공식 제공하지 않으므로, requests 라이브러리의 기본 헤더(default_headers()) 자체를 오버라이드하는 방식으로 우회.
+# 배경: gdeltdoc 라이브러리 자체 GitHub 이슈(#22, alex9smith/gdelt-doc-api)에서
+# "요청 수가 적었는데도 rate limit 에러를 겪었고, 브라우저 요청은 정상 동작
+# 했다 - api_client.py에 User-Agent 헤더를 추가했더니 해결됐다"는 보고를
+# 실제로 확인함(우리가 쓰는 바로 그 라이브러리의 이슈 트래커). 이 패치가
+# 라이브러리에 병합됐다는 근거는 못 찾았고, README에도 헤더/세션을
+# 커스터마이징하는 공식 옵션이 없어 - 지금도 gdeltdoc이 User-Agent 없이
+# 요청을 보내고 있을 가능성이 높다고 판단.
 #
-# ** 주의 - 이건 프로세스 전역에 영향을 준다 **
-# : 이 모듈을 import하는 순간
+# gdeltdoc이 헤더 주입 방법을 공식 제공하지 않으므로, requests 라이브러리의
+# 기본 헤더(default_headers()) 자체를 오버라이드하는 방식으로 우회한다 -
+# Session()이 생성될 때마다 이 함수가 호출되므로, gdeltdoc이 내부적으로
+# 만드는 Session에도 자연히 적용된다.
+#
+# ** 주의 - 이건 프로세스 전역에 영향을 준다 **: 이 모듈을 import하는 순간
 # requests 기본 헤더가 바뀌어서, 같은 프로세스에서 실행되는 naver_collector의
-# requests.get 호출에도 이 User-Agent가 섞여 들어간다.
-# (인증 자체엔 영향 없음, 다만 "전역 부작용"이라는 점은 유지보수 시 반드시 인지할 것).
-# WATT_collector가 이미 쓰고 있는 것과 동일한 UA 문자열을 재사용해 일관성을 맞춤.
+# requests.get 호출에도 이 User-Agent가 섞여 들어간다(naver_collector는
+# X-Naver-Client-Id 등 자기 인증 헤더만 명시적으로 쓰고 User-Agent는 따로
+# 지정 안 하므로 - 인증은 헤더 값 기반이라 UA가 섞여도 인증 자체엔 영향 없음,
+# 다만 "전역 부작용"이라는 점은 유지보수 시 반드시 인지할 것). WATT_collector
+# 가 이미 쓰고 있는 것과 동일한 UA 문자열을 재사용해 일관성을 맞춤.
 _GDELT_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
@@ -78,6 +107,7 @@ if not getattr(requests.utils, "_gdelt_ua_patched", False):
     requests.utils._gdelt_ua_patched = True
 
 
+
 # 예시 키워드. 구글 시트(KEYWORD_SHEET_CSV_URL)가 설정돼 있으면 그쪽을
 # 우선 쓰고, 없거나 읽기 실패하면 이 리스트로 대체된다(keyword_source.py
 # 참고, naver_collector.py와 동일 방침). GDELT DOC API는 영문 검색이
@@ -100,7 +130,12 @@ KEYWORDS_EN = [
 
 # --- 이미 실패가 확인된 키워드 사전 스킵 ---
 #
-# 길이 기반 자동 필터 대신 "실제로 실패가 확인된 키워드"만 명시적으로 등록하는 스킵 리스트로 처리한다.
+# "HPAI"는 GDELT API가 매번 ValueError("The specified phrase is too short.")
+# 로 거부하는 게 확인됨. 문제는 이 에러가 429 재시도 루프를 다 태우고
+# 나서야(최대 4단계 백오프, 아래 MAX_RETRIES 참고) 도달하는 진짜 에러라서,
+# 매 실행마다 어차피 실패할 키워드에 시간을 낭비하게 된다.
+#
+# "몇 글자부터 너무 짧다고 판단하는지"는 GDELT가 공식적으로 공개한 기준이 아니라서(추정으로 길이 임계값을 정하면 다른 정상 키워드까지 잘못 걸러낼 위험이 있음), 길이 기반 자동 필터 대신 "실제로 실패가 확인된 키워드"만 명시적으로 등록하는 스킵 리스트로 처리한다.
 # 새 키워드를 추가했는데 계속 같은 ValueError로 실패하는 게 확인되면 여기 추가할 것.
 
 SKIP_KEYWORDS = {
@@ -108,8 +143,21 @@ SKIP_KEYWORDS = {
 }
 
 # --- 학습형 스킵 목록 ---
-# "실제로 같은 키워드가 2번 연속 ValueError(쿼리 자체 거부)로 실패하면 자동으로 스킵 목록에 편입"
-# GitHub Actions 러너가 매번 새 VM이라(상태가 실행 간 유지 안 됨) 이 학습 결과를 파일로 저장해서 리포에 git commit해야 다음 실행에도 이어짐
+#
+# 위 SKIP_KEYWORDS는 사람이 로그를 보고 손으로 채워넣는 "수동" 목록이라,
+# 아직 안 등록된 짧은 키워드가 시트에 새로 추가되면 등록되기 전까지 매번
+# ValueError로 요청 1번씩 계속 낭비함(길이 기반 예방적 차단은 위험해서 안 씀).
+#
+# 대신 "실제로 같은 키워드가 2번 연속 ValueError(쿼리 자체 거부)로 실패하면
+# 자동으로 스킵 목록에 편입"하는 방식을 씀 - 사람이 손으로 안 건드려도 됨.
+# GitHub Actions 러너가 매번 새 VM이라(상태가 실행 간 유지 안 됨) 이 학습
+# 결과를 파일로 저장해서 리포에 git commit해야 다음 실행에도 이어짐 -
+# storage.py가 raw.json/scored.json을 저장하는 것과 같은 패턴을 재사용함.
+#
+# data/가 아니라 별도 state/ 디렉토리에 두는 이유: data/는 "주차별 결과물
+# 아카이브"라는 의미가 이미 확정돼 있는데(storage.py 참고), 이 파일은
+# 특정 주차에 속하지 않고 계속 누적되는 "파이프라인 자체의 학습된 상태"라
+# 성격이 달라 구분함.
 #
 # 2번(SKIP_STATE_FAILURE_THRESHOLD)으로 잡은 이유: 1번 실패만으로 바로
 # 영구 등록하면, GDELT 쪽 일시적 문제로 어쩌다 한 번 오탐이 났을 때도
@@ -126,8 +174,11 @@ _value_error_keywords_this_run: list[str] = []
 
 def _load_skip_state(path: str = SKIP_STATE_PATH) -> dict:
     """
-    {키워드: {"fail_count": N, "reason": "...", "last_seen": "..."}} 형태로 저장된 학습된 스킵 상태를 읽어온다.
-    파일이 없거나(첫 실행) 읽기/파싱에 실패하면 빈 딕셔너리로 안전하게 시작한다.
+    {키워드: {"fail_count": N, "reason": "...", "last_seen": "..."}} 형태로
+    저장된 학습된 스킵 상태를 읽어온다. 파일이 없거나(첫 실행) 읽기/파싱에
+    실패하면 빈 딕셔너리로 안전하게 시작한다 - 이 파일은 어디까지나 최적화용
+    보조 데이터라, 못 읽어도 파이프라인 자체가 죽으면 안 됨(9.4/9.5 원칙과
+    같은 방향).
     """
     try:
         with open(path, encoding="utf-8") as f:
@@ -154,7 +205,8 @@ def _save_skip_state(state: dict, path: str = SKIP_STATE_PATH) -> None:
 
 def _update_skip_state_after_run() -> None:
     """
-    collect() 끝에서 호출 - 이번 실행 중 ValueError로 실패한 키워드들의 fail_count를 1씩 올리고, 변경이 있었으면 파일에 저장한다.
+    collect() 끝에서 호출 - 이번 실행 중 ValueError로 실패한 키워드들의
+    fail_count를 1씩 올리고, 변경이 있었으면 파일에 저장한다.
     """
     if not _value_error_keywords_this_run:
         return
@@ -175,18 +227,34 @@ def _update_skip_state_after_run() -> None:
 
 # --- 키워드 오매칭(false positive) 필터 ---
 #
-# "실제로 오매칭이 확인된 키워드"에 한해 제외 패턴을 명시적으로 등록하는 방식
+# GDELT article_search는 키워드를 "부분 문자열 포함" 방식으로 매칭하기 때문에, 의도한 키워드가 더 긴 무관한 구(phrase)의 일부로 들어있는 제목도 그대로 매칭돼버리는 구조적 문제가 있다.
+# 실제로 확인된 사례:
+#   "foot and mouth disease"(구제역) 검색 -> "hand, foot and mouth disease"
+#   (수족구병 - 어린이 질환, 전혀 다른 병)가 그대로 포함 매칭됨
+#
+# 길이 기반이나 정규식 기반의 일반화된 해법 대신, "실제로 오매칭이 확인된 키워드"에 한해 제외 패턴을 명시적으로 등록하는 방식을 쓴다
 # (SKIP_KEYWORDS와 동일한 철학 - 추정으로 일반 규칙을 만들면 다른 정상 매칭까지 잘못 걸러낼 위험이 있음).
 # 새 오매칭 패턴이 확인되면 여기 추가할 것.
 #
 # 형태: {검색 키워드: [제목에 이 문자열(대소문자 무시)이 포함되면 제외, ...]}
+#
+# 딕셔너리 키는 실제로 시트(v5)에서 쓰는 키워드 문자열과 정확히 일치해야
+# 한다("foot-and-mouth disease", 하이픈 있음) - FALSE_POSITIVE_FILTERS.get
+# (keyword, [])가 정확히 일치하는 문자열만 찾기 때문에, 키가 조금이라도
+# 다르면(예: 하이픈 유무) 이 필터가 조용히 무력화된다.
 FALSE_POSITIVE_FILTERS = {
     "foot-and-mouth disease": ["hand, foot and mouth", "hand foot and mouth"],
 }
 
 # --- 구두점 앞 공백 정규화 ---
 #
-# 비교 전에 "구두점 앞 공백"을 없애는 정규화를 한 번 거치는 쪽을 택함.
+# 실제 GDELT article_search가 돌려주는 제목은 쉼표/마침표 "앞"에도 공백이
+# 들어간 토크나이즈된 형식이다(예: "Westmoreland sees increase in hand ,
+# foot and mouth disease" - "hand SPACE , SPACE foot" 형태). 이 형식을
+# 고려하지 않고 FALSE_POSITIVE_FILTERS 패턴을 등록하면 실제 제목과 안
+# 맞아서 필터가 전혀 작동하지 않는다.
+#
+# 패턴을 계속 늘리는 대신(제목 형식이 또 달라지면 또 놓칠 위험), 비교 전에 "구두점 앞 공백"을 없애는 정규화를 한 번 거치는 쪽을 택함.
 # 이러면 "hand, foot and mouth"/"hand , foot and mouth"/"hand  , foot and mouth" 등 공백 개수가 달라져도 전부 같은 문자열로 취급돼 안전하다.
 _SPACE_BEFORE_PUNCT = _re.compile(r"\s+([,.;:!?])")
 
@@ -373,14 +441,18 @@ def _trigger_cooldown(seconds: float):
 
 def _parse_retry_after(response) -> float | None:
     """
-    gdeltdoc의 RateLimitError는 requests.HTTPError를 상속해서 원본 응답을 response 속성에 그대로 담고 있음(gdeltdoc/errors.py의 `raise RateLimitError(response=response)`)
-    - 이 함수는 거기서 `Retry-After` 헤더를 읽어본다.
+    gdeltdoc의 RateLimitError는 requests.HTTPError를 상속해서 원본 응답을
+    response 속성에 그대로 담고 있음(gdeltdoc/errors.py의 `raise
+    RateLimitError(response=response)`) - 이 함수는 거기서 `Retry-After`
+    헤더를 읽어본다.
 
-    ** 중요 - GDELT가 실제로 이 헤더를 주는지는 미확인 **:
-    헤더가 있으면 그 값을 쓰고, 없으면(또는 파싱 실패하면) None을 반환해서 호출부가 기존 방식(BACKOFF_BASE_SECONDS 지수 백오프 추측)으로 안전하게 fallback하도록 설계
-    - 있으면 이득, 없어도 손해 없는 변경.
+    ** 중요 - GDELT가 실제로 이 헤더를 주는지는 미확인 **: 헤더가 있으면
+    그 값을 쓰고, 없으면(또는 파싱 실패하면) None을 반환해서 호출부가
+    기존 방식(BACKOFF_BASE_SECONDS 지수 백오프 추측)으로 안전하게
+    fallback하도록 설계 - 있으면 이득, 없어도 손해 없는 변경.
 
-    HTTP 표준상 Retry-After는 초 단위 정수 또는 HTTP-date 형식일 수 있어(RFC 9110) 둘 다 시도한다.
+    HTTP 표준상 Retry-After는 초 단위 정수 또는 HTTP-date 형식일 수 있어
+    (RFC 9110) 둘 다 시도한다.
     """
     if response is None:
         return None
