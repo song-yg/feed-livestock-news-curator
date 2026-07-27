@@ -189,7 +189,7 @@ def _load_skip_state(path: str = SKIP_STATE_PATH) -> dict:
             # 힌트일 뿐이라 이상하면 그냥 빈 상태로 다시 시작하는 게
             # 안전하다(아래 skip_state.get(keyword)가 dict가 아닌 값에
             # 호출되면 AttributeError로 죽을 수 있어 여기서 미리 막음).
-            print(f"[gdelt] 🟡 주의 - 학습된 스킵 상태 파일 구조 이상(dict 아님, 타입: "
+            print(f"[gdelt] 🟡 주의 [GD-01] - 학습된 스킵 상태 파일 구조 이상(dict 아님, 타입: "
                   f"{type(state).__name__}) - 빈 상태로 다시 시작: {path}")
             return {}
         return state
@@ -209,7 +209,7 @@ def _save_skip_state(state: dict, path: str = SKIP_STATE_PATH) -> None:
             json.dump(state, f, ensure_ascii=False, indent=2)
         print(f"[gdelt] 학습된 스킵 상태 저장 완료 -> {path}")
     except OSError as e:
-        print(f"[gdelt] 🟡 주의 - 학습된 스킵 상태 저장 실패(이번 실행 결과엔 영향 없음, "
+        print(f"[gdelt] 🟡 주의 [GD-02] - 학습된 스킵 상태 저장 실패(이번 실행 결과엔 영향 없음, "
               f"다음 실행에서 다시 학습 시도됨): {path} - {type(e).__name__} - {e!r}")
 
 
@@ -232,7 +232,7 @@ def _update_skip_state_after_run() -> None:
         entry["last_seen"] = now_str
         state[keyword] = entry
         if entry["fail_count"] >= SKIP_STATE_FAILURE_THRESHOLD:
-            print(f"[gdelt] 🟡 주의 - '{keyword}' - {entry['fail_count']}회 연속 ValueError 확인됨 "
+            print(f"[gdelt] 🟡 주의 [GD-03] - '{keyword}' - {entry['fail_count']}회 연속 ValueError 확인됨 "
                   f"(임계값 {SKIP_STATE_FAILURE_THRESHOLD}) - 다음 실행부터 자동 스킵 대상으로 등록")
 
     _save_skip_state(state)
@@ -628,7 +628,7 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
                     published_at = _parse_seendate(str(row["seendate"]))
                 except ValueError as e:
                     # 날짜 파싱 실패한 기사 1건만 건너뜀 (전체 중단 아님, 9.1 방침)
-                    print(f"[gdelt] 🟡 주의 - '{keyword}' 기사 스킵 - {type(e).__name__} - {e!r}")
+                    print(f"[gdelt] 🟡 주의 [GD-04] - '{keyword}' 기사 스킵 - {type(e).__name__} - {e!r}")
                     continue
 
                 if not _is_recent(published_at, DAYS_BACK):
@@ -662,7 +662,7 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
         # 시점에 바로 기록해둔다. 일반 Exception과 구분해서 잡는 이유는
         # 네트워크 오류 같은 일시적 실패까지 "이 키워드가 문제"로 학습되면
         # 안 되기 때문(오탐 방지).
-        print(f"[gdelt] 🟡 주의 - '{keyword}' article_search 실패(쿼리 자체 거부로 추정 - "
+        print(f"[gdelt] 🟡 주의 [GD-05] - '{keyword}' article_search 실패(쿼리 자체 거부로 추정 - "
               f"{type(e).__name__}: {e})")
         _value_error_keywords_this_run.append(keyword)
         return False, [], f"{type(e).__name__}: {e}"
@@ -670,7 +670,7 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
     except Exception as e:
         # 기사 수집 자체가 실패한 경우 - 호출부(collect())가 이 키워드를
         # failed_keywords에 담아 외부 재시도 라운드로 넘긴다.
-        print(f"[gdelt] 🟡 주의 - '{keyword}' article_search 실패: {type(e).__name__} - {e!r}")
+        print(f"[gdelt] 🟡 주의 [GD-06] - '{keyword}' article_search 실패: {type(e).__name__} - {e!r}")
         return False, [], f"{type(e).__name__}: {e}"
 
 
@@ -717,7 +717,7 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
                 try:
                     published_at = _parse_seendate(str(row["seendate"]))
                 except ValueError as e:
-                    print(f"[gdelt] 🟡 주의 - '{label}' 기사 스킵 - {type(e).__name__} - {e!r}")
+                    print(f"[gdelt] 🟡 주의 [GD-07] - '{label}' 기사 스킵 - {type(e).__name__} - {e!r}")
                     continue
 
                 if not _is_recent(published_at, DAYS_BACK):
@@ -772,12 +772,12 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
         # 수 있다(키워드를 OR로 합친 구조에서 생기는 위험 - 개별 요청이면
         # 문제 키워드 하나만 실패로 끝났을 것). 재시도 대신 그 즉시 키워드별
         # 개별 요청으로 내려가서 문제 키워드만 격리하고, 나머지는 정상적으로 살린다.
-        print(f"[gdelt] 🟡 주의 - '{label}' article_search 실패(쿼리 자체 거부로 추정 - "
+        print(f"[gdelt] 🟡 주의 [GD-08] - '{label}' article_search 실패(쿼리 자체 거부로 추정 - "
               f"{type(e).__name__}: {e}) - 재시도 대신 키워드별 개별 요청으로 즉시 전환")
         return _collect_articles_individually(gd, keywords)
 
     except Exception as e:
-        print(f"[gdelt] 🟡 주의 - '{label}' article_search 실패: {type(e).__name__} - {e!r}")
+        print(f"[gdelt] 🟡 주의 [GD-09] - '{label}' article_search 실패: {type(e).__name__} - {e!r}")
         return False, []
 
 
@@ -1053,7 +1053,7 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
         # 위험이 있어 개별로 보강하는 것이고, 여기는 배치 요청 자체가
         # 여러 번(1차 + 재시도 라운드) 계속 실패해서 더 이상 배치로는
         # 시도할 수단이 없어 마지막 수단으로 키워드 단위로 쪼개는 것이다.
-        print(f"[gdelt] 🟡 주의 - 배치 재시도 {OUTER_RETRY_PASSES}회 소진 - 개별 요청 전환: {batch_round}")
+        print(f"[gdelt] 🟡 주의 [GD-10] - 배치 재시도 {OUTER_RETRY_PASSES}회 소진 - 개별 요청 전환: {batch_round}")
         for batch in batch_round:
             pending_individual.extend(batch)
 
@@ -1093,7 +1093,7 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
 
     if failed_keywords:
         detail = ", ".join(f"{kw} ({failure_reasons.get(kw, '사유 불명')})" for kw in failed_keywords)
-        print(f"[gdelt] 🔴 조치필요 - 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
+        print(f"[gdelt] 🔴 조치필요 [GD-11] - 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
               f"기사 0건으로 처리됨): {detail}")
 
     # --- 시계열 수집 완전 제거 결정 ---

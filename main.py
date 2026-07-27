@@ -80,7 +80,7 @@ def run_collectors() -> tuple[list[dict], dict, list[str]]:
         all_articles.extend(watt_articles)
         print(f"[main] WATT 수집 완료 - {len(watt_articles)}건")
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - WATT 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
+        print(f"[main] 🔴 조치필요 [MN-01] - WATT 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
         failed_sources.append("WATT")
 
     try:
@@ -88,7 +88,7 @@ def run_collectors() -> tuple[list[dict], dict, list[str]]:
         all_articles.extend(naver_articles)
         print(f"[main] 네이버 수집 완료 - {len(naver_articles)}건")
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - 네이버 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
+        print(f"[main] 🔴 조치필요 [MN-02] - 네이버 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
         failed_sources.append("네이버")
 
     try:
@@ -96,7 +96,7 @@ def run_collectors() -> tuple[list[dict], dict, list[str]]:
         all_articles.extend(gdelt_articles)
         print(f"[main] GDELT 수집 완료 - {len(gdelt_articles)}건")
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - GDELT 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
+        print(f"[main] 🔴 조치필요 [MN-03] - GDELT 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
         failed_sources.append("GDELT")
 
     return all_articles, gdelt_timeline, failed_sources
@@ -236,7 +236,7 @@ def _load_embedding_model():
         print("[main] BGE-M3 임베딩 모델 로드 완료")
         return model
     except Exception as e:
-        print(f"[main] 🟡 주의 - BGE-M3 모델 로드 실패 - 2차(임베딩) 매칭 없이 진행 "
+        print(f"[main] 🟡 주의 [MN-04] - BGE-M3 모델 로드 실패 - 2차(임베딩) 매칭 없이 진행 "
               f"(1차 사전 매칭만 적용됨): {type(e).__name__} - {e!r}")
         return None
 
@@ -321,7 +321,7 @@ def run() -> None:
         keyword_tagger.tag_articles(articles)
         keyword_tagger.print_category_distribution(articles)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - [2] 정규화/태깅 단계에서 예상 못 한 오류 발생 - 원본 기사 그대로 다음 단계로 진행: "
+        print(f"[main] 🔴 조치필요 [MN-05] - [2] 정규화/태깅 단계에서 예상 못 한 오류 발생 - 원본 기사 그대로 다음 단계로 진행: "
               f"{type(e).__name__} - {e!r}")
 
     print("\n=== [2.5] 관련성 필터 ===")
@@ -332,7 +332,7 @@ def run() -> None:
     try:
         articles = relevance_filter.filter_articles(articles)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - [2.5] 관련성 필터 단계에서 예상 못 한 오류 발생 - 필터링 없이 다음 단계로 진행: "
+        print(f"[main] 🔴 조치필요 [MN-06] - [2.5] 관련성 필터 단계에서 예상 못 한 오류 발생 - 필터링 없이 다음 단계로 진행: "
               f"{type(e).__name__} - {e!r}")
 
     print("\n=== [2.6] 카테고리 재분류 ===")
@@ -346,7 +346,7 @@ def run() -> None:
     try:
         articles = relevance_filter.recategorize_uncategorized(articles)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - [2.6] 카테고리 재분류 단계에서 예상 못 한 오류 발생 - 재분류 없이 다음 단계로 진행: "
+        print(f"[main] 🔴 조치필요 [MN-07] - [2.6] 카테고리 재분류 단계에서 예상 못 한 오류 발생 - 재분류 없이 다음 단계로 진행: "
               f"{type(e).__name__} - {e!r}")
 
     print("\n=== [2.1] 이슈 그룹핑 임베딩 모델 로드 ===")
@@ -361,7 +361,7 @@ def run() -> None:
         scorer.print_category_top_n("국내", domestic_category_ranked, n=CATEGORY_TOP_N)
         scorer.print_category_top_n("해외", international_category_ranked, n=CATEGORY_TOP_N)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - [3] 스코어링 단계에서 예상 못 한 오류 발생 - 이번 주는 Top N 없이 진행"
+        print(f"[main] 🔴 조치필요 [MN-08] - [3] 스코어링 단계에서 예상 못 한 오류 발생 - 이번 주는 Top N 없이 진행"
               f"(저장 단계에서 raw.json은 그대로 남음): {type(e).__name__} - {e!r}")
         domestic_ranked, international_ranked = [], []
         domestic_category_ranked, international_category_ranked = {}, {}
@@ -380,7 +380,7 @@ def run() -> None:
         category_comparison = category_aggregator.compare_with_last_week(category_distribution)
         category_aggregator.print_aggregate_with_comparison(category_distribution, category_comparison)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - [3-보조] 카테고리 집계 단계에서 예상 못 한 오류 발생 - 이번 주는 집계 없이 진행: "
+        print(f"[main] 🔴 조치필요 [MN-09] - [3-보조] 카테고리 집계 단계에서 예상 못 한 오류 발생 - 이번 주는 집계 없이 진행: "
               f"{type(e).__name__} - {e!r}")
         category_distribution, category_comparison = {}, None
 
@@ -392,7 +392,7 @@ def run() -> None:
         llm_summarizer.print_summaries("국내", domestic_summarized)
         llm_summarizer.print_summaries("해외", international_summarized)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - [4] LLM 요약 단계에서 예상 못 한 오류 발생 - 요약 없이(원문 제목만) 진행: "
+        print(f"[main] 🔴 조치필요 [MN-10] - [4] LLM 요약 단계에서 예상 못 한 오류 발생 - 요약 없이(원문 제목만) 진행: "
               f"{type(e).__name__} - {e!r}")
         domestic_summarized, international_summarized = domestic_ranked, international_ranked
 
@@ -405,7 +405,7 @@ def run() -> None:
         for category, items in international_category_summarized.items():
             llm_summarizer.print_summaries(f"해외-{category}", items)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - [4-보조] 카테고리별 LLM 요약 단계에서 예상 못 한 오류 발생 - 요약 없이(원문 제목만) 진행: "
+        print(f"[main] 🔴 조치필요 [MN-11] - [4-보조] 카테고리별 LLM 요약 단계에서 예상 못 한 오류 발생 - 요약 없이(원문 제목만) 진행: "
               f"{type(e).__name__} - {e!r}")
         domestic_category_summarized, international_category_summarized = (
             domestic_category_ranked, international_category_ranked)
@@ -437,7 +437,7 @@ def run() -> None:
                                            gdelt_timeline, failed_sources, category_distribution,
                                            category_comparison)
         except Exception as e:
-            print(f"[main] 🔴 조치필요 - 저장 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
+            print(f"[main] 🔴 조치필요 [MN-12] - 저장 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
                   f"{type(e).__name__} - {e!r}")
             saved_dir = None
     print("\n=== [6] 배포 ===")
@@ -451,12 +451,12 @@ def run() -> None:
                                   domestic_category_summarized, international_category_summarized,
                                   failed_sources, category_comparison)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 - 배포 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
+        print(f"[main] 🔴 조치필요 [MN-13] - 배포 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
               f"{type(e).__name__} - {e!r}")
 
     if failed_sources:
         saved_dir_note = f"{saved_dir}/scored.json에도" if saved_dir else "(data/ 파일에는 안 남았지만)"
-        print(f"\n[main] 🔴 조치필요 - 이번 실행 실패 소스: {failed_sources} (9.2 에러 리포트 - "
+        print(f"\n[main] 🔴 조치필요 [MN-14] - 이번 실행 실패 소스: {failed_sources} (9.2 에러 리포트 - "
               f"{saved_dir_note} failed_sources로 같이 저장됨)")
 
 

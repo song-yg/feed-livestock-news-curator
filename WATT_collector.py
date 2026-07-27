@@ -162,7 +162,7 @@ def collect() -> list[dict]:
                     print(f"[watt] '{source_name}' -> 최근 {DAYS_BACK}일 이내 {len(site_results)}건")
                 except Exception as e:
                     # 사이트 하나 실패해도 전체를 멈추지 않는다 (9.1 소스별 독립 실행 구조)
-                    print(f"[watt] 🔴 조치필요 - '{source_name}' 수집 실패: {type(e).__name__} - {e!r}")
+                    print(f"[watt] 🔴 조치필요 [WT-01] - '{source_name}' 수집 실패: {type(e).__name__} - {e!r}")
                     continue
         finally:
             browser.close()
@@ -317,7 +317,7 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
     try:
         response = page.goto(url, timeout=30000, wait_until="networkidle")
     except Exception as e:
-        print(f"[watt] 🟡 주의 - 목록 페이지 이동 실패: {_domain_only(url)} - {type(e).__name__} - {e!r}")
+        print(f"[watt] 🟡 주의 [WT-02] - 목록 페이지 이동 실패: {_domain_only(url)} - {type(e).__name__} - {e!r}")
         return []
 
     # 실행마다 콘텐츠가 요동치는 원인이 (a) CDN/캐시 계층이 오래된 스냅샷을
@@ -339,7 +339,7 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
     try:
         page.wait_for_selector("h5 a, h4 a", timeout=15000)
     except Exception:
-        print(f"[watt] 🟡 주의 - 목록 로딩 실패 또는 타임아웃: {_domain_only(url)}")
+        print(f"[watt] 🟡 주의 [WT-03] - 목록 로딩 실패 또는 타임아웃: {_domain_only(url)}")
         return []
 
     html = page.content()
@@ -370,13 +370,13 @@ def _fetch_detail(page, url: str) -> dict | None:
     try:
         page.goto(url, timeout=30000)
     except Exception as e:
-        print(f"[watt] 🟡 주의 - 상세 페이지 이동 실패: {url} - {type(e).__name__} - {e!r}")
+        print(f"[watt] 🟡 주의 [WT-04] - 상세 페이지 이동 실패: {url} - {type(e).__name__} - {e!r}")
         return None
 
     try:
         page.wait_for_selector("meta[property='article:published_time']", state="attached", timeout=15000)
     except Exception:
-        print(f"[watt] 🟡 주의 - 상세 페이지 로딩 실패 또는 타임아웃: {url}")
+        print(f"[watt] 🟡 주의 [WT-05] - 상세 페이지 로딩 실패 또는 타임아웃: {url}")
         return None
 
     html = page.content()
@@ -384,13 +384,13 @@ def _fetch_detail(page, url: str) -> dict | None:
 
     meta_tag = soup.find("meta", attrs={"property": "article:published_time"})
     if not meta_tag or not meta_tag.get("content"):
-        print(f"[watt] 🟡 주의 - published_time 메타 태그 없음: {url}")
+        print(f"[watt] 🟡 주의 [WT-06] - published_time 메타 태그 없음: {url}")
         return None
 
     try:
         published_at = _parse_published_time(meta_tag["content"])
     except ValueError as e:
-        print(f"[watt] 🟡 주의 - {type(e).__name__} - {e!r}")
+        print(f"[watt] 🟡 주의 [WT-07] - {type(e).__name__} - {e!r}")
         return None
 
     # 본문 컨테이너 class를 몰라서 "추천/관련기사 위젯 전 <p> 태그 전부"로

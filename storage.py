@@ -77,7 +77,7 @@ def week_dir(base_dir: str = "data", reference: datetime | None = None) -> str |
     try:
         os.makedirs(path, exist_ok=True)
     except OSError as e:
-        print(f"[storage] 🔴 조치필요 - 저장 디렉토리 생성 실패: {path} - {type(e).__name__} - {e!r}")
+        print(f"[storage] 🔴 조치필요 [ST-01] - 저장 디렉토리 생성 실패: {path} - {type(e).__name__} - {e!r}")
         return None
     return path
 
@@ -115,7 +115,7 @@ def save_raw(directory: str, articles: list[dict]) -> str | None:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(cleaned, f, ensure_ascii=False, indent=2)
     except (OSError, TypeError, ValueError) as e:
-        print(f"[storage] 🔴 조치필요 - raw.json 저장 실패: {path} - {type(e).__name__} - {e!r}")
+        print(f"[storage] 🔴 조치필요 [ST-02] - raw.json 저장 실패: {path} - {type(e).__name__} - {e!r}")
         return None
     print(f"[storage] raw.json 저장 완료 ({len(cleaned)}건) -> {path}")
     return path
@@ -168,7 +168,7 @@ def save_scored(directory: str, domestic_summarized: list[dict],
         with open(path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
     except (OSError, TypeError, ValueError) as e:
-        print(f"[storage] 🔴 조치필요 - scored.json 저장 실패: {path} - {type(e).__name__} - {e!r}")
+        print(f"[storage] 🔴 조치필요 [ST-03] - scored.json 저장 실패: {path} - {type(e).__name__} - {e!r}")
         return None
     print(f"[storage] scored.json 저장 완료 -> {path}")
     return path
@@ -299,7 +299,7 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
     except OSError as e:
-        print(f"[storage] 🔴 조치필요 - summary.md 저장 실패: {path} - {type(e).__name__} - {e!r}")
+        print(f"[storage] 🔴 조치필요 [ST-04] - summary.md 저장 실패: {path} - {type(e).__name__} - {e!r}")
         return None
     print(f"[storage] summary.md 저장 완료 -> {path}")
     return path
@@ -328,7 +328,7 @@ def save_week(articles: list[dict], domestic_summarized: list[dict],
     """
     directory = week_dir(base_dir)
     if directory is None:
-        print("[storage] 🔴 조치필요 - 저장 디렉토리를 만들지 못해 이번 주 저장을 건너뜀 "
+        print("[storage] 🔴 조치필요 [ST-05] - 저장 디렉토리를 만들지 못해 이번 주 저장을 건너뜀 "
               "(raw.json/scored.json/summary.md 전부 저장 안 됨)")
         return None
 
@@ -349,7 +349,7 @@ def save_week(articles: list[dict], domestic_summarized: list[dict],
     failed = [name for name, path in saved.items() if path is None]
 
     if failed:
-        print(f"[storage] 🔴 조치필요 - 이번 주 저장 일부 실패 - 성공: {succeeded or '없음'} / "
+        print(f"[storage] 🔴 조치필요 [ST-06] - 이번 주 저장 일부 실패 - 성공: {succeeded or '없음'} / "
               f"실패: {failed} (실패 원인은 위 개별 로그 참고) -> {directory}/")
     else:
         print(f"[storage] 이번 주 저장 완료 -> {directory}/ (raw.json, scored.json, summary.md)")

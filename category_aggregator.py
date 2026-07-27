@@ -168,7 +168,7 @@ def compare_with_last_week(current: dict[str, Counter], base_dir: str = "data",
         return comparison
 
     except (FileNotFoundError, json.JSONDecodeError, OSError) as e:
-        print(f"[category_aggregator] 🟡 주의 - 지난주 데이터 없음/읽기 실패({path}) - "
+        print(f"[category_aggregator] 🟡 주의 [CA-01] - 지난주 데이터 없음/읽기 실패({path}) - "
               f"증감 비교 생략: {type(e).__name__} - {e!r}")
         return None
     except (ValueError, AttributeError, TypeError, KeyError) as e:
@@ -176,7 +176,7 @@ def compare_with_last_week(current: dict[str, Counter], base_dir: str = "data",
         # 아닌 경우(예: null, 리스트 등으로 손상된 지난주 파일) - 위 첫
         # except와 마찬가지로 "지난주 데이터를 못 쓴다"는 같은 결론이라
         # 동일하게 안전한 None으로 처리한다.
-        print(f"[category_aggregator] 🟡 주의 - 지난주 데이터 구조 이상({path}) - "
+        print(f"[category_aggregator] 🟡 주의 [CA-02] - 지난주 데이터 구조 이상({path}) - "
               f"증감 비교 생략: {type(e).__name__} - {e!r}")
         return None
 

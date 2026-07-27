@@ -88,13 +88,13 @@ def _fetch_csv_rows(csv_url: str) -> list[dict] | None:
         reader = csv.DictReader(io.StringIO(text))
         rows = list(reader)
         if not rows:
-            print("[keyword_source] 🟡 주의 - 시트가 비어있음 - fallback 사용")
+            print("[keyword_source] 🔴 조치필요 [KS-01] - 시트가 비어있음(CSV 대신 엉뚱한 내용이 왔을 가능성) - fallback 사용")
             _cache[csv_url] = None
             return None
         _cache[csv_url] = rows
         return rows
     except Exception as e:
-        print(f"[keyword_source] 🔴 조치필요 - 시트 읽기 실패: {type(e).__name__} - {e!r} - fallback 사용")
+        print(f"[keyword_source] 🔴 조치필요 [KS-02] - 시트 읽기 실패: {type(e).__name__} - {e!r} - fallback 사용")
         _cache[csv_url] = None
         return None
 
@@ -126,6 +126,26 @@ def _detect_keyword_lang(keyword: str) -> str:
     return "ko" if (hangul_count / len(keyword)) >= 0.2 else "en"
 
 
+def _is_valid_keyword(keyword: str) -> bool:
+    """
+    키워드가 실제 검색어로 쓸 만한지(문자/숫자를 하나라도 포함하는지)
+    확인한다.
+
+    실제로 시트에 실수로 ";" 하나만 입력된 채 active=TRUE로 등록된 사고가
+    있었다 - 이 값은 한글 비율이 0이라 _detect_keyword_lang()이 "en"으로
+    판정해서 그대로 통과했고, gdelt_collector가 이걸 "; OR smart farming"
+    형태로 다른 정상 키워드와 묶어 OR 쿼리에 실어 보냈다. GDELT가 이 조합에
+    429를 반복해서 8분 넘게 재시도만 하다 끝난 뒤에야 결과가 나온 것으로
+    보아, 특수문자/공백뿐인 키워드가 정상 키워드의 발목까지 잡을 수 있다는
+    뜻이라 애초에 이 단계에서 걸러낸다.
+
+    `str.isalnum()`은 한글 음절도 True로 판정하므로(예: '가'.isalnum() ==
+    True) 한글/영문/숫자 키워드는 전부 정상 통과하고, 구두점·기호·공백만
+    있는 경우만 걸러진다.
+    """
+    return any(ch.isalnum() for ch in keyword)
+
+
 def get_keywords(lang: str, fallback: list[str]) -> list[str]:
     """
     lang("ko" 또는 "en")에 해당하는 활성(active=TRUE) 키워드 리스트를 구글
@@ -144,7 +164,7 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
     """
     csv_url = os.environ.get("KEYWORD_SHEET_CSV_URL")
     if not csv_url:
-        print(f"[keyword_source] 🔴 조치필요 - KEYWORD_SHEET_CSV_URL 없음 - {lang} 기본(하드코딩) 키워드 리스트 사용: {fallback}")
+        print(f"[keyword_source] 🔴 조치필요 [KS-03] - KEYWORD_SHEET_CSV_URL 없음 - {lang} 기본(하드코딩) 키워드 리스트 사용: {fallback}")
         return fallback
 
     rows = _fetch_csv_rows(csv_url)
@@ -153,10 +173,14 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
 
     keywords = []
     mismatches = []
+    invalid_keywords = []
     for row in rows:
         keyword = row.get("keyword", "").strip()
         declared_lang = row.get("lang", "").strip().lower()
         if not keyword or declared_lang not in ("ko", "en") or not _is_active(row):
+            continue
+        if not _is_valid_keyword(keyword):
+            invalid_keywords.append(keyword)
             continue
         actual_lang = _detect_keyword_lang(keyword)
         if actual_lang != declared_lang:
@@ -164,9 +188,13 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
         if actual_lang == lang:
             keywords.append(keyword)
 
+    if invalid_keywords:
+        print(f"[keyword_source] 🟡 주의 [KS-04] - 시트에 문자/숫자가 하나도 없는(특수문자·공백뿐인) "
+              f"키워드 {len(invalid_keywords)}건 제외: {invalid_keywords!r}")
+
     if mismatches:
         detail = ", ".join(f"'{kw}'(시트={declared} -> 실제={actual})" for kw, declared, actual in mismatches)
-        print(f"[keyword_source] 🟡 주의 - 시트 lang 컬럼과 실제 키워드 언어가 다른 항목 {len(mismatches)}건 "
+        print(f"[keyword_source] 🟡 주의 [KS-05] - 시트 lang 컬럼과 실제 키워드 언어가 다른 항목 {len(mismatches)}건 "
               f"발견 - 실제 언어 기준으로 자동 보정해서 사용(시트도 고쳐두는 걸 권장): {detail}")
 
     # 중복 키워드 제거 - 시트에 같은 키워드가 실수로 두 번 이상 등록되면
@@ -189,11 +217,12 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
     keywords = deduped_keywords
 
     if duplicates:
-        print(f"[keyword_source] 🟡 주의 - 시트에 중복 등록된 {lang} 키워드 {len(duplicates)}건 제외(첫 등장만 유지): "
+        print(f"[keyword_source] 🟡 주의 [KS-06] - 시트에 중복 등록된 {lang} 키워드 {len(duplicates)}건 제외(첫 등장만 유지): "
               f"{duplicates}")
 
     if not keywords:
-        print(f"[keyword_source] 🟡 주의 - 구글 시트에 lang={lang} 활성 키워드가 하나도 없음 - fallback 사용")
+        print(f"[keyword_source] 🔴 조치필요 [KS-07] - 구글 시트에 lang={lang} 활성 키워드가 하나도 없음"
+              f"(CSV 대신 엉뚱한 내용이 왔거나, 시트에서 실수로 전부 비활성화했을 수 있음) - fallback 사용")
         return fallback
 
     print(f"[keyword_source] 구글 시트에서 {lang} 키워드 {len(keywords)}개 로드: {keywords}")
@@ -262,4 +291,24 @@ if __name__ == "__main__":
     assert result_ko_dup == ["구제역", "조류  독감"], "중복 제거 후 첫 등장 표기만 남아야 함"
     assert result_en_dup == ["feed price"], "대소문자/공백만 다른 중복도 제거돼야 함"
 
-    print("\n[keyword_source] 자체 점검 통과 (fallback 경로 + 정상 파싱 경로 + lang 뒤바뀜 자동 보정 + 중복 제거)")
+    # 실제 발생했던 사고 재현: 시트에 특수문자/공백뿐인 키워드가 잘못 등록된 경우
+    # (";", "   " 등 - 문자/숫자가 하나도 없어 그대로 두면 GDELT/네이버로
+    # 그대로 넘어가 다른 정상 키워드와 OR로 묶여 429 재시도만 반복하다
+    # 시간을 허비하는 사고로 이어졌음)
+    fake_csv_invalid = (
+        "keyword,lang,active,note\n"
+        ";,ko,TRUE,\n"
+        "   ,en,TRUE,\n"
+        "---,en,TRUE,\n"
+        "smart farming,en,TRUE,\n"
+    )
+    _FakeResp.content = fake_csv_invalid.encode("utf-8-sig")
+    _cache.clear()
+    result_ko_invalid = get_keywords("ko", ["fallback"])
+    result_en_invalid = get_keywords("en", ["fallback"])
+    print("[검증5] 특수문자/공백뿐인 키워드 제외 - ko:", result_ko_invalid, "/ en:", result_en_invalid)
+    assert result_ko_invalid == ["fallback"], "유효한 ko 키워드가 하나도 없으면 fallback을 써야 함"
+    assert result_en_invalid == ["smart farming"], "특수문자/공백뿐인 항목은 빠지고 정상 키워드만 남아야 함"
+
+    print("\n[keyword_source] 자체 점검 통과 (fallback 경로 + 정상 파싱 경로 + lang 뒤바뀜 자동 보정 "
+          "+ 중복 제거 + 특수문자/공백뿐인 키워드 제외)")

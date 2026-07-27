@@ -278,7 +278,7 @@ def export_similarity_scores(articles: list[dict], sim_matrix, threshold: float,
                     a.get("source", ""), b.get("source", ""),
                 ])
     except OSError as e:
-        print(f"[issue_grouper] 🟡 주의 - 유사도 디버그 CSV 저장 실패(그룹핑 결과에는 영향 없음): "
+        print(f"[issue_grouper] 🟡 주의 [IG-01] - 유사도 디버그 CSV 저장 실패(그룹핑 결과에는 영향 없음): "
               f"{path} - {type(e).__name__}: {e}")
         return None
 
@@ -554,13 +554,13 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
         parsed = json.loads(text.strip())
     except Exception as e:
         snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
-        print(f"[issue_grouper] 🔴 조치필요 - 3차 LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치({len(pairs)}쌍)는 "
+        print(f"[issue_grouper] 🔴 조치필요 [IG-02] - 3차 LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치({len(pairs)}쌍)는 "
               f"전부 '안 묶음' fallback: {type(e).__name__} - {e!r} | 실제 응답: {snippet}")
         return None
 
     if not isinstance(parsed, list) or not parsed:
         actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
-        print(f"[issue_grouper] 🔴 조치필요 - 3차 LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 아니거나 "
+        print(f"[issue_grouper] 🔴 조치필요 [IG-03] - 3차 LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 아니거나 "
               f"비어있음, 실제 {actual}) - 이 배치({len(pairs)}쌍) 전부 '안 묶음' fallback "
               f"| 실제 응답: {_snippet_for_log(text)}")
         return None
@@ -588,7 +588,7 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
             results.append(False)  # 안전한 기본값 - 안 묶음
 
     if missing:
-        print(f"[issue_grouper] 🟡 주의 - 3차 LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
+        print(f"[issue_grouper] 🟡 주의 [IG-04] - 3차 LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
               f"(기대 {len(pairs)}쌍 중 {len(missing)}쌍) - 그 쌍들만 '안 묶음' 기본값 처리, "
               f"나머지 {len(pairs) - len(missing)}쌍은 정상 판정 사용")
 
@@ -617,7 +617,7 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]]) -> list[
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[issue_grouper] 🟡 주의 - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - 3차 LLM 보조 생략, "
+        print(f"[issue_grouper] 🟡 주의 [IG-05] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - 3차 LLM 보조 생략, "
               f"애매 구간 {len(borderline_pairs)}쌍 전부 '안 묶음' 기본값 유지")
         return []
 
@@ -680,7 +680,7 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
         # 1차 결과 + 나머지를 단독 그룹으로 반환 - to_singleton_groups와
         # 동일한 안전한 fallback (2차가 없으면 3차의 재료인 borderline_pairs
         # 자체가 안 생기므로 3차도 자연히 생략됨)
-        print("[issue_grouper] 🟡 주의 - 임베딩 모델이 없어 2차(임베딩) 매칭 생략 - 1차 결과만 사용")
+        print("[issue_grouper] 🟡 주의 [IG-06] - 임베딩 모델이 없어 2차(임베딩) 매칭 생략 - 1차 결과만 사용")
         singleton = [[a] for a in stage1_unmatched]
         return stage1_grouped + singleton
 
@@ -761,7 +761,7 @@ def _merge_confirmed_components(components: list[list[dict]],
                 merged_group.extend(components[idx])
             merged_components.append(merged_group)
         else:
-            print(f"[issue_grouper] 🟡 주의 - 3차 확정 쌍이 사슬로만 연결됨(컴포넌트 "
+            print(f"[issue_grouper] 🟡 주의 [IG-07] - 3차 확정 쌍이 사슬로만 연결됨(컴포넌트 "
                   f"{len(indices)}개 - 일부 쌍은 LLM에 직접 확인된 적 없음) "
                   f"- 연쇄 병합 방지로 안 묶고 개별 유지")
             for idx in indices:

@@ -181,7 +181,7 @@ def send_email(html_content: str, subject: str, recipients: list[str],
             server.login(smtp_user, smtp_app_password)
             server.sendmail(smtp_user, recipients, msg.as_string())
     except (smtplib.SMTPException, OSError) as e:
-        print(f"[deploy] 🔴 조치필요 - 이메일 발송 실패: {type(e).__name__} - {e!r}")
+        print(f"[deploy] 🔴 조치필요 [DP-01] - 이메일 발송 실패: {type(e).__name__} - {e!r}")
         return False
 
     print(f"[deploy] 이메일 발송 완료 -> {', '.join(recipients)}")
@@ -202,15 +202,15 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
     recipients_raw = os.environ.get("EMAIL_RECIPIENTS")
 
     if not smtp_user or not smtp_app_password:
-        print("[deploy] 🔴 조치필요 - SMTP_USER/SMTP_APP_PASSWORD 없음 - 이메일 발송 생략")
+        print("[deploy] 🔴 조치필요 [DP-02] - SMTP_USER/SMTP_APP_PASSWORD 없음 - 이메일 발송 생략")
         return False
     if not recipients_raw:
-        print("[deploy] 🔴 조치필요 - EMAIL_RECIPIENTS 없음 - 이메일 발송 생략")
+        print("[deploy] 🔴 조치필요 [DP-03] - EMAIL_RECIPIENTS 없음 - 이메일 발송 생략")
         return False
 
     recipients = [r.strip() for r in recipients_raw.split(",") if r.strip()]
     if not recipients:
-        print("[deploy] 🔴 조치필요 - EMAIL_RECIPIENTS가 비어있음(콤마만 있거나 공백) - 이메일 발송 생략")
+        print("[deploy] 🔴 조치필요 [DP-04] - EMAIL_RECIPIENTS가 비어있음(콤마만 있거나 공백) - 이메일 발송 생략")
         return False
 
     html_content = render_email_html(week_label, domestic_summarized, international_summarized,
