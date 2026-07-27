@@ -593,9 +593,13 @@ def _extract_domain(url: str) -> str:
     return domain.replace("www.", "")
 
 
-def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, list[dict]]:
+def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, list[dict], str | None]:
     """
-    한 키워드에 대해 article_search만 수행하고 (성공 여부, 기사 리스트)를 반환한다.
+    한 키워드에 대해 article_search만 수행하고 (성공 여부, 기사 리스트,
+    실패 사유)를 반환한다. 실패 사유는 성공 시 None, 실패 시
+    "{예외타입}: {메시지}" 형태 - 호출부(collect())가 "최종 실패 키워드"
+    로그에 원인까지 같이 남길 수 있도록 함(운영자가 429/네트워크 오류/
+    그 외 예외 중 무엇 때문인지 로그만 보고 구분할 수 있게).
     외부 재시도 라운드(OUTER_RETRY_PASSES)에서 실패한 키워드만 다시 돌릴
     수 있도록 collect()와는 별도 함수로 분리돼 있다.
 
@@ -654,7 +658,7 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
         fp_note = f" (오매칭 필터로 {false_positive_count}건 제외)" if false_positive_count else ""
         print(f"[gdelt] '{keyword}' article_search -> 최근 {DAYS_BACK}일 이내 "
               f"{len(keyword_articles)}건 수집 완료{fp_note}")
-        return True, keyword_articles
+        return True, keyword_articles, None
 
     except ValueError as e:
         # 쿼리 자체가 거부된 경우(예: "phrase too short")는 시간이 지나도
@@ -666,13 +670,13 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
         print(f"[gdelt] '{keyword}' article_search 실패(쿼리 자체 거부로 추정 - "
               f"{type(e).__name__}: {e})")
         _value_error_keywords_this_run.append(keyword)
-        return False, []
+        return False, [], f"{type(e).__name__}: {e}"
 
     except Exception as e:
         # 기사 수집 자체가 실패한 경우 - 호출부(collect())가 이 키워드를
         # failed_keywords에 담아 외부 재시도 라운드로 넘긴다.
         print(f"[gdelt] '{keyword}' article_search 실패: {type(e).__name__} - {e!r}")
-        return False, []
+        return False, [], f"{type(e).__name__}: {e}"
 
 
 def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple[bool, list[dict]]:
@@ -799,7 +803,7 @@ def _collect_articles_individually(gd: "GdeltDoc", keywords: list[str]) -> tuple
     all_articles = []
     any_success = False
     for keyword in keywords:
-        success, keyword_articles = _collect_articles_for_keyword(gd, keyword)
+        success, keyword_articles, _reason = _collect_articles_for_keyword(gd, keyword)
         if success:
             any_success = True
             all_articles.extend(keyword_articles)
@@ -1007,8 +1011,7 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
                 # 특정 원인 키워드를 지목할 수 없으므로, 안전하게 배치 전체를
                 # 개별 재요청 대상으로 보충한다.
                 print(f"[gdelt] 배치 {batch} 결과가 상한 근처까지 참({len(batch_articles)}건) - "
-                      f"특정 키워드 독차지는 아니라 크라우딩 주범을 지목할 수 없지만, "
-                      f"골고루 상한에 밀렸을 위험이 있어 배치 전체 {batch} 개별 재요청으로 보충 예정")
+                      f"골고루 밀렸을 위험 있어 배치 전체 개별 재요청으로 보충 예정")
                 pending_individual.extend(batch)
         time.sleep(REQUEST_INTERVAL)
 
@@ -1050,14 +1053,23 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
         batch_round = still_failed_batches
 
     if batch_round:
-        print(f"[gdelt] 배치 재시도 {OUTER_RETRY_PASSES}회 후에도 실패한 배치 - "
-              f"마지막 안전망으로 개별 요청 전환: {batch_round}")
+        # 이 경로는 위 "배치 내 크라우딩 감지"/"상한 근처까지 참"과는 다른
+        # 상황이다 - 그쪽은 요청 자체는 성공했는데 결과가 상한에 밀렸을
+        # 위험이 있어 개별로 보강하는 것이고, 여기는 배치 요청 자체가
+        # 여러 번(1차 + 재시도 라운드) 계속 실패해서 더 이상 배치로는
+        # 시도할 수단이 없어 마지막 수단으로 키워드 단위로 쪼개는 것이다.
+        print(f"[gdelt] 배치 재시도 {OUTER_RETRY_PASSES}회 소진 - 개별 요청 전환: {batch_round}")
         for batch in batch_round:
             pending_individual.extend(batch)
 
     # --- 2단계: 개별 보충 요청 - 실패한 것만 외부 재시도 라운드 ---
     round_keywords = list(dict.fromkeys(pending_individual))  # 순서 유지하며 중복 제거
     failed_keywords: list[str] = []
+    # 키워드별 마지막 실패 사유(예외 타입+메시지) - 라운드를 거듭할수록
+    # 최신 시도의 사유로 덮어써진다. "최종 실패 키워드" 로그에 원인까지
+    # 같이 남겨서, 429(서버 혼잡) 때문인지 다른 이유(네트워크 오류, 예상
+    # 못 한 예외 등)인지 운영자가 로그만 보고 구분할 수 있게 한다.
+    failure_reasons: dict[str, str] = {}
 
     for round_num in range(OUTER_RETRY_PASSES + 1):
         if round_num > 0:
@@ -1075,16 +1087,19 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
         failed_keywords = []
 
         for keyword in round_keywords:
-            success, keyword_articles = _collect_articles_for_keyword(gd, keyword)
+            success, keyword_articles, reason = _collect_articles_for_keyword(gd, keyword)
             if success:
                 all_articles.extend(keyword_articles)
+                failure_reasons.pop(keyword, None)  # 재시도로 살아났으면 이전 실패 기록 제거
             else:
                 failed_keywords.append(keyword)
+                failure_reasons[keyword] = reason or "사유 불명"
             time.sleep(REQUEST_INTERVAL)
 
     if failed_keywords:
+        detail = ", ".join(f"{kw} ({failure_reasons.get(kw, '사유 불명')})" for kw in failed_keywords)
         print(f"[gdelt] 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
-              f"기사 0건으로 처리됨): {failed_keywords}")
+              f"기사 0건으로 처리됨): {detail}")
 
     # --- 시계열 수집 완전 제거 결정 ---
     # timelinevol 단독(키워드 5개) 실전 규모 테스트에서도 429 백오프 4단계를

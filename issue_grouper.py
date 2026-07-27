@@ -472,6 +472,18 @@ def _build_llm_user_prompt(pairs: list[tuple[dict, dict, float]]) -> str:
     return "\n".join(lines)
 
 
+def _snippet_for_log(text: str, limit: int = 200) -> str:
+    """
+    LLM 원본 응답을 로그에 안전하게 남기기 위해 자른다(relevance_filter.py
+    의 동일 함수와 같은 목적) - 파싱 실패/형식 이상 로그에 "실제로 뭘
+    받았는지"가 없으면 운영자가 원인을 구분할 방법이 없어서 추가함.
+    """
+    if not text:
+        return "(빈 응답)"
+    flat = " ".join(text.split())
+    return flat[:limit] + ("..." if len(flat) > limit else "")
+
+
 def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requests.Session) -> list[bool] | None:
     """
     LLM API를 한 번 호출해서 pairs 각각에 대한 same_event 판정을 받아온다.
@@ -489,6 +501,7 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
     함수를 부르는 stage3_llm_assist 쪽에서 "안 묶음"으로 처리).
     """
     user_prompt = _build_llm_user_prompt(pairs)
+    text = None
 
     try:
         if LLM_PROVIDER == "openrouter":
@@ -540,14 +553,16 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
             text = text[4:] if text.startswith("json") else text
         parsed = json.loads(text.strip())
     except Exception as e:
+        snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
         print(f"[issue_grouper] 3차 LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치({len(pairs)}쌍)는 "
-              f"전부 '안 묶음' fallback: {type(e).__name__} - {e!r}")
+              f"전부 '안 묶음' fallback: {type(e).__name__} - {e!r} | 실제 응답: {snippet}")
         return None
 
     if not isinstance(parsed, list) or not parsed:
         actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
         print(f"[issue_grouper] 3차 LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 아니거나 "
-              f"비어있음, 실제 {actual}) - 이 배치({len(pairs)}쌍) 전부 '안 묶음' fallback")
+              f"비어있음, 실제 {actual}) - 이 배치({len(pairs)}쌍) 전부 '안 묶음' fallback "
+              f"| 실제 응답: {_snippet_for_log(text)}")
         return None
 
     # id 기반 부분 복구 - "출력 개수 != 입력 개수"면 배치 전체를 버리는

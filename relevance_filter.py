@@ -173,6 +173,20 @@ def _build_user_prompt(batch: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _snippet_for_log(text: str, limit: int = 200) -> str:
+    """
+    LLM 원본 응답을 로그에 안전하게 남기기 위해 자른다. 파싱 실패/형식
+    이상 로그에 "실제로 뭘 받았는지"가 없으면(예: 거부 메시지였는지, 빈
+    문자열이었는지, JSON이 깨진 건지) 운영자가 원인을 구분할 방법이 없어서
+    추가함. 너무 길면 로그가 지저분해지니 앞부분만 자르고, 줄바꿈은 한
+    줄로 정리한다.
+    """
+    if not text:
+        return "(빈 응답)"
+    flat = " ".join(text.split())
+    return flat[:limit] + ("..." if len(flat) > limit else "")
+
+
 def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> list[bool] | None:
     """
     LLM API를 한 번 호출해서 batch 각각에 대한 relevant 판정을 받아온다.
@@ -184,6 +198,8 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
     오버헤드를 줄인다.
     """
     user_prompt = _build_user_prompt(batch)
+    text = None  # 예외가 어느 지점에서 났든(응답을 아예 못 받았을 수도 있음)
+                 # 로그에서 안전하게 참조할 수 있도록 미리 초기화
 
     try:
         if LLM_PROVIDER == "openrouter":
@@ -232,14 +248,17 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
             text = text[4:] if text.startswith("json") else text
         parsed = json.loads(text.strip())
     except Exception as e:
+        snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
         print(f"[relevance_filter] LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치"
-              f"({len(batch)}건) 전부 통과 처리: {type(e).__name__} - {e!r}")
+              f"({len(batch)}건) 전부 통과 처리: {type(e).__name__} - {e!r} "
+              f"| 실제 응답: {snippet}")
         return None
 
     if not isinstance(parsed, list) or not parsed:
         actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
         print(f"[relevance_filter] LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 "
-              f"아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 통과 처리")
+              f"아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 통과 처리 "
+              f"| 실제 응답: {_snippet_for_log(text)}")
         return None
 
     # "출력 개수 != 입력 개수"면 배치 전체를 버리는 대신, id를 명시적으로
@@ -415,6 +434,7 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
     누락된 경우와 동일하게 다룸).
     """
     user_prompt = _build_category_user_prompt(batch)
+    text = None
 
     try:
         if LLM_PROVIDER == "openrouter":
@@ -460,14 +480,17 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
             text = text[4:] if text.startswith("json") else text
         parsed = json.loads(text.strip())
     except Exception as e:
+        snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
         print(f"[relevance_filter] 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
-              f"이 배치({len(batch)}건) 전부 '기타' 유지: {type(e).__name__} - {e!r}")
+              f"이 배치({len(batch)}건) 전부 '기타' 유지: {type(e).__name__} - {e!r} "
+              f"| 실제 응답: {snippet}")
         return None
 
     if not isinstance(parsed, list) or not parsed:
         actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
         print(f"[relevance_filter] 카테고리 재분류 LLM({LLM_PROVIDER}) 출력 형식 이상"
-              f"(리스트가 아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 '기타' 유지")
+              f"(리스트가 아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 '기타' 유지 "
+              f"| 실제 응답: {_snippet_for_log(text)}")
         return None
 
     valid_choices = set(category_choices) | {"기타"}
