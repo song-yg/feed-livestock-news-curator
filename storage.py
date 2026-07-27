@@ -1,7 +1,7 @@
 """
 storage.py - 5단계 저장 레이어.
 
-알고리즘 문서 섹션 5 정의 그대로: data/YYYY-WW/ 아래에 raw.json / scored.json /
+data/YYYY-WW/ 아래에 raw.json / scored.json /
 summary.md 세 파일을 저장한다. main.py의 run() 마지막 단계에서 이 모듈의
 save_week()를 호출한다.
 
@@ -67,9 +67,8 @@ def week_dir(base_dir: str = "data", reference: datetime | None = None) -> str |
 
     디렉토리 생성 자체가 실패하면(권한 문제, 디스크 공간 부족 등) 예외를
     그대로 던지는 대신 로그를 남기고 None을 반환한다 - 호출부(save_week)가
-    이걸 보고 저장 전체를 안전하게 건너뛸 수 있게 함(9.1 "소스별 독립 실행
-    구조"와 같은 방향 - 저장 실패가 이미 끝난 수집/스코어링/요약 결과까지
-    통째로 날려버리면 안 됨).
+    이걸 보고 저장 전체를 안전하게 건너뛸 수 있게 함 - 저장 실패가 이미
+    끝난 수집/스코어링/요약 결과까지 통째로 날려버리면 안 됨.
     """
     now = reference or datetime.now(timezone.utc)
     iso = now.isocalendar()
@@ -243,8 +242,8 @@ def save_summary_md(directory: str, week_label: str, domestic_summarized: list[d
                      category_comparison: dict[str, dict[str, dict]] | None = None) -> str | None:
     """
     사람이 바로 읽을 배포용 요약본. llm_summarizer.print_summaries와 같은
-    내용을 마크다운 파일로 남긴다(9.4 안전장치 - 요약 유무와 무관하게 원문
-    링크는 항상 같이 남김).
+    내용을 마크다운 파일로 남긴다(요약 유무와 무관하게 원문 링크는 항상
+    같이 남김).
 
     문서 작업 시 언더바(_) 등 앞의 이스케이프는 넣지 않는다(마크다운 렌더링
     시 불필요한 백슬래시가 그대로 노출되는 문제 방지 - 프로젝트 방침).

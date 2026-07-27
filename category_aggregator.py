@@ -9,7 +9,7 @@ category_aggregator.py
 전체적으로 몇 건 다뤄졌는지"를 보여주는 별도의 거친(coarse) 보조 지표를
 제공한다.
 
-** keyword_score(문서 3번 섹션, 미구현)와의 차이 **
+** keyword_score(미구현)와의 차이 **
 keyword_score = keyword_hit_count x recency_weight는 개별 키워드 단위(예:
 "조류독감"이라는 단어 하나)의 정밀 지표로, 트렌드 시각화·민감 키워드
 알림용으로 설계돼 있으나 여전히 미구현이다.
@@ -70,7 +70,7 @@ def count_by_category(articles: list[dict]) -> Counter:
 
 def aggregate(articles: list[dict]) -> dict[str, Counter]:
     """
-    3.1 원칙대로 국내/해외 두 축으로 나눠서 각각 카테고리별 건수를 집계한다.
+    국내/해외 두 축으로 나눠서 각각 카테고리별 건수를 집계한다.
 
     반환값: {"국내": Counter, "해외": Counter}
     (scorer.split_domestic_international과 동일한 축 정의 - 네이버=국내,
@@ -125,7 +125,7 @@ def compare_with_last_week(current: dict[str, Counter], base_dir: str = "data",
 
     지난주 파일이 없으면(첫 실행, 혹은 지난주 저장이 실패했던 경우) 예외를
     던지지 않고 None을 반환한다 - 호출부가 이걸 보고 "지난주 데이터 없음"
-    으로 안전하게 표시하면 됨(9.4/9.5 원칙과 같은 방향).
+    으로 안전하게 표시하면 됨.
 
     반환값 (지난주 데이터가 있는 경우):
       {"국내": {카테고리: {"this_week": int, "last_week": int, "delta": int}, ...},

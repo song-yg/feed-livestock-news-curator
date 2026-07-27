@@ -2,7 +2,6 @@
 gdelt_collector.py
 GDELT DOC 2.0 API를 파이썬 클라이언트(gdeltdoc)로 호출해서
 키워드별 해외 언급 데이터를 수집하는 모듈.
-(알고리즘 문서 "1. 수집 레이어" - gdelt_collector 스펙 참조)
 
 naver_collector / watt_collector와 반환 형태가 다르다는 점이 핵심 차이:
 그 둘은 list[dict] 하나만 반환하지만, 이 모듈은 tuple(articles, timeline)을 반환한다.
@@ -34,7 +33,7 @@ GDELT 429가 구조적으로 심해서(요청 대부분에서 발생, 원인이 
      "User-Agent 미기재 가설 대응" 주석 참고)
   4. 키워드를 하나의 OR 쿼리로 결합: gdeltdoc의 Filters(keyword=[...])가
      리스트를 자동으로 OR로 묶어준다는 걸 확인(공식 README) - 요청 횟수
-     자체를 줄여 429에 걸릴 기회를 줄임. 시계열은 3.1 원칙상 "키워드별
+     자체를 줄여 429에 걸릴 기회를 줄임. 시계열은 "키워드별
      트렌드"가 의미가 있어야 하므로(지금은 항상 빈 값이라 실질적 영향은
      없음) 이건 합치지 않고 키워드별로 유지하는 구조를 남겨둠
      (_collect_articles_for_keywords 및 collect() 참고).
@@ -177,8 +176,7 @@ def _load_skip_state(path: str = SKIP_STATE_PATH) -> dict:
     {키워드: {"fail_count": N, "reason": "...", "last_seen": "..."}} 형태로
     저장된 학습된 스킵 상태를 읽어온다. 파일이 없거나(첫 실행) 읽기/파싱에
     실패하면 빈 딕셔너리로 안전하게 시작한다 - 이 파일은 어디까지나 최적화용
-    보조 데이터라, 못 읽어도 파이프라인 자체가 죽으면 안 됨(9.4/9.5 원칙과
-    같은 방향).
+    보조 데이터라, 못 읽어도 파이프라인 자체가 죽으면 안 됨.
     """
     try:
         with open(path, encoding="utf-8") as f:
@@ -236,6 +234,88 @@ def _update_skip_state_after_run() -> None:
                   f"(임계값 {SKIP_STATE_FAILURE_THRESHOLD}) - 다음 실행부터 자동 스킵 대상으로 등록")
 
     _save_skip_state(state)
+
+
+# --- 학습형 크라우딩 목록 ---
+#
+# 매번 "크라우딩 감지 -> 개별 재요청으로 보충"하는 흐름 자체는 이미
+# 안전하게 동작하지만, 특정 키워드가 반복해서 250건 상한 근처까지 차는
+# "원래 큰 키워드"라면, 배치에 넣어봐야 어차피 크라우딩으로 걸려 개별
+# 재요청을 또 하게 될 뿐이다 - 배치 요청 1번을 낭비하는 셈. 이런 키워드는
+# 학습해서 다음 실행부터는 처음부터 배치를 안 거치고 바로 개별 요청으로
+# 보낸다(요청 횟수 절약 - "배치 1번 + 개별 재요청 1번"이 "개별 요청 1번"
+# 으로 줄어듦).
+#
+# 판단 기준은 배치 안에서의 제목 매칭 비율(근사치, _detect_crowded_keywords
+# 방식)이 아니라, 그 키워드를 실제로 "혼자" 요청했을 때 결과 건수 자체가
+# 상한(MAX_RECORDS) 근처인지로 본다 - 개별 요청 결과는 그 키워드 하나만의
+# 정확한 건수라 근사치보다 신뢰도가 높다.
+CROWDING_STATE_PATH = "state/gdelt_crowding_keywords.json"
+CROWDING_STATE_LEARN_THRESHOLD = 2  # SKIP_STATE_FAILURE_THRESHOLD와 같은 논리 -
+                                     # 1번의 반짝 화제성 급증만으로 영구
+                                     # 등록하면 안 되니 2회 연속 확인을 요구
+
+# 이번 실행 중 "개별 요청 결과가 상한 근처였던" 키워드를 모아두는 용도.
+# collect() 시작 시 반드시 비워야 함(_value_error_keywords_this_run과 동일한 이유)
+_crowded_keywords_this_run: list[str] = []
+
+
+def _load_crowding_state(path: str = CROWDING_STATE_PATH) -> dict:
+    """
+    {키워드: {"crowd_count": N, "last_seen": "..."}} 형태로 저장된 학습된
+    크라우딩 상태를 읽어온다. _load_skip_state와 완전히 동일한 안전 처리
+    (파일 없음/파싱 실패/구조 이상 전부 빈 딕셔너리로 안전하게 시작).
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            state = json.load(f)
+        if not isinstance(state, dict):
+            print(f"[gdelt] 🟡 주의 - 학습된 크라우딩 상태 파일 구조 이상(dict 아님, 타입: "
+                  f"{type(state).__name__}) - 빈 상태로 다시 시작: {path}")
+            return {}
+        return state
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"[gdelt] 학습된 크라우딩 상태 파일 읽기 실패(처음 실행이거나 파일 없음 - "
+              f"정상, 빈 상태로 시작): {path} - {type(e).__name__} - {e!r}")
+        return {}
+
+
+def _save_crowding_state(state: dict, path: str = CROWDING_STATE_PATH) -> None:
+    """저장 실패해도 예외를 던지지 않는다 - _save_skip_state와 동일한 패턴."""
+    try:
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+        print(f"[gdelt] 학습된 크라우딩 상태 저장 완료 -> {path}")
+    except OSError as e:
+        print(f"[gdelt] 🟡 주의 - 학습된 크라우딩 상태 저장 실패(이번 실행 결과엔 영향 없음, "
+              f"다음 실행에서 다시 학습 시도됨): {path} - {type(e).__name__} - {e!r}")
+
+
+def _update_crowding_state_after_run() -> None:
+    """
+    collect() 끝에서 호출 - 이번 실행 중 개별 요청 결과가 상한 근처였던
+    키워드들의 crowd_count를 1씩 올리고, 변경이 있었으면 파일에 저장한다.
+    """
+    if not _crowded_keywords_this_run:
+        return
+
+    state = _load_crowding_state()
+    now_str = datetime.now(timezone.utc).isoformat()
+    for keyword in dict.fromkeys(_crowded_keywords_this_run):  # 중복 제거, 순서 유지
+        entry = state.get(keyword)
+        if not isinstance(entry, dict):
+            entry = {"crowd_count": 0}  # 없거나(신규) 손상된 값이면 새로 시작
+        entry["crowd_count"] = entry.get("crowd_count", 0) + 1
+        entry["last_seen"] = now_str
+        state[keyword] = entry
+        if entry["crowd_count"] >= CROWDING_STATE_LEARN_THRESHOLD:
+            print(f"[gdelt] '{keyword}' - {entry['crowd_count']}회 연속 상한 근처 확인됨 "
+                  f"(임계값 {CROWDING_STATE_LEARN_THRESHOLD}) - 다음 실행부터 배치 없이 바로 개별 요청으로 처리")
+
+    _save_crowding_state(state)
 
 # --- 키워드 오매칭(false positive) 필터 ---
 #
@@ -619,15 +699,15 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
                 if _is_false_positive(keyword, str(row["title"])):
                     # 예: "foot and mouth disease" 검색인데 제목이
                     # "hand, foot and mouth disease"(수족구병)인 경우 -
-                    # 구조적 오매칭이라 이 기사만 조용히 제외 (9.1 방침대로
-                    # 기사 1건 스킵일 뿐 키워드 전체를 중단하지 않음)
+                    # 구조적 오매칭이라 이 기사만 조용히 제외(기사 1건
+                    # 스킵일 뿐 키워드 전체를 중단하지 않음)
                     false_positive_count += 1
                     continue
 
                 try:
                     published_at = _parse_seendate(str(row["seendate"]))
                 except ValueError as e:
-                    # 날짜 파싱 실패한 기사 1건만 건너뜀 (전체 중단 아님, 9.1 방침)
+                    # 날짜 파싱 실패한 기사 1건만 건너뜀(전체 중단 아님)
                     print(f"[gdelt] 🟡 주의 [GD-04] - '{keyword}' 기사 스킵 - {type(e).__name__} - {e!r}")
                     continue
 
@@ -942,9 +1022,12 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     # 이번 실행의 학습 기록을 새로 시작 (모듈이 테스트 등에서 재사용될 수
     # 있어 이전 실행의 잔여물이 안 섞이도록 매번 비움)
     _value_error_keywords_this_run.clear()
+    _crowded_keywords_this_run.clear()
     skip_state = _load_skip_state()
+    crowding_state = _load_crowding_state()
 
     active_keywords = []
+    known_crowders = []
     for keyword in target_keywords:
         if keyword in SKIP_KEYWORDS:
             print(f"[gdelt] '{keyword}' 스킵 - {SKIP_KEYWORDS[keyword]}")
@@ -955,17 +1038,26 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
                   f"({learned_entry.get('fail_count')}회 연속 ValueError 확인, "
                   f"{SKIP_STATE_PATH} 참고)")
             continue
+        crowding_entry = crowding_state.get(keyword)
+        if isinstance(crowding_entry, dict) and crowding_entry.get("crowd_count", 0) >= CROWDING_STATE_LEARN_THRESHOLD:
+            # 배치에 넣어봐야 어차피 크라우딩으로 걸려 개별 재요청을 또
+            # 하게 될 뿐이므로, 배치 단계 자체를 건너뛰고 바로 개별 처리
+            # 대상으로 보낸다(요청 횟수 절약).
+            print(f"[gdelt] '{keyword}' - 학습된 크라우딩 키워드({crowding_entry.get('crowd_count')}회 "
+                  f"연속 상한 근처 확인, {CROWDING_STATE_PATH} 참고) - 배치 없이 바로 개별 요청으로 처리")
+            known_crowders.append(keyword)
+            continue
         active_keywords.append(keyword)
 
     all_articles = []
     timeline_by_keyword = {}
 
-    if not active_keywords:
+    if not active_keywords and not known_crowders:
         return all_articles, timeline_by_keyword
 
     # --- 1단계: 배치 단위 수집 + 크라우딩 감지 ---
     batches = [active_keywords[i:i + BATCH_SIZE] for i in range(0, len(active_keywords), BATCH_SIZE)]
-    pending_individual: list[str] = []  # 크라우딩/상한 근접으로 밀려나 개별 확인이 필요한 키워드
+    pending_individual: list[str] = list(known_crowders)  # 학습된 크라우딩 키워드는 처음부터 개별 처리 대상
     pending_batches: list[list[str]] = []  # 배치 요청 자체가 실패해서 배치로 재시도할 것들
 
     for batch in batches:
@@ -1086,6 +1178,11 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
             if success:
                 all_articles.extend(keyword_articles)
                 failure_reasons.pop(keyword, None)  # 재시도로 살아났으면 이전 실패 기록 제거
+                if len(keyword_articles) >= MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
+                    # 이 키워드를 "혼자" 요청했는데도 결과가 상한 근처 -
+                    # 원래 건수가 많은 키워드라는 뜻이라, 다음 실행부터
+                    # 배치를 거치지 않도록 학습 대상으로 기록해둔다.
+                    _crowded_keywords_this_run.append(keyword)
             else:
                 failed_keywords.append(keyword)
                 failure_reasons[keyword] = reason or "사유 불명"
@@ -1111,6 +1208,9 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     # 반영(2번 연속되면 다음 실행부터 자동 스킵). git commit/push는
     # main.py/run-pipline.yml 쪽 책임 - 여기는 파일 생성까지만.
     _update_skip_state_after_run()
+    # 이번 실행에서 개별 요청 결과가 상한 근처였던 키워드들의 학습 상태도
+    # 같은 방식으로 반영(2번 연속되면 다음 실행부터 배치 없이 바로 개별 처리).
+    _update_crowding_state_after_run()
 
     return all_articles, timeline_by_keyword
 

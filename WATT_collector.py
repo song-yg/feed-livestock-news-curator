@@ -1,7 +1,6 @@
 """
 watt_collector.py
 WATT Global Media 계열 사이트(feedstrategy.com) 뉴스를 수집하는 모듈.
-(알고리즘 문서 "1. 수집 레이어" - watt_collector 스펙 참조)
 
 requests + BeautifulSoup으로 시도했으나 403 Forbidden으로 막혀서(WAF가 UA를
 보고 차단하는 것으로 추정) Playwright(실제 브라우저 엔진)를 사용한다.
@@ -92,7 +91,7 @@ def _parse_published_time(raw: str) -> datetime:
 
     이게 문제가 안 되는 이유: scorer.py의 recency_weight/일수계산은 전부
     "경과일수(정수)" 단위로만 동작하고 시:분:초는 어디서도 쓰이지 않는다
-    (3번 섹션 계단형 가중치 표 자체가 일 단위). 따라서 시간 정보가 없는 채로
+    (계단형 가중치 표 자체가 일 단위). 따라서 시간 정보가 없는 채로
     00:00:00에 고정되는 건 버그가 아니라 사이트 데이터 자체의 특성이고,
     이 프로젝트 스코어링 정확도에 영향이 없다.
 
@@ -161,7 +160,7 @@ def collect() -> list[dict]:
                     all_results.extend(site_results)
                     print(f"[watt] '{source_name}' -> 최근 {DAYS_BACK}일 이내 {len(site_results)}건")
                 except Exception as e:
-                    # 사이트 하나 실패해도 전체를 멈추지 않는다 (9.1 소스별 독립 실행 구조)
+                    # 사이트 하나 실패해도 전체를 멈추지 않는다(소스별 독립 실행 구조)
                     print(f"[watt] 🔴 조치필요 [WT-01] - '{source_name}' 수집 실패: {type(e).__name__} - {e!r}")
                     continue
         finally:

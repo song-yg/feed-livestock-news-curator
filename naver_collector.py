@@ -1,7 +1,6 @@
 """
 naver_collector.py
-네이버 뉴스 검색 API를 호출해서 뉴스를 수집하는 모듈.
-(알고리즘 문서 "1. 수집 레이어" - naver_collector 스펙 참조)
+네이버 뉴스 검색 API를 호출해서 뉴스를 수집하는 모듈 (수집 레이어).
 """
 
 import re

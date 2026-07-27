@@ -1,12 +1,11 @@
 """
 keyword_tagger.py
-"2.2 키워드 태깅" 담당 모듈. 정규화(normalizer) 단계에서 각 기사의 제목을
+키워드 태깅 담당 모듈. 정규화(normalizer) 단계에서 각 기사의 제목을
 KEYWORDS_KR/EN 사전과 매칭해 이슈 카테고리를 라벨링한다.
-(알고리즘 문서 "2.2 키워드 태깅" 참조)
 
-주의 - 이슈 그룹핑(2.1)과는 완전히 별개 기능이다:
-  - 2.1 이슈 그룹핑: "이 기사와 저 기사가 같은 사건을 다루는가" (BGE-M3 임베딩, 아직 미구현)
-  - 2.2 키워드 태깅(이 모듈): "이 기사가 어떤 카테고리(질병/가격/제도 등)에 속하는가"
+주의 - 이슈 그룹핑(issue_grouper.py)과는 완전히 별개 기능이다:
+  - 이슈 그룹핑: "이 기사와 저 기사가 같은 사건을 다루는가" (BGE-M3 임베딩)
+  - 키워드 태깅(이 모듈): "이 기사가 어떤 카테고리(질병/가격/제도 등)에 속하는가"
   둘은 입력도 출력도 다르고 서로 의존하지 않는다 - 이 모듈은 임베딩/LLM 없이
   순수 문자열 매칭만 쓴다.
 
@@ -194,8 +193,8 @@ def tag_articles(articles: list[dict]) -> list[dict]:
 
     주의 - WATT 소스와의 관계: WATT_collector는 사이트에서 직접 긁어온
     카테고리(예: "Poultry", "Nutrition" 등 WATT 자체 분류 체계)를 이미
-    "category" 필드에 채워서 넘긴다. 반면 naver/gdelt는 알고리즘 문서에 명시된
-    대로 이 정규화 단계에서 채우도록 None으로 비워둔 채 넘어온다.
+    "category" 필드에 채워서 넘긴다. 반면 naver/gdelt는 이 정규화 단계에서
+    채우도록 None으로 비워둔 채 넘어온다.
 
     이 함수는 소스에 상관없이 모든 기사에 "우리 시스템의 통일된 카테고리
     체계"(질병명/시장가격/정부제도 등, 이 모듈의 CATEGORY_KEYWORDS 기준)를
@@ -221,7 +220,7 @@ def tag_articles(articles: list[dict]) -> list[dict]:
     total = len(articles)
     other_ratio = (other_count / total * 100) if total else 0.0
     print(f"[keyword_tagger] {total}건 중 '기타' {other_count}건 ({other_ratio:.1f}%) "
-          f"- 비율이 높으면 사전에 신규 키워드 추가 검토 (2.2 방침)")
+          f"- 비율이 높으면 사전에 신규 키워드 추가 검토")
 
     return articles
 

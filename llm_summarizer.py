@@ -1,8 +1,7 @@
 """
 llm_summarizer.py
-"4. LLM 사용 지점" 중 (A) 자체 요약 생성 + (A-1) 얇은 재료 fallback 담당 모듈.
-(알고리즘 문서 "4. LLM 사용 지점" 표 참조. (B) 그룹핑 보조는
-issue_grouper.stage3_llm_assist가 담당)
+(A) 자체 요약 생성 + (A-1) 얇은 재료 fallback 담당 모듈. (B) 그룹핑
+보조는 issue_grouper.stage3_llm_assist가 담당)
 
 ** 프로바이더 설정을 issue_grouper.py에서 그대로 재사용 **
 LLM_PROVIDER/모델명/API URL/X-Title 상수를 새로 정의하지 않고
@@ -14,10 +13,10 @@ latin-1만 허용돼 UnicodeEncodeError), 이미 고쳐서 검증까지 끝난 �
 그대로 재사용하면 같은 버그가 재현되는 걸 원천적으로 막을 수 있다
 (issue_grouper.py 쪽 코드는 이 모듈이 전혀 건드리지 않음).
 
-** (A)/(A-1) 안전장치 (9.4 원칙 재사용) **
+** (A)/(A-1) 안전장치 **
 API 키가 없거나 LLM 호출/응답이 실패해도 요약을 생략하고 원문 제목만
-노출하는 쪽으로 fallback한다 - 3차와 동일한 철학, "요약 없이 원문 링크만
-발송"이 9.5 섹션이 권장한 무료 모델 대응책과도 일치한다.
+노출하는 쪽으로 fallback한다 - 3차와 동일한 철학, 요약 없이 원문 링크만
+발송하는 무료 모델 대응책과도 일치한다.
 """
 
 import os
@@ -30,13 +29,12 @@ import issue_grouper as _ig  # LLM_PROVIDER, 모델명, API URL, X-Title 상수 
 _SYSTEM_PROMPT = (
     "너는 사료·축산업 뉴스 큐레이션 서비스의 요약 작성자다. 주어진 이슈(같은 "
     "사건을 다루는 기사 제목들과 참고 정보)를 보고 한국어로 2~3문장의 자체 "
-    "요약을 작성하라. 원문을 그대로 옮기지 말고 핵심 내용만 새로 요약한다 "
-    "(9.4 안전장치 1번 - 없는 내용 추가 금지). 확실하지 않은 수치나 사실은 "
+    "요약을 작성하라. 원문을 그대로 옮기지 말고 핵심 내용만 새로 요약한다. "
+    "확실하지 않은 수치나 사실은 "
     "임의로 만들어내지 말고, 주어진 제목/참고 정보에 있는 내용만 사용한다. "
-    "확실하지 않으면 요약 대신 애매함을 그대로 표현하라(9.5 섹션 - 확실하지 "
-    "않으면 요약 대신 제목만 나열하는 원칙과 같은 결). 전문용어·질병명·"
+    "확실하지 않으면 요약 대신 애매함을 그대로 표현하라. 전문용어·질병명·"
     "정부기관명·제도명 등 고유명사는 임의로 한글화하지 말고 영문 원어가 "
-    "있으면 괄호로 병기한다(12.2 언어 처리 방침). 다른 설명 없이 요약 "
+    "있으면 괄호로 병기한다. 다른 설명 없이 요약 "
     "문장만 출력한다."
 )
 
@@ -53,7 +51,7 @@ def _build_user_prompt(item: dict) -> str:
     이슈 하나(scorer.score_group() 결과 dict - titles/urls/press_list/articles
     필드를 가짐)를 LLM 입력 프롬프트로 만든다.
 
-    문서 4번 섹션 (A) 입력 정의 그대로: 제목 + (본문 확보된 경우) 본문에서
+    제목 + (본문 확보된 경우) 본문에서
     뽑은 핵심 문장 + (네이버 소스인 경우) description을 참고 컨텍스트로
     추가한다(그대로 인용하지 않고 참고용으로만 사용).
     """
@@ -181,7 +179,7 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     result = dict(item)
     titles = item.get("titles", [])
 
-    # (A-1) 얇은 재료 fallback (문서 4번 섹션 (A-1)): 이슈 그룹핑이 안 되고
+    # (A-1) 얇은 재료 fallback: 이슈 그룹핑이 안 되고
     # (그룹 크기 1) 언론사 1곳만 보도한 단독 기사라도, 실제로 요약할 재료가
     # 있으면(예: WATT는 본문 전체를 긁어오므로 body가 충분히 김) 굳이
     # 생략할 이유가 없다 - 재료가 얇아서 생략하는 거지, "단독 기사"라서
@@ -200,7 +198,7 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
             result["summary"] = None
             result["summary_skipped_reason"] = (
                 "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, "
-                "원문 제목만 노출 (문서 4번 섹션 (A-1))"
+                "원문 제목만 노출"
             )
             return result
         # 재료(본문 등)가 충분하면 단독 기사여도 아래 정상 요약 경로로 진행
@@ -223,7 +221,7 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
 
     if not summary_text:
         result["summary"] = None
-        result["summary_skipped_reason"] = "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+        result["summary_skipped_reason"] = "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
         return result
 
     if _is_suspicious_summary(summary_text):
@@ -274,7 +272,6 @@ def print_summaries(label: str, summarized: list[dict]) -> None:
     결과를 사람이 읽기 좋게 콘솔에 출력한다(scorer.print_top_n과 같은 톤 -
     storage.py 저장 결과와 별개로 실행 중 진행 확인용).
 
-    9.4 안전장치 2번("출력에 항상 원문 링크 강제 부착") 그대로 적용 -
     요약이 있든 없든 원문 링크는 항상 같이 보여준다.
     """
     print(f"\n=== {label} - LLM 요약 ===")

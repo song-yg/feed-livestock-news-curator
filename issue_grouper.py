@@ -1,8 +1,8 @@
 """
 issue_grouper.py
-"2.1 이슈 그룹핑" 담당 모듈 (알고리즘 문서 "2.1 이슈 그룹핑" 참조)
+이슈 그룹핑 담당 모듈.
 
-문서에 정의된 하이브리드 파이프라인을 전부 구현:
+하이브리드 파이프라인을 전부 구현:
   1차 - KR<->EN 키워드 사전 매칭         -> 구현은 됐으나 현재 사전을 비워둠
                                           (ISSUE_SYNONYM_GROUPS 주석 참조)
   2차 - BGE-M3 임베딩 코사인 유사도       -> 구현
@@ -174,18 +174,17 @@ def stage1_group(articles: list[dict]) -> tuple[list[list[dict]], list[dict]]:
 # 2차: BGE-M3 임베딩 코사인 유사도 매칭
 # ---------------------------------------------------------------------------
 #
-# 문서 2.1 "작동 방식" 2~5번 그대로: 1차에서 못 잡은 기사만 대상으로,
+# 1차에서 못 잡은 기사만 대상으로,
 # 전체 기사끼리(국내x해외 뿐 아니라 국내-국내/해외-해외도 포함) 코사인
 # 유사도를 계산해서 threshold 이상이면 그룹핑한다.
 #
-# 임계값(THRESHOLD)은 문서 "7. 아직 결정 안 된 것들"에 명시된 대로 아직
-# 미확정 값이다. scorer.py의 PRESS_DEDUP_CAP과 같은 성격의 "잠정 상수" -
-# issue_grouper.export_similarity_scores()로 뽑은 유사도 디버그 CSV를
-# 직접 보고 조정한다.
+# 임계값(THRESHOLD)은 아직 미확정 값이다. scorer.py의 PRESS_DEDUP_CAP과
+# 같은 성격의 "잠정 상수" - issue_grouper.export_similarity_scores()로
+# 뽑은 유사도 디버그 CSV를 직접 보고 조정한다.
 THRESHOLD = 0.7
 
 # threshold 근처 "애매한 구간"의 폭. 예를 들어 THRESHOLD=0.7,
-# BORDERLINE_MARGIN=0.06이면 0.64~0.70 사이가 애매 구간 -> 문서 3차(LLM 보조)
+# BORDERLINE_MARGIN=0.06이면 0.64~0.70 사이가 애매 구간 -> 3차(LLM 보조)
 # 대상. 3차(stage3_llm_assist)가 실제로 이 borderline_pairs를 입력받아
 # 처리한다 - LLM이 "같은 사건"으로 확정한 쌍만 병합되고, 그 외(API 키
 # 없음/호출 실패 등)는 여전히 "안 묶는" 보수적 기본값으로 fallback.
@@ -194,10 +193,10 @@ BORDERLINE_MARGIN = 0.06
 
 def _embedding_text(article: dict) -> str:
     """
-    임베딩에 넣을 텍스트를 만든다. 문서 2.1: "제목 + 있으면 본문 요약 일부".
+    임베딩에 넣을 텍스트를 만든다 - "제목 + 있으면 본문 요약 일부".
     본문(body)이 있는 소스(WATT)는 앞부분 200자만 덧붙인다 - 본문 전체를
     넣으면 계산량만 늘고, 어차피 "같은 이슈인지" 판단엔 도입부만으로 충분한
-    경우가 대부분이라 문서 취지("일부")에 맞춰 짧게 자른다.
+    경우가 대부분이라 짧게 자른다.
     """
     title = article.get("title", "")
     body = article.get("body")
@@ -304,10 +303,10 @@ def stage2_group(
     반환값:
       grouped: 2차에서 새로 묶인 그룹들
       still_unmatched: 2차에서도 못 잡은 기사들 (혼자 남는 "단독 기사" -
-                        4번 섹션 (A-1) fallback 대상이 됨)
+                        llm_summarizer의 (A-1) fallback 대상이 됨)
       borderline_pairs: threshold 근처 애매 구간에 걸린 (기사A, 기사B, 유사도)
-                        쌍 목록 - 3차 LLM 보조가 아직 없어서 지금은 기록만
-                        해두고 그룹핑엔 반영하지 않음 (보수적 기본값)
+                        쌍 목록 - group_issues()가 이 목록을 3차 LLM 보조
+                        (stage3_llm_assist)에 넘겨 최종 병합 여부를 판단한다
     """
     if not articles:
         return [], [], []
@@ -365,35 +364,34 @@ def stage2_group(
 # 3차: LLM 그룹핑 보조 (임계값 애매 구간)
 # ---------------------------------------------------------------------------
 #
-# 문서 4번 섹션 (B) 그대로: 2차(임베딩) 유사도가 threshold 근처 애매 구간에
+# 2차(임베딩) 유사도가 threshold 근처 애매 구간에
 # 걸린 쌍만 LLM에 물어봐서 "같은 사건인지 아닌지" 최종 판단한다.
 # (전수 호출 아님 - stage2_group에서 이미 borderline_pairs로 걸러진 소수만 대상)
 #
-# 판정 기준은 2.1에서 확정한 이슈 그룹핑 정의를 그대로 따른다: "같은 사건"
+# 판정 기준은 이슈 그룹핑의 정의를 그대로 따른다: "같은 사건"
 # 이란 같은 질병/주제여도 국가·장소·시점이 다르면 별개 이슈다(예: 한국
 # 조류독감 발생과 미국 조류독감 발생은 별개). 이 기준을 LLM에게도 시스템
 # 프롬프트로 명시한다.
 #
 # ** 프로바이더 스위치 **
-# 기본은 Anthropic(Haiku 4.5) - 9.5 섹션 결론대로 이 프로젝트 규모에서
+# 기본은 Anthropic(Haiku 4.5) - 이 프로젝트 규모에서
 # 유료 API 비용은 무시 가능한 수준이고, 은퇴 공지 의무가 있어 장기 운영에
 # 안전하다. 다만 API 키 발급 결재가 아직 안 난 상태에서 로컬 개발/검증을
 # 막을 이유는 없으므로, 환경변수 LLM_PROVIDER로 임시 대체 경로(OpenRouter
-# 무료 모델)를 켤 수 있게 했다 - 9.5 섹션 "모델 이름은 설정 파일 한 곳에서만
-# 관리" 원칙대로, 프로바이더별 설정을 이 블록 하나에 모아둔다.
+# 무료 모델)를 켤 수 있게 했다 - 프로바이더별 설정을 이 블록 하나에 모아둔다.
 #
 #   LLM_PROVIDER=anthropic (기본값, 아무것도 안 하면 이 경로) - ANTHROPIC_API_KEY 사용
 #   LLM_PROVIDER=openrouter                                  - OPENROUTER_API_KEY 사용
 #
 # ** 중요 - openrouter는 "로컬 검증 전용" 임시 경로다 **
-# 9.5 섹션이 무료 모델을 권장하지 않는 이유(예고 없는 정책 변경/모델 제거)가
-# 그대로 적용되므로, GitHub Actions 등 실제 운영 환경에는 LLM_PROVIDER를
+# 무료 모델은 예고 없는 정책 변경/모델 제거 위험이 있으므로,
+# GitHub Actions 등 실제 운영 환경에는 LLM_PROVIDER를
 # 설정하지 말고 기본값(anthropic)을 그대로 둘 것 - 키 발급이 승인되면 이
 # 환경변수 자체를 지우기만 하면 원래 경로로 돌아간다.
 #
 # 무료 모델 하나를 못 박지 않고 OpenRouter의 자체 무료 라우터(openrouter/free)
 # 를 기본값으로 쓴 이유: 개별 :free 모델은 공급사가 예고 없이 무료 태그를
-# 뗄 수 있어(9.5 섹션과 같은 리스크) 코드가 조용히 깨질 수 있는데,
+# 뗄 수 있어 코드가 조용히 깨질 수 있는데,
 # openrouter/free는 그 라우팅 자체를 OpenRouter가 대신 처리해준다. 특정
 # 모델을 고정하고 싶으면 OPENROUTER_MODEL 환경변수로 덮어쓸 수 있다.
 #
@@ -496,8 +494,8 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
     재사용해 커넥션 오버헤드를 줄인다(relevance_filter.py와 동일한 방식).
 
     입력/출력 개수 불일치, JSON 파싱 실패, API 에러, 항목 형식 이상 등
-    신뢰할 수 없는 응답이면 None을 반환한다 - 9.4 "출력 형식을 코드로 자동
-    검증... 어긋나면 fallback" 원칙을 여기서도 그대로 적용 (fallback은 이
+    신뢰할 수 없는 응답이면 None을 반환한다 - 출력 형식을 코드로 자동
+    검증해서 어긋나면 fallback하는 원칙을 여기서도 그대로 적용 (fallback은 이
     함수를 부르는 stage3_llm_assist 쪽에서 "안 묶음"으로 처리).
     """
     user_prompt = _build_llm_user_prompt(pairs)
@@ -535,7 +533,7 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
             body = {
                 "model": LLM_MODEL_ANTHROPIC,
                 "max_tokens": 1024,
-                "temperature": 0,  # 9.4 "temperature 낮게" 원칙 그대로 - 판정 일관성 우선
+                "temperature": 0,  # 판정 일관성 우선 - temperature 낮게 유지
                 "system": _LLM_SYSTEM_PROMPT,
                 "messages": [{"role": "user", "content": user_prompt}],
             }
@@ -598,15 +596,14 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
 def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]]) -> list[tuple[dict, dict, float]]:
     """
     2차에서 애매 구간에 걸린 쌍들을 LLM에 물어봐서, "같은 사건"으로 확정된
-    쌍만 골라 반환한다 (문서 4번 섹션 (B) - 그룹을 지우는 게 아니라 묶을지
-    말지만 판단).
+    쌍만 골라 반환한다 (그룹을 지우는 게 아니라 묶을지 말지만 판단).
 
     LLM_PROVIDER(기본 anthropic)에 따라 필요한 API 키 환경변수가 다르다:
       anthropic  -> ANTHROPIC_API_KEY
       openrouter -> OPENROUTER_API_KEY (임시 로컬 검증용 - 위 프로바이더
                     스위치 주석 참조, 운영 환경에서는 쓰지 않을 것)
 
-    해당 키가 없거나 모든 배치 호출이 실패하면, 9.4/9.5 원칙대로 "안 묶음"
+    해당 키가 없거나 모든 배치 호출이 실패하면, "안 묶음"
     보수적 기본값으로 안전하게 fallback한다 - 이 경우 group_issues의 최종
     결과는 3차가 아예 없던 이전 동작과 동일해지므로 전체 파이프라인이
     죽지 않는다.
@@ -660,7 +657,7 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
     한 번 더 적용 - 그룹 안에 이미 묶인 기사와 아직 단독인 기사가 한 쌍으로
     확정될 수도 있으므로, "기사 단위"가 아니라 "구성요소 단위"로 합쳐야
     한다). article의 url을 구성요소 식별에 쓴다 - 이 시스템의 공통 스키마상
-    url은 항상 존재하고 고유하다 (2번 섹션 "완전 동일 기사 제거" 로직도
+    url은 항상 존재하고 고유하다("완전 동일 기사 제거" 로직도
     같은 전제로 URL을 키로 씀).
 
     ** 연쇄(사슬) 병합 방지 **
@@ -671,7 +668,7 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
     으로 셋 이상을 묶으면 위험함. 3개 이상이 연결된 경우, 그 안의 모든
     쌍이 실제로 LLM에게 직접 확인됐는지(완전 그래프/클리크인지) 검증하고,
     클리크가 아니면(사슬로만 연결됐으면) 병합하지 않고 개별 컴포넌트로
-    유지한다(9.4 "애매하면 안 묶는 게 안전하다" 원칙과 같은 방향).
+    유지한다(애매하면 안 묶는 게 안전하다는 원칙과 같은 방향).
     """
     stage1_grouped, stage1_unmatched = stage1_group(articles)
 
@@ -714,8 +711,8 @@ def _merge_confirmed_components(components: list[list[dict]],
     결과로 나온 각 연결 그룹에 대해 "그 그룹 안의 모든 쌍이 실제로 전부
     직접 확정됐는지"(완전 그래프/클리크인지) 검증한다.
       - 클리크면(모든 쌍이 직접 확인됨) 안전하게 병합.
-      - 클리크가 아니면(사슬로만 연결됐으면) 9.4 "애매하면 안 묶는 게
-        안전하다" 원칙에 따라 그 컴포넌트들을 병합하지 않고 그대로 둔다
+      - 클리크가 아니면(사슬로만 연결됐으면) "애매하면 안 묶는 게
+        안전하다"는 원칙에 따라 그 컴포넌트들을 병합하지 않고 그대로 둔다
         (로그로 남김 - 왜 안 묶였는지 사후 확인 가능하게).
     """
     if not confirmed_pairs:

@@ -1,6 +1,6 @@
 """
 relevance_filter.py
-"2.5 관련성 필터" - 정규화(URL dedup + 키워드 태깅) 직후, 2.1 이슈 그룹핑
+관련성 필터 - 정규화(URL dedup + 키워드 태깅) 직후, 이슈 그룹핑
 (임베딩 로드) 전에 실행한다.
 
 배경: 키워드 매칭만으로는 걸러지지 않는 오매칭 유형이 다수 확인됨 -
@@ -296,7 +296,7 @@ def filter_articles(articles: list[dict]) -> list[dict]:
 
     API 키가 없거나(LLM_PROVIDER에 맞는 키 환경변수 미설정) 모든 배치 호출이
     실패하면, 안전하게 원본 articles를 그대로 반환한다(필터를 그냥 안 거친
-    것과 동일 - 9.4/9.5 원칙과 같은 방향의 안전한 기본값).
+    것과 동일한 안전한 기본값).
 
     ** WATT 소스는 LLM 호출 없이 자동 통과 **
     WATT(WATTAgNet/Feed Strategy)는 그 자체가 사료·축산업 전문지라, 이
@@ -522,8 +522,7 @@ def recategorize_uncategorized(articles: list[dict]) -> list[dict]:
     filter_articles()를 통과했지만 category="기타"로 남아있는 기사를 LLM으로
     재분류한다. main.py에서 filter_articles() 바로 다음 단계로 부른다.
 
-    API 키가 없거나 전부 실패해도 안전하게 원본 그대로(재분류 없이) 반환 -
-    9.4/9.5 원칙과 같은 방향.
+    API 키가 없거나 전부 실패해도 안전하게 원본 그대로(재분류 없이) 반환.
     """
     targets = [a for a in articles if a.get("category") == "기타"]
     if not targets:

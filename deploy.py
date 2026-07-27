@@ -21,15 +21,15 @@ GitHub Secrets(민감정보라 Variables 아님)에서 읽는다:
 ** 콘텐츠 구성 **
 storage.py가 이미 만들어둔 domestic_summarized/international_summarized/
 domestic_by_category/international_by_category(scored.json과 동일한
-데이터)를 그대로 받아서 summary.md와 같은 구조(9.4 안전장치 - 요약 유무와
-무관하게 원문 링크는 항상 같이 노출)로 HTML을 렌더링한다. 이메일 클라이언트는
-외부 스타일시트를 지원 안 하는 경우가 많아 인라인 스타일만 사용.
+데이터)를 그대로 받아서 summary.md와 같은 구조(요약 유무와 무관하게 원문
+링크는 항상 같이 노출)로 HTML을 렌더링한다. 이메일 클라이언트는 외부
+스타일시트를 지원 안 하는 경우가 많아 인라인 스타일만 사용.
 
 ** 안전 실패 원칙 **
 storage.py와 같은 방향 - 이메일 발송이 실패해도(SMTP 인증 오류, 네트워크
 문제 등) 예외를 그대로 던지지 않고 로그만 남기고 조용히 실패한다. 이 시점엔
 이미 수집/스코어링/요약/저장이 다 끝난 뒤라, 배포 하나 실패했다고 전체
-실행을 죽이면 안 된다는 판단(9.1 원칙과 같은 방향).
+실행을 죽이면 안 된다는 판단.
 """
 
 import html

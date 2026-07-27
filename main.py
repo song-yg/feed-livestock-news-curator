@@ -1,13 +1,12 @@
 """
 main.py
 사료·축산업 뉴스 큐레이션 시스템의 오케스트레이션 레이어.
-(알고리즘 문서 "6. 실행/오케스트레이션 (Runner)" 참조)
 
 6단계 파이프라인 전부 구현 완료:
   1) 수집        -> watt/naver/gdelt collector 순차 실행
-  2) 정규화      -> 공통 스키마 통합 + 완전 동일 기사(URL) 제거 + 2.2 키워드
-                    태깅(keyword_tagger.py) + 2.5 관련성 필터(relevance_filter.py)
-                    + 2.6 카테고리 재분류(relevance_filter.py) + 2.1 이슈
+  2) 정규화      -> 공통 스키마 통합 + 완전 동일 기사(URL) 제거 + 키워드
+                    태깅(keyword_tagger.py) + 관련성 필터(relevance_filter.py)
+                    + 카테고리 재분류(relevance_filter.py) + 이슈
                     그룹핑(issue_grouper.py - 1차 사전 매칭 + 2차 BGE-M3
                     임베딩 + 3차 LLM 보조)
   3) 스코어링    -> scorer.py가 이슈(여러 기사 묶음) 단위로 점수 계산 +
@@ -18,7 +17,7 @@ main.py
                     담당. 프로바이더 설정(LLM_PROVIDER, 모델명, X-Title 등)은
                     issue_grouper.py에서 그대로 재사용. API 키가 없거나
                     LLM 호출이 실패해도 그 이슈는 "요약 생략, 원문 제목만
-                    노출"로 안전하게 fallback(9.4/9.5 원칙)
+                    노출"로 안전하게 fallback
   5) 저장        -> storage.py - data/YYYY-WW/에 raw.json(정규화+필터링된
                     최종 기사 데이터)/scored.json(스코어링+요약 결과,
                     articles 필드는 raw.json과 중복이라 제외)/summary.md
@@ -56,20 +55,20 @@ CATEGORY_TOP_N = 1
 
 
 # ---------------------------------------------------------------------------
-# 1) 수집 레이어 (섹션 1)
+# 1) 수집 레이어
 # ---------------------------------------------------------------------------
 
 def run_collectors() -> tuple[list[dict], dict, list[str]]:
     """
     watt/naver/gdelt collector를 순서대로 실행한다.
 
-    9.1 "소스별 독립 실행 구조" - 각 collector 호출을 개별 try/except로 감싸서 하나가 완전히 죽어도(예: import 실패, 예상 밖 예외) 나머지 소스는 계속 진행한다.
+    소스별 독립 실행 구조 - 각 collector 호출을 개별 try/except로 감싸서 하나가 완전히 죽어도(예: import 실패, 예상 밖 예외) 나머지 소스는 계속 진행한다.
     각 collector 내부에도 이미 더 세밀한 단위(WATT는 사이트별, naver/gdelt는 키워드별)의 방어가 있지만, 여기 main.py 레벨의 try/except는 "collector 모듈 자체가 통째로 실패하는 경우"에 대한 마지막 방어선이다.
 
     반환값:
       all_articles: watt+naver+gdelt 기사를 하나로 합친 리스트 (아직 정규화 전 원본 스키마 - 이미 세 collector가 공통 스키마를 지키므로 합치기만 하면 됨)
-      gdelt_timeline: GDELT 시계열 데이터 (3.1 규칙대로 스코어링에는 안 들어가고 참고 지표 전용 - storage.py가 scored.json에 그대로 저장)
-      failed_sources: 실패한 소스 이름 목록 (9.2 "에러 리포트 자동화"의 재료 - storage.py/deploy.py가 결과물에 반영)
+      gdelt_timeline: GDELT 시계열 데이터 (스코어링에는 안 들어가고 참고 지표 전용 - storage.py가 scored.json에 그대로 저장)
+      failed_sources: 실패한 소스 이름 목록 (storage.py/deploy.py가 결과물에 반영)
     """
     all_articles: list[dict] = []
     gdelt_timeline: dict = {}
@@ -103,14 +102,13 @@ def run_collectors() -> tuple[list[dict], dict, list[str]]:
 
 
 # ---------------------------------------------------------------------------
-# 2) 정규화 레이어 (섹션 2) - 완전 동일 기사 제거 + 2.2 키워드 태깅까지만
-#    (2.1 이슈 그룹핑은 미구현 - scorer.to_singleton_groups로 임시 대체)
+# 2) 정규화 레이어 - 완전 동일 기사 제거 + 키워드 태깅
 # ---------------------------------------------------------------------------
 
 def normalize(articles: list[dict]) -> list[dict]:
     """
     "완전 동일 기사 제거": 같은 URL이 중복 수집된 경우만 제거.
-    (2번 섹션 명시 - 이슈 그룹핑과는 다른 개념. 여긴 정말 똑같은 기사가 두 번 들어온 경우만 거른다 - 예: 페이지네이션 겹침, 재실행 등).
+    (이슈 그룹핑과는 다른 개념. 여긴 정말 똑같은 기사가 두 번 들어온 경우만 거른다 - 예: 페이지네이션 겹침, 재실행 등).
 
     첫 번째로 본 URL을 유지하고 이후 중복은 버린다 (순서 유지를 위해 dict를 순서 보존 집합처럼 사용).
     """
@@ -132,21 +130,21 @@ def normalize(articles: list[dict]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# 3) 스코어링 (섹션 3) - scorer.py 그대로 사용
+# 3) 스코어링 - scorer.py 그대로 사용
 # ---------------------------------------------------------------------------
 
 def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list[dict], dict, dict]:
     """
-    이슈 그룹핑(issue_grouper.group_issues) + 3.1/3.2 국내/해외 개별 랭킹(Top N)까지 수행.
+    이슈 그룹핑(issue_grouper.group_issues) + 국내/해외 개별 랭킹(Top N)까지 수행.
 
     ** 그룹핑을 먼저, 축 분리는 그 다음 (설계 결정) **
-    알고리즘 문서 2.1 "작동 방식" 3번은 매칭 범위를 "전체 기사 벡터 x 전체 기사 벡터"(국내-국내 / 해외-해외 / 국내-해외 전부 포함)로 명시하고 있다.
-    국내/해외를 먼저 나눠서 각각 그룹핑하면 국내-해외 교차 매칭이 구조적으로 아예 발생할 수 없게 된다 (문서 정의와 어긋남).
+    이슈 매칭 범위는 "전체 기사 벡터 x 전체 기사 벡터"(국내-국내 / 해외-해외 / 국내-해외 전부 포함)여야 한다.
+    국내/해외를 먼저 나눠서 각각 그룹핑하면 국내-해외 교차 매칭이 구조적으로 아예 발생할 수 없게 된다.
     그래서 순서는: ① 전체 기사를 대상으로 group_issues()를 한 번 호출 -> ② 그 결과 그룹들을 국내/해외 축으로 "나눠서" scorer에 넘긴다.
 
     ** 국내-해외 교차 매칭된 그룹의 처리 **
     group_issues가 만든 그룹 하나가 국내(네이버)·해외(WATT/GDELT) 기사를 동시에 포함할 수 있다.
-    3.2 원칙("양쪽 리스트 모두에서 노출... 하나의 점수로 합치지는 않음, 정규화·환산 없이 각 축의 원본 신호를 그대로 보존")대로,
+    "양쪽 리스트 모두에서 노출하되 하나의 점수로 합치지는 않음, 정규화·환산 없이 각 축의 원본 신호를 그대로 보존"하는 원칙대로,
     이런 그룹은 국내 축 스코어링엔 그 그룹 안의 네이버 기사만, 해외 축 스코어링엔 그 그룹 안의 WATT/GDELT 기사만 걸러서 넘긴다 - 각 축의 issue_score가 그 축 안에서의 원본 신호만 반영하게 하기 위함이다.
     "이 이슈가 다른 축에서도 다뤄졌다"는 🔗 표시로 화면에 노출된다 - 아래 domestic_part/international_part 둘 다 비어있지 않은 경우에만 서로에게 "_cross_axis_partner"를 붙이고, scorer.score_group()이 이를 cross_axis_partner 정식 필드로 승격한다.
 
@@ -227,7 +225,7 @@ def _load_embedding_model():
 
     모델 로드 실패(최초 실행 시 다운로드 실패, 패키지 미설치, 캐시 문제 등) 시에도 전체 파이프라인이 죽지 않도록 여기서 예외를 잡아 None을 반환한다.
     issue_grouper.group_issues(articles, model=None)이 이미 "2차(임베딩) 생략, 1차 사전 매칭 결과만 사용"으로 안전하게 fallback하도록 설계돼 있으므로(issue_grouper.py group_issues 참고),
-    이 함수의 실패가 9.1 "소스별 독립 실행 구조"와 같은 철학으로 전체 중단 없이 흡수된다.
+    이 함수의 실패가 소스별 독립 실행 구조와 같은 철학으로 전체 중단 없이 흡수된다.
     (완전한 자동 복구는 아님 - 다음 실행에서 모델 로드가 다시 성공하길 기대하는 정도의 완화책).
     """
     try:
@@ -284,13 +282,13 @@ def step4_category_llm_summary(domestic_category_ranked: dict[str, list[dict]],
 def step4_llm_summary(domestic_ranked: list[dict],
                        international_ranked: list[dict]) -> tuple[list[dict], list[dict]]:
     """
-    섹션 4 (A) 자체 요약 + (A-1) 얇은 재료 fallback. 실제 로직은
+    (A) 자체 요약 + (A-1) 얇은 재료 fallback. 실제 로직은
     llm_summarizer.py에 있고, 이 함수는 국내/해외 축을 각각 넘겨주는 얇은
     호출부다. (B) 그룹핑 보조는 issue_grouper.stage3_llm_assist가 처리한다
     - 여기서는 (A)/(A-1)만 다룬다.
 
     domestic_ranked/international_ranked는 score()에서 이미 top_n=5로 제한된
-    상태로 들어온다 (7번 섹션 "초기엔 주간 Top 5로 제한 운영" 방침 그대로 -
+    상태로 들어온다 (초기엔 주간 Top 5로 제한 운영하는 방침 그대로 -
     여기서 추가로 자르지 않음).
 
     반환값은 입력과 같은 형태(list[dict])에 "summary"/"summary_skipped_reason"
@@ -314,7 +312,7 @@ def run() -> None:
     # 리포 파일 동기화 문제로 실제 배포된 코드에 함수가 없는 경우 등)가
     # 나도 그 단계만 안전한 기본값으로 넘어가고, 이미 모은 articles는
     # 그대로 살려서 [5] 저장/[6] 배포까지 도달하게 한다. storage.py/deploy.py
-    # 호출부에 이미 있던 것과 같은 방향(9.1 "소스별 독립 실행 구조") - 한
+    # 호출부에 이미 있던 것과 같은 방향(소스별 독립 실행 구조) - 한
     # 단계의 예상 못 한 실패가 그 이전까지 쌓은 결과 전체를 날려버리면 안 됨.
     try:
         articles = normalize(articles)
@@ -340,7 +338,7 @@ def run() -> None:
     # 서로 달라서, 사전엔 안 걸려 category="기타"로 붙었는데 relevance_filter
     # 가 "관련 있음"으로 확정하는 기사가 생길 수 있음 - 이 기사는 필터는
     # 통과하는데 category는 계속 "기타"라, "기타"를 제외하는 카테고리별
-    # Top N(3번 섹션)에는 영원히 못 들어가는 공백이 있었음. 이 단계로 그
+    # Top N에는 영원히 못 들어가는 공백이 있었음. 이 단계로 그
     # 기사들만 다시 LLM에 물어 재분류한다 - 자세한 설계 배경은
     # relevance_filter.recategorize_uncategorized() docstring 참고.
     try:
@@ -428,7 +426,7 @@ def run() -> None:
     else:
         # storage.py 내부는 이미 파일 단위로 안전하게 실패를 흡수하도록
         # 만들었지만(storage.py docstring 참고), 예상 못 한 예외까지 완벽히
-        # 막을 순 없으므로 9.1 "소스별 독립 실행 구조"와 같은 방향으로 마지막
+        # 막을 순 없으므로 소스별 독립 실행 구조와 같은 방향으로 마지막
         # 방어선을 하나 더 둔다 - 저장이 통째로 실패해도 이미 콘솔에 다 출력된
         # 이번 실행 결과(수집/스코어링/요약)는 그대로 남는다.
         try:
@@ -456,8 +454,8 @@ def run() -> None:
 
     if failed_sources:
         saved_dir_note = f"{saved_dir}/scored.json에도" if saved_dir else "(data/ 파일에는 안 남았지만)"
-        print(f"\n[main] 🔴 조치필요 [MN-14] - 이번 실행 실패 소스: {failed_sources} (9.2 에러 리포트 - "
-              f"{saved_dir_note} failed_sources로 같이 저장됨)")
+        print(f"\n[main] 🔴 조치필요 [MN-14] - 이번 실행 실패 소스: {failed_sources} "
+              f"({saved_dir_note} failed_sources로 같이 저장됨)")
 
 
 if __name__ == "__main__":
