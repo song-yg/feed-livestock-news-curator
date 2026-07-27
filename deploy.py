@@ -1,14 +1,16 @@
 """
 deploy.py - 6단계 배포 레이어.
 
-Gmail SMTP로 이번 주 큐레이션 결과를 HTML 이메일로 발송한다.
-main.py의 [6] 배포 단계에서 이 모듈의 send_weekly_email()을 호출한다.
+Gmail SMTP로 이번 주 큐레이션 결과를 HTML 이메일로 발송한다. main.py의
+[6] 배포 단계에서 이 모듈의 send_weekly_email()을 호출한다.
 
 ** Gmail SMTP를 선택한 이유 **
-SendGrid/Mailgun 같은 무료 트랜잭션 이메일 API는 도메인 인증(SPF/DKIM) 없이 기본 발신 주소로 보내면 스팸함으로 분류될 확률이 높음
-- 이제 막 만든 발신자라 평판이 전혀 없는 상태로 시작하기 때문.
-Gmail SMTP는 실제 Gmail 계정에서 Gmail 서버를 통해 보내는 거라 SPF/DKIM이 자동으로 유효하고 발신처 신뢰도도 이미 높아 이 문제가 훨씬 덜함
-- 특히 지금처럼 수신자가 소수일 때는 도메인 설정 같은 번거로운 과정 없이 바로 쓸 수 있는 쪽이 낫다.
+SendGrid/Mailgun 같은 무료 트랜잭션 이메일 API는 도메인 인증(SPF/DKIM)
+없이 기본 발신 주소로 보내면 스팸함으로 분류될 확률이 높음 - 이제 막 만든
+발신자라 평판이 전혀 없는 상태로 시작하기 때문. Gmail SMTP는 실제 Gmail
+계정에서 Gmail 서버를 통해 보내는 거라 SPF/DKIM이 자동으로 유효하고
+발신처 신뢰도도 이미 높아 이 문제가 훨씬 덜함 - 특히 지금처럼 수신자가
+소수일 때는 도메인 설정 같은 번거로운 과정 없이 바로 쓸 수 있는 쪽이 낫다.
 
 ** 인증정보 관리 **
 GitHub Secrets(민감정보라 Variables 아님)에서 읽는다:
@@ -17,14 +19,17 @@ GitHub Secrets(민감정보라 Variables 아님)에서 읽는다:
   EMAIL_RECIPIENTS   수신자 이메일, 콤마로 구분
 
 ** 콘텐츠 구성 **
-storage.py가 이미 만들어둔 domestic_summarized/international_summarized/domestic_by_category/international_by_category(scored.json과 동일한 데이터)를 그대로 받아서
-summary.md와 같은 구조(9.4 안전장치 - 요약 유무와 무관하게 원문 링크는 항상 같이 노출)로 HTML을 렌더링한다.
-이메일 클라이언트는 외부 스타일시트를 지원 안 하는 경우가 많아 인라인 스타일만 사용.
+storage.py가 이미 만들어둔 domestic_summarized/international_summarized/
+domestic_by_category/international_by_category(scored.json과 동일한
+데이터)를 그대로 받아서 summary.md와 같은 구조(9.4 안전장치 - 요약 유무와
+무관하게 원문 링크는 항상 같이 노출)로 HTML을 렌더링한다. 이메일 클라이언트는
+외부 스타일시트를 지원 안 하는 경우가 많아 인라인 스타일만 사용.
 
 ** 안전 실패 원칙 **
-storage.py와 같은 방향
-- 이메일 발송이 실패해도(SMTP 인증 오류, 네트워크 문제 등) 예외를 그대로 던지지 않고 로그만 남기고 조용히 실패한다.
-이 시점엔 이미 수집/스코어링/요약/저장이 다 끝난 뒤라, 배포 하나 실패했다고 전체 실행을 죽이면 안 된다는 판단(9.1 원칙과 같은 방향).
+storage.py와 같은 방향 - 이메일 발송이 실패해도(SMTP 인증 오류, 네트워크
+문제 등) 예외를 그대로 던지지 않고 로그만 남기고 조용히 실패한다. 이 시점엔
+이미 수집/스코어링/요약/저장이 다 끝난 뒤라, 배포 하나 실패했다고 전체
+실행을 죽이면 안 된다는 판단(9.1 원칙과 같은 방향).
 """
 
 import html
@@ -97,8 +102,9 @@ def _format_category_html(label: str, by_category: dict[str, list[dict]]) -> str
 
 def _format_category_comparison_html(category_comparison: dict[str, dict[str, dict]] | None) -> str:
     """
-    category_aggregator.compare_with_last_week()의 결과를 이메일 상단에 넣을 HTML로 만든다.
-    storage._format_category_comparison_section(summary.md용)과 같은 정보, 렌더링 형식만 HTML.
+    category_aggregator.compare_with_last_week()의 결과를 이메일 상단에
+    넣을 HTML로 만든다. storage._format_category_comparison_section
+    (summary.md용)과 같은 정보, 렌더링 형식만 HTML.
     """
     if not category_comparison:
         return ""
@@ -130,8 +136,9 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     scored.json과 동일한 데이터를 받아 이메일 본문(HTML 문자열)을 만든다.
     summary.md(storage.py)와 콘텐츠 구성은 같고 렌더링 형식만 HTML로 다르다.
 
-    category_comparison(지난주 대비 증감)이 있으면 제목 바로 아래에 추가
-    - "이번 주 큰 흐름"을 이슈 목록보다 먼저 보여주는 구성(summary.md와 동일한 배치 원칙).
+    category_comparison(지난주 대비 증감)이 있으면 제목 바로 아래에 추가 -
+    "이번 주 큰 흐름"을 이슈 목록보다 먼저 보여주는 구성(summary.md와
+    동일한 배치 원칙).
     """
     parts = [
         '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Arial, sans-serif; '
@@ -158,8 +165,9 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
 def send_email(html_content: str, subject: str, recipients: list[str],
                smtp_user: str, smtp_app_password: str) -> bool:
     """
-    Gmail SMTP(587, STARTTLS)로 HTML 이메일을 보낸다. 성공하면 True, 실패하면 (예외를 던지지 않고) False를 반환한다
-    - 호출부가 이 결과로 로그만 남기고 계속 진행할 수 있게.
+    Gmail SMTP(587, STARTTLS)로 HTML 이메일을 보낸다. 성공하면 True, 실패하면
+    (예외를 던지지 않고) False를 반환한다 - 호출부가 이 결과로 로그만 남기고
+    계속 진행할 수 있게.
     """
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -173,7 +181,7 @@ def send_email(html_content: str, subject: str, recipients: list[str],
             server.login(smtp_user, smtp_app_password)
             server.sendmail(smtp_user, recipients, msg.as_string())
     except (smtplib.SMTPException, OSError) as e:
-        print(f"[deploy] 이메일 발송 실패: {type(e).__name__} - {e}")
+        print(f"[deploy] 🔴 조치필요 - 이메일 발송 실패: {type(e).__name__} - {e!r}")
         return False
 
     print(f"[deploy] 이메일 발송 완료 -> {', '.join(recipients)}")
@@ -186,23 +194,23 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
                        failed_sources: list[str],
                        category_comparison: dict[str, dict[str, dict]] | None = None) -> bool:
     """
-    main.py에서 부르는 단일 진입점.
-    환경변수(GitHub Secrets)에서 인증정보를 읽고, 없으면 요약 모듈들과 같은 패턴으로 안전하게 생략한다.
+    main.py에서 부르는 단일 진입점. 환경변수(GitHub Secrets)에서 인증정보를
+    읽고, 없으면 요약 모듈들과 같은 패턴으로 안전하게 생략한다.
     """
     smtp_user = os.environ.get("SMTP_USER")
     smtp_app_password = os.environ.get("SMTP_APP_PASSWORD")
     recipients_raw = os.environ.get("EMAIL_RECIPIENTS")
 
     if not smtp_user or not smtp_app_password:
-        print("[deploy] SMTP_USER/SMTP_APP_PASSWORD 없음 - 이메일 발송 생략")
+        print("[deploy] 🔴 조치필요 - SMTP_USER/SMTP_APP_PASSWORD 없음 - 이메일 발송 생략")
         return False
     if not recipients_raw:
-        print("[deploy] EMAIL_RECIPIENTS 없음 - 이메일 발송 생략")
+        print("[deploy] 🔴 조치필요 - EMAIL_RECIPIENTS 없음 - 이메일 발송 생략")
         return False
 
     recipients = [r.strip() for r in recipients_raw.split(",") if r.strip()]
     if not recipients:
-        print("[deploy] EMAIL_RECIPIENTS가 비어있음(콤마만 있거나 공백) - 이메일 발송 생략")
+        print("[deploy] 🔴 조치필요 - EMAIL_RECIPIENTS가 비어있음(콤마만 있거나 공백) - 이메일 발송 생략")
         return False
 
     html_content = render_email_html(week_label, domestic_summarized, international_summarized,

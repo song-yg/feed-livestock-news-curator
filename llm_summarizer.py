@@ -144,7 +144,7 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: reque
         # 못 찾은 경우, 예: API 응답 스키마 변경) 실제로 뭘 받았는지 잘라서
         # 같이 남긴다 - relevance_filter.py/issue_grouper.py와 동일한 이유.
         snippet = (" ".join(str(data).split())[:200] + "...") if data is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
-        print(f"[llm_summarizer] LLM({_ig.LLM_PROVIDER}) 호출 실패: {type(e).__name__} - {e!r} "
+        print(f"[llm_summarizer] 🔴 조치필요 - LLM({_ig.LLM_PROVIDER}) 호출 실패: {type(e).__name__} - {e!r} "
               f"| 실제 응답: {snippet}")
         return None
 

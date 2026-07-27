@@ -249,14 +249,14 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
         parsed = json.loads(text.strip())
     except Exception as e:
         snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
-        print(f"[relevance_filter] LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치"
+        print(f"[relevance_filter] 🔴 조치필요 - LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치"
               f"({len(batch)}건) 전부 통과 처리: {type(e).__name__} - {e!r} "
               f"| 실제 응답: {snippet}")
         return None
 
     if not isinstance(parsed, list) or not parsed:
         actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
-        print(f"[relevance_filter] LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 "
+        print(f"[relevance_filter] 🔴 조치필요 - LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 "
               f"아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 통과 처리 "
               f"| 실제 응답: {_snippet_for_log(text)}")
         return None
@@ -282,7 +282,7 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
             results.append(True)  # 안전한 기본값 - 통과
 
     if missing:
-        print(f"[relevance_filter] LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
+        print(f"[relevance_filter] 🟡 주의 - LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
               f"(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 통과 처리, "
               f"나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
 
@@ -328,7 +328,7 @@ def filter_articles(articles: list[dict]) -> list[dict]:
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[relevance_filter] {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+        print(f"[relevance_filter] 🟡 주의 - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"관련성 필터 생략, {len(llm_target_articles)}건(네이버/GDELT) 전부 통과")
         return articles
 
@@ -343,12 +343,7 @@ def filter_articles(articles: list[dict]) -> list[dict]:
     with requests.Session() as session:
         for batch_num, i in enumerate(range(0, len(llm_target_articles), BATCH_SIZE), start=1):
             batch = llm_target_articles[i:i + BATCH_SIZE]
-            # 배치 시작 시점에 포함된 기사 제목을 남겨서, 특정 기사가 "LLM이
-            # 판정했는데 놓친 것"인지 "429 등으로 애초에 판정 자체를 못 받은
-            # 것"인지 바로 다음 줄의 성공/실패 로그와 대조해 사후 추적 가능하게 함.
-            titles_preview = " / ".join(a.get("title", "")[:40] for a in batch)
-            print(f"[relevance_filter] 배치 {batch_num}/{total_batches} 처리 중 "
-                  f"({len(batch)}건): {titles_preview}")
+            print(f"[relevance_filter] 배치 {batch_num}/{total_batches} 처리 중 ({len(batch)}건)")
             results = _call_llm(batch, api_key, session)
             if results is None:
                 kept.extend(batch)  # 이 배치는 전부 통과 (안전한 기본값)
@@ -481,14 +476,14 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
         parsed = json.loads(text.strip())
     except Exception as e:
         snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
-        print(f"[relevance_filter] 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
+        print(f"[relevance_filter] 🔴 조치필요 - 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
               f"이 배치({len(batch)}건) 전부 '기타' 유지: {type(e).__name__} - {e!r} "
               f"| 실제 응답: {snippet}")
         return None
 
     if not isinstance(parsed, list) or not parsed:
         actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
-        print(f"[relevance_filter] 카테고리 재분류 LLM({LLM_PROVIDER}) 출력 형식 이상"
+        print(f"[relevance_filter] 🔴 조치필요 - 카테고리 재분류 LLM({LLM_PROVIDER}) 출력 형식 이상"
               f"(리스트가 아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 '기타' 유지 "
               f"| 실제 응답: {_snippet_for_log(text)}")
         return None
@@ -515,7 +510,7 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
             results.append("기타")  # 안전한 기본값 - 재분류 안 하고 기타 유지
 
     if missing:
-        print(f"[relevance_filter] 카테고리 재분류 LLM({LLM_PROVIDER}) 출력에서 id {missing} "
+        print(f"[relevance_filter] 🟡 주의 - 카테고리 재분류 LLM({LLM_PROVIDER}) 출력에서 id {missing} "
               f"누락/형식 이상(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 "
               f"'기타' 유지, 나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
 
@@ -537,7 +532,7 @@ def recategorize_uncategorized(articles: list[dict]) -> list[dict]:
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[relevance_filter] {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+        print(f"[relevance_filter] 🟡 주의 - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"카테고리 재분류 생략, {len(targets)}건 '기타' 그대로 유지")
         return articles
 

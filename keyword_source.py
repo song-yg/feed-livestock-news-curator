@@ -88,13 +88,13 @@ def _fetch_csv_rows(csv_url: str) -> list[dict] | None:
         reader = csv.DictReader(io.StringIO(text))
         rows = list(reader)
         if not rows:
-            print("[keyword_source] 시트가 비어있음 - fallback 사용")
+            print("[keyword_source] 🟡 주의 - 시트가 비어있음 - fallback 사용")
             _cache[csv_url] = None
             return None
         _cache[csv_url] = rows
         return rows
     except Exception as e:
-        print(f"[keyword_source] 시트 읽기 실패: {type(e).__name__} - {e!r} - fallback 사용")
+        print(f"[keyword_source] 🔴 조치필요 - 시트 읽기 실패: {type(e).__name__} - {e!r} - fallback 사용")
         _cache[csv_url] = None
         return None
 
@@ -144,7 +144,7 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
     """
     csv_url = os.environ.get("KEYWORD_SHEET_CSV_URL")
     if not csv_url:
-        print(f"[keyword_source] KEYWORD_SHEET_CSV_URL 없음 - {lang} 기본(하드코딩) 키워드 리스트 사용: {fallback}")
+        print(f"[keyword_source] 🔴 조치필요 - KEYWORD_SHEET_CSV_URL 없음 - {lang} 기본(하드코딩) 키워드 리스트 사용: {fallback}")
         return fallback
 
     rows = _fetch_csv_rows(csv_url)
@@ -166,7 +166,7 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
 
     if mismatches:
         detail = ", ".join(f"'{kw}'(시트={declared} -> 실제={actual})" for kw, declared, actual in mismatches)
-        print(f"[keyword_source] 시트 lang 컬럼과 실제 키워드 언어가 다른 항목 {len(mismatches)}건 "
+        print(f"[keyword_source] 🟡 주의 - 시트 lang 컬럼과 실제 키워드 언어가 다른 항목 {len(mismatches)}건 "
               f"발견 - 실제 언어 기준으로 자동 보정해서 사용(시트도 고쳐두는 걸 권장): {detail}")
 
     # 중복 키워드 제거 - 시트에 같은 키워드가 실수로 두 번 이상 등록되면
@@ -189,11 +189,11 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
     keywords = deduped_keywords
 
     if duplicates:
-        print(f"[keyword_source] 시트에 중복 등록된 {lang} 키워드 {len(duplicates)}건 제외(첫 등장만 유지): "
+        print(f"[keyword_source] 🟡 주의 - 시트에 중복 등록된 {lang} 키워드 {len(duplicates)}건 제외(첫 등장만 유지): "
               f"{duplicates}")
 
     if not keywords:
-        print(f"[keyword_source] 구글 시트에 lang={lang} 활성 키워드가 하나도 없음 - fallback 사용")
+        print(f"[keyword_source] 🟡 주의 - 구글 시트에 lang={lang} 활성 키워드가 하나도 없음 - fallback 사용")
         return fallback
 
     print(f"[keyword_source] 구글 시트에서 {lang} 키워드 {len(keywords)}개 로드: {keywords}")
