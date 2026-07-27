@@ -310,17 +310,31 @@ def run() -> None:
     articles, gdelt_timeline, failed_sources = run_collectors()
 
     print("\n=== [2] 정규화 (스키마 통일은 collector가 이미 함 / URL dedup + 키워드 태깅) ===")
-    articles = normalize(articles)
-    keyword_tagger.tag_articles(articles)
-    keyword_tagger.print_category_distribution(articles)
-    keyword_tagger.print_uncategorized_sample(articles, sample_size=30)
+    # 이 단계부터 [4-보조]까지는 각각 안전망을 둔다 - 예상 못 한 예외(예:
+    # 리포 파일 동기화 문제로 실제 배포된 코드에 함수가 없는 경우 등)가
+    # 나도 그 단계만 안전한 기본값으로 넘어가고, 이미 모은 articles는
+    # 그대로 살려서 [5] 저장/[6] 배포까지 도달하게 한다. storage.py/deploy.py
+    # 호출부에 이미 있던 것과 같은 방향(9.1 "소스별 독립 실행 구조") - 한
+    # 단계의 예상 못 한 실패가 그 이전까지 쌓은 결과 전체를 날려버리면 안 됨.
+    try:
+        articles = normalize(articles)
+        keyword_tagger.tag_articles(articles)
+        keyword_tagger.print_category_distribution(articles)
+        keyword_tagger.print_uncategorized_sample(articles, sample_size=30)
+    except Exception as e:
+        print(f"[main] [2] 정규화/태깅 단계에서 예상 못 한 오류 발생 - 원본 기사 그대로 다음 단계로 진행: "
+              f"{type(e).__name__} - {e!r}")
 
     print("\n=== [2.5] 관련성 필터 (LLM - 사료·축산업 뉴스가 아닌 기사 제외) ===")
     # 키워드 매칭만으로는 못 거르는 오매칭(동음이의어, 기관명 일부로만 등장,
     # 각주성 언급 등)을 LLM이 제목/요약 맥락으로 판단해 걸러낸다 - 이후
     # 단계(임베딩 계산, 3차 LLM 그룹핑 보조)의 대상도 함께 줄어드는 효과가
     # 있음. 자세한 설계 배경은 relevance_filter.py 모듈 docstring 참고.
-    articles = relevance_filter.filter_articles(articles)
+    try:
+        articles = relevance_filter.filter_articles(articles)
+    except Exception as e:
+        print(f"[main] [2.5] 관련성 필터 단계에서 예상 못 한 오류 발생 - 필터링 없이 다음 단계로 진행: "
+              f"{type(e).__name__} - {e!r}")
 
     print("\n=== [2.6] 카테고리 재분류 (LLM - '기타'로 남았지만 관련성 확인된 기사) ===")
     # keyword_tagger(사전 매칭)와 relevance_filter(LLM 관련성 판단)는 기준이
@@ -330,46 +344,72 @@ def run() -> None:
     # Top N(3번 섹션)에는 영원히 못 들어가는 공백이 있었음. 이 단계로 그
     # 기사들만 다시 LLM에 물어 재분류한다 - 자세한 설계 배경은
     # relevance_filter.recategorize_uncategorized() docstring 참고.
-    articles = relevance_filter.recategorize_uncategorized(articles)
+    try:
+        articles = relevance_filter.recategorize_uncategorized(articles)
+    except Exception as e:
+        print(f"[main] [2.6] 카테고리 재분류 단계에서 예상 못 한 오류 발생 - 재분류 없이 다음 단계로 진행: "
+              f"{type(e).__name__} - {e!r}")
 
     print("\n=== [2.1] 이슈 그룹핑 임베딩 모델 로드 (BGE-M3, 실행당 1회) ===")
     embedding_model = _load_embedding_model()
 
     print("\n=== [3] 스코어링 (2.1 이슈 그룹핑 + 국내/해외 개별 Top N + 카테고리별 Top N) ===")
-    (domestic_ranked, international_ranked,
-     domestic_category_ranked, international_category_ranked) = score(articles, embedding_model, top_n=5)
-    scorer.print_top_n("국내", domestic_ranked, n=5)
-    scorer.print_top_n("해외", international_ranked, n=5)
-    scorer.print_category_top_n("국내", domestic_category_ranked, n=CATEGORY_TOP_N)
-    scorer.print_category_top_n("해외", international_category_ranked, n=CATEGORY_TOP_N)
+    try:
+        (domestic_ranked, international_ranked,
+         domestic_category_ranked, international_category_ranked) = score(articles, embedding_model, top_n=5)
+        scorer.print_top_n("국내", domestic_ranked, n=5)
+        scorer.print_top_n("해외", international_ranked, n=5)
+        scorer.print_category_top_n("국내", domestic_category_ranked, n=CATEGORY_TOP_N)
+        scorer.print_category_top_n("해외", international_category_ranked, n=CATEGORY_TOP_N)
+    except Exception as e:
+        print(f"[main] [3] 스코어링 단계에서 예상 못 한 오류 발생 - 이번 주는 Top N 없이 진행"
+              f"(저장 단계에서 raw.json은 그대로 남음): {type(e).__name__} - {e!r}")
+        domestic_ranked, international_ranked = [], []
+        domestic_category_ranked, international_category_ranked = {}, {}
 
     print("\n=== [3-보조] 카테고리 전체 집계 (국내/해외, 지난주 대비 증감 포함) ===")
     # 이슈 그룹핑이 "동일 사건만" 묶는 좁은 정의라 큰 트렌드가 개별 이슈로
     # 흩어져 보이는 공백을 메우는 거친(coarse) 보조 지표 - 순위(Top N)와는
     # 별개로, 카테고리 자체가 이번 주 몇 건 다뤄졌는지만 보여준다.
     # (category_aggregator.py 모듈 docstring 참고)
-    category_distribution = category_aggregator.aggregate(articles)
-    # 지난주 scored.json이 있으면 카테고리별 증감을 같이 보여준다. 지난주
-    # 데이터가 없으면(첫 실행 등) compare_with_last_week가 안전하게 None을
-    # 반환하고, 아래 출력 함수는 그 경우 증감 없이 출력한다(category_
-    # aggregator.py 함수 docstring 참고).
-    category_comparison = category_aggregator.compare_with_last_week(category_distribution)
-    category_aggregator.print_aggregate_with_comparison(category_distribution, category_comparison)
+    try:
+        category_distribution = category_aggregator.aggregate(articles)
+        # 지난주 scored.json이 있으면 카테고리별 증감을 같이 보여준다. 지난주
+        # 데이터가 없으면(첫 실행 등) compare_with_last_week가 안전하게 None을
+        # 반환하고, 아래 출력 함수는 그 경우 증감 없이 출력한다(category_
+        # aggregator.py 함수 docstring 참고).
+        category_comparison = category_aggregator.compare_with_last_week(category_distribution)
+        category_aggregator.print_aggregate_with_comparison(category_distribution, category_comparison)
+    except Exception as e:
+        print(f"[main] [3-보조] 카테고리 집계 단계에서 예상 못 한 오류 발생 - 이번 주는 집계 없이 진행: "
+              f"{type(e).__name__} - {e!r}")
+        category_distribution, category_comparison = {}, None
 
     # 4~6단계
     print("\n=== [4] LLM 요약 생성 (상위 이슈, 국내/해외 각각) ===")
-    domestic_summarized, international_summarized = step4_llm_summary(
-        domestic_ranked, international_ranked)
-    llm_summarizer.print_summaries("국내", domestic_summarized)
-    llm_summarizer.print_summaries("해외", international_summarized)
+    try:
+        domestic_summarized, international_summarized = step4_llm_summary(
+            domestic_ranked, international_ranked)
+        llm_summarizer.print_summaries("국내", domestic_summarized)
+        llm_summarizer.print_summaries("해외", international_summarized)
+    except Exception as e:
+        print(f"[main] [4] LLM 요약 단계에서 예상 못 한 오류 발생 - 요약 없이(원문 제목만) 진행: "
+              f"{type(e).__name__} - {e!r}")
+        domestic_summarized, international_summarized = domestic_ranked, international_ranked
 
     print("\n=== [4-보조] LLM 요약 생성 (카테고리별 Top N, 국내/해외 각각) ===")
-    domestic_category_summarized, international_category_summarized = step4_category_llm_summary(
-        domestic_category_ranked, international_category_ranked)
-    for category, items in domestic_category_summarized.items():
-        llm_summarizer.print_summaries(f"국내-{category}", items)
-    for category, items in international_category_summarized.items():
-        llm_summarizer.print_summaries(f"해외-{category}", items)
+    try:
+        domestic_category_summarized, international_category_summarized = step4_category_llm_summary(
+            domestic_category_ranked, international_category_ranked)
+        for category, items in domestic_category_summarized.items():
+            llm_summarizer.print_summaries(f"국내-{category}", items)
+        for category, items in international_category_summarized.items():
+            llm_summarizer.print_summaries(f"해외-{category}", items)
+    except Exception as e:
+        print(f"[main] [4-보조] 카테고리별 LLM 요약 단계에서 예상 못 한 오류 발생 - 요약 없이(원문 제목만) 진행: "
+              f"{type(e).__name__} - {e!r}")
+        domestic_category_summarized, international_category_summarized = (
+            domestic_category_ranked, international_category_ranked)
 
     print("\n=== [5] 저장 (data/YYYY-WW/raw.json, scored.json, summary.md) ===")
     # storage.py 내부는 이미 파일 단위로 안전하게 실패를 흡수하도록
