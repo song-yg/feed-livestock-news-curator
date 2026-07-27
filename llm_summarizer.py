@@ -181,16 +181,29 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     result = dict(item)
     titles = item.get("titles", [])
 
-    # (A-1) 얇은 재료 fallback (문서 4번 섹션 (A-1)): 이슈 그룹핑이 안
-    # 되고(그룹 크기 1) 언론사 1곳만 보도한 단독 기사는 재료(제목 하나뿐)가
-    # 너무 얇아 LLM이 요약을 만들면 사실상 제목을 부풀리는 것과 다름없으므로,
-    # 애초에 LLM 호출 자체를 생략한다.
+    # (A-1) 얇은 재료 fallback (문서 4번 섹션 (A-1)): 이슈 그룹핑이 안 되고
+    # (그룹 크기 1) 언론사 1곳만 보도한 단독 기사라도, 실제로 요약할 재료가
+    # 있으면(예: WATT는 본문 전체를 긁어오므로 body가 충분히 김) 굳이
+    # 생략할 이유가 없다 - 재료가 얇아서 생략하는 거지, "단독 기사"라서
+    # 생략하는 게 아니다. GDELT는 스펙상 body/description이 아예 없고,
+    # 네이버는 description은 있지만 짧은 스니펫뿐이라 대부분 이 기준에
+    # 못 미침 - 결과적으로 WATT 단독 기사만 예외적으로 요약이 생성된다.
     if len(titles) == 1:
-        result["summary"] = None
-        result["summary_skipped_reason"] = (
-            "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
-        )
-        return result
+        article = item.get("articles", [{}])[0] if item.get("articles") else {}
+        body = article.get("body") or ""
+        description = article.get("description") or ""
+        # 잠정값 - 이 정도는 돼야 "제목을 그대로 풀어쓰는 것"을 넘어서는
+        # 실질적 요약이 가능하다고 봄(짧은 스니펫 한두 줄로는 어차피 제목과
+        # 큰 차이 없는 재요약이 나올 뿐이라 기존처럼 생략하는 게 안전).
+        has_substantial_material = len(body) >= 200 or len(description) >= 50
+        if not has_substantial_material:
+            result["summary"] = None
+            result["summary_skipped_reason"] = (
+                "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, "
+                "원문 제목만 노출 (문서 4번 섹션 (A-1))"
+            )
+            return result
+        # 재료(본문 등)가 충분하면 단독 기사여도 아래 정상 요약 경로로 진행
 
     key_env_var = "OPENROUTER_API_KEY" if _ig.LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
@@ -308,10 +321,32 @@ if __name__ == "__main__":
     }
 
     result1 = summarize_issue(single_article_issue)
-    print("[검증1] 단독 기사(A-1) - summary:", result1["summary"],
+    print("[검증1] 단독 기사(A-1, 네이버 짧은 설명만) - summary:", result1["summary"],
           "/ reason:", result1["summary_skipped_reason"])
     assert result1["summary"] is None
-    assert "단독 기사" in result1["summary_skipped_reason"]
+    assert "재료가 얇아" in result1["summary_skipped_reason"]
+
+    # 단독 기사여도 WATT처럼 본문이 충분히 길면 A-1로 생략되지 않고
+    # 정상 요약 시도 경로(이 테스트 환경에선 API 키 없음 fallback)로
+    # 가야 한다 - "단독 기사라서" 무조건 생략하던 예전 동작과의 차이 확인.
+    single_watt_issue = {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": ["WATT 단독 보도 - 테스트용 제목"],
+        "urls": ["https://example.com/watt1"],
+        "press_list": ["feedstrategy.com"],
+        "articles": [{"source": "Feed Strategy", "title": "WATT 단독 보도 - 테스트용 제목",
+                      "url": "https://example.com/watt1", "body": "충분히 긴 본문 발췌입니다. " * 20}],
+    }
+    os.environ.pop("ANTHROPIC_API_KEY", None)
+    os.environ.pop("OPENROUTER_API_KEY", None)
+    result1b = summarize_issue(single_watt_issue)
+    print("[검증1b] 단독 기사(본문 충분, WATT) - summary:", result1b["summary"],
+          "/ reason:", result1b["summary_skipped_reason"])
+    assert result1b["summary"] is None  # 이 테스트 환경엔 API 키가 없어 결국 요약은 안 나옴
+    assert "재료가 얇아" not in result1b["summary_skipped_reason"], "본문이 충분하면 A-1(재료 부족)로 생략되면 안 됨"
+    assert "없음" in result1b["summary_skipped_reason"]  # API 키 없음 fallback으로 넘어갔어야 함
 
     # API 키를 일부러 지운 상태에서 다건 그룹을 넣어 "키 없음" fallback 확인
     os.environ.pop("ANTHROPIC_API_KEY", None)
