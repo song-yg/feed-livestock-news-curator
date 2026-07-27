@@ -1,0 +1,491 @@
+{
+  "generated_at": "2026-07-27T03:14:44.366049+00:00",
+  "domestic": [
+    {
+      "issue_score": 7.0,
+      "mention_count": 7,
+      "raw_mention_count": 7,
+      "titles": [
+        "광양시, 폭염 대응 강화… 취약계층 보호·현장 점검 강화",
+        "광양시, 4대 분야 폭염 종합대책 추진…취약계층 보호·현장 대응 강화",
+        "광양시, 폭염 총력 대응···취약계층 밀착 관리",
+        "광양시, '취약계층 보호·수경시설 가동'... 도심 폭염저감 총력",
+        "광양시 '폭염 종합대책' 추진…\"시민 안전 최우선\"",
+        "광양시, '폭염 종합대책' 행정력 집중···분야별 대응 '촘촘'",
+        "광양시, 폭염 대응 강화…취약계층 보호·현장 중심 관리 확대"
+      ],
+      "urls": [
+        "https://hbnpress.com/news/view/1065576134243147",
+        "https://www.shinailbo.co.kr/news/articleView.html?idxno=5044390",
+        "https://www.thereport.co.kr/news/articleView.html?idxno=89902",
+        "http://www.newsworker.co.kr/news/articleView.html?idxno=438145",
+        "https://www.news1.kr/local/gwangju-jeonnam/6238073",
+        "https://www.greened.kr/news/articleView.html?idxno=345862",
+        "https://www.newspim.com/news/view/20260724000644"
+      ],
+      "press_list": [
+        "greened.kr",
+        "hbnpress.com",
+        "news1.kr",
+        "newspim.com",
+        "newsworker.co.kr",
+        "shinailbo.co.kr",
+        "thereport.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 4.9,
+      "mention_count": 7,
+      "raw_mention_count": 7,
+      "titles": [
+        "정부, 9월 2차 공공기관 이전 로드맵 발표…경북도, 유치 사활",
+        "경북도-송언석 의원, 국회서 공공기관 2차 이전 대응책 논의",
+        "경북도, 공공기관 2차 이전 맞춤형 유치 전략 마련 나선다…국회서 머리...",
+        "경북도, '2차 공공기관 유치 전략 국회 세미나' 개최… \"경제와 일자리...",
+        "경북도, 2차 공공기관 유치 총력···전략 국회서 전략 세미나 개최",
+        "“2차 공공기관은 경북으로”...경북 유치 전략 국회 세미나 개최",
+        "경북, 국회서 공공기관 이전 전략 세미나…2차 공공기관 유치 ‘총력전..."
+      ],
+      "urls": [
+        "https://www.munhwa.com/article/11604399?ref=naver",
+        "https://www.gukjenews.com/news/articleView.html?idxno=3642608",
+        "https://www.eroun.net/news/articleView.html?idxno=85974",
+        "https://www.polinews.co.kr/news/articleView.html?idxno=737711",
+        "https://www.cnbnews.com/news/articleView.html?idxno=1008839",
+        "https://www.wikitree.co.kr/articles/1147711",
+        "https://www.seoul.co.kr/news/society/2026/07/22/20260722500007?wlog_tag3=naver"
+      ],
+      "press_list": [
+        "cnbnews.com",
+        "eroun.net",
+        "gukjenews.com",
+        "munhwa.com",
+        "polinews.co.kr",
+        "seoul.co.kr",
+        "wikitree.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 4.7,
+      "mention_count": 8,
+      "raw_mention_count": 8,
+      "titles": [
+        "창녕군, 축산악취 줄이고 주민 쾌적함 더한다",
+        "창녕군, 축산악취 저감에 29억원 투입",
+        "창녕군, 스마트 기술 도입 축산환경 개선 박차",
+        "창녕군, 축산악취 NO! 쾌적함 OK!",
+        "창녕군, 축산악취 저감시설·환경 개선으로 친환경 축산 기반 다져",
+        "창녕군, 축산악취 감소에 29억원 투입해 '쾌적함을 더하다'",
+        "창녕군, 축산악취 저감 위해 29억 투입 17개 사업 추진",
+        "창녕군, 축산악취는 덜고 쾌적함은 더한다"
+      ],
+      "urls": [
+        "http://www.gnmaeil.com/news/articleView.html?idxno=591178",
+        "http://www.gndomin.com/news/articleView.html?idxno=482845",
+        "http://www.enewstoday.co.kr/news/articleView.html?idxno=2450736",
+        "https://www.imaeil.com/page/view/2026072112364893230",
+        "https://view.asiae.co.kr/article/2026072112165560765",
+        "https://www.pennmike.com/news/articleView.html?idxno=124055",
+        "https://www.gukjenews.com/news/articleView.html?idxno=3641457",
+        "https://www.newsgn.com/news/articleView.html?idxno=563240"
+      ],
+      "press_list": [
+        "enewstoday.co.kr",
+        "gndomin.com",
+        "gnmaeil.com",
+        "gukjenews.com",
+        "imaeil.com",
+        "newsgn.com",
+        "pennmike.com",
+        "view.asiae.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 4.2,
+      "mention_count": 6,
+      "raw_mention_count": 6,
+      "titles": [
+        "고흥군 농산물 스마트 공급센터 본격 가동…수급 조절·유통 경쟁력 기...",
+        "고흥 농산물 스마트 공급센터 준공…\"유통 혁신 핵심 거점 역할\"",
+        "고흥군, 농산물 스마트공급센터 준공…산지유통 경쟁력 강화 기대",
+        "고흥군, 스마트 공급센터 준공…산지유통 강화",
+        "고흥 농산물 스마트 공급센터 가동…공동선별·유통 경쟁력 강화",
+        "고흥군, \"스마트 공급센터\" 준공으로 농산물 수급조절·유통 경쟁력 강..."
+      ],
+      "urls": [
+        "http://www.newsmaker.or.kr/news/articleView.html?idxno=179436",
+        "https://view.asiae.co.kr/article/2026072205322368070",
+        "https://www.newstnt.com/news/articleView.html?idxno=711109",
+        "https://www.mhns.co.kr/news/articleView.html?idxno=753982",
+        "https://www.betanews.net/article/view/beta202607210072",
+        "http://www.newsworker.co.kr/news/articleView.html?idxno=437500"
+      ],
+      "press_list": [
+        "betanews.net",
+        "mhns.co.kr",
+        "newsmaker.or.kr",
+        "newstnt.com",
+        "newsworker.co.kr",
+        "view.asiae.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 3.8,
+      "mention_count": 5,
+      "raw_mention_count": 5,
+      "titles": [
+        "제주에 그린 K-농업의 미래…6차산업 국제박람회 '푸파페 제주' 개막",
+        "K-농업의 미래…6차산업 국제박람회 '푸파페 제주' 개막",
+        "국제박람회 '푸파페 제주' 개막… \"섬에서 세계로\"",
+        "\"제주 농업의 미래를 열다\"…제8회 푸파페 제주 개막",
+        "K-농업의 미래…6차산업 국제박람회 '푸파페 제주' 개막"
+      ],
+      "urls": [
+        "http://www.suwonilbo.kr/news/articleView.html?idxno=316945",
+        "https://www.headlinejeju.co.kr/news/articleView.html?idxno=596386",
+        "https://www.kmaeil.com/news/articleView.html?idxno=646408",
+        "https://www.nocutnews.co.kr/news/6552427?utm_source=naver&utm_medium=article&utm_campaign=20260723035913",
+        "https://www.jejusori.net/news/articleView.html?idxno=504992"
+      ],
+      "press_list": [
+        "headlinejeju.co.kr",
+        "jejusori.net",
+        "kmaeil.com",
+        "nocutnews.co.kr",
+        "suwonilbo.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    }
+  ],
+  "international": [
+    {
+      "issue_score": 2.8,
+      "mention_count": 4,
+      "raw_mention_count": 4,
+      "titles": [
+        "从 《 思想耀岭南 》 看县域富民产业发展 _ 南方网",
+        "从 《 思想耀岭南 》 看县域富民产业发展 _ 深圳新闻网",
+        "从 《 思想耀岭南 》 看县域富民产业发展 _ 广州日报大洋网",
+        "从 《 思想耀岭南 》 看县域富民产业发展"
+      ],
+      "urls": [
+        "https://news.southcn.com/node_de9aedeec1/e4db8d30ad.shtml",
+        "https://www.sznews.com/news/content/2026-07/21/content_32127668.htm",
+        "https://news.dayoo.com/guangdong/202607/21/139996_54982050.htm",
+        "https://news.ycwb.com/ikimvkltij/content_54241216.htm"
+      ],
+      "press_list": [
+        "news.dayoo.com",
+        "news.southcn.com",
+        "news.ycwb.com",
+        "sznews.com"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 2.4,
+      "mention_count": 3,
+      "raw_mention_count": 3,
+      "titles": [
+        "Queensland records first bird flu case | SBS News",
+        "First suspected H5 bird flu case recorded in Queensland | Queensland Country Life",
+        "First suspected H5 bird flu case recorded in Queensland | North Queensland Register"
+      ],
+      "urls": [
+        "https://www.sbs.com.au/news/article/bird-flu-queensland-first-case/fub12jlzo",
+        "https://www.queenslandcountrylife.com.au/story/9316738/first-suspected-h5-bird-flu-case-recorded-in-queensland/",
+        "https://www.northqueenslandregister.com.au/story/9316738/first-suspected-h5-bird-flu-case-recorded-in-queensland/"
+      ],
+      "press_list": [
+        "northqueenslandregister.com.au",
+        "queenslandcountrylife.com.au",
+        "sbs.com.au"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 1.7,
+      "mention_count": 2,
+      "raw_mention_count": 2,
+      "titles": [
+        "连江定海 ： 往昔海防门户 今日海上牧场 _ 福州 _ 新闻频道 _ 福州新闻网",
+        "潮声 | 连江定海 ： 往昔海防门户 今日海上牧场 - 社会"
+      ],
+      "urls": [
+        "https://news.fznews.com.cn/lianjiang/20260724/1QrJ4j9r34.shtml",
+        "http://fjnews.fjsen.com/2026-07/24/content_32224187.htm"
+      ],
+      "press_list": [
+        "fjnews.fjsen.com",
+        "news.fznews.com.cn"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 1.4,
+      "mention_count": 2,
+      "raw_mention_count": 2,
+      "titles": [
+        "LA PAZ : Frigerio destacó el impacto de la energía renovable durante una visita a una planta avícola",
+        "Frigerio destacó el impacto de las energías renovables en el desarrollo productivo"
+      ],
+      "urls": [
+        "https://www.diariojunio.com.ar/la-paz-frigerio-destaco-el-impacto-de-la-energia-renovable-durante-una-visita-a-una-planta-avicola/",
+        "https://diarioelargentino.com/provincia/frigerio-destaco-el-impacto-de-las-energias-renovables-en-el-desarrollo-productivo.htm"
+      ],
+      "press_list": [
+        "diarioelargentino.com",
+        "diariojunio.com.ar"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+    },
+    {
+      "issue_score": 1.0,
+      "mention_count": 1,
+      "raw_mention_count": 1,
+      "titles": [
+        "Rumin8: New compound provides more methane reducing options for producers"
+      ],
+      "urls": [
+        "https://www.feedstrategy.com/sustainability-in-feed-production/carbon-emissions-reduction/news/15830838/rumin8-new-compound-provides-more-methane-reducing-options-for-producers"
+      ],
+      "press_list": [
+        "Feed Strategy"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+    }
+  ],
+  "domestic_by_category": {
+    "정부·제도 용어": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "[AFL 칼럼] 선제적 방역 시설 구축에 예산 확대해야"
+        ],
+        "urls": [
+          "https://www.aflnews.co.kr/news/articleView.html?idxno=325268"
+        ],
+        "press_list": [
+          "aflnews.co.kr"
+        ],
+        "cross_axis_partner": null,
+        "category": "정부·제도 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ],
+    "가금 계열화/수직계열화": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "원종계부터 유통까지... 체리부로, 완전 수직계열화로 품질 경쟁력 확보"
+        ],
+        "urls": [
+          "http://digitalchosun.dizzo.com/site/data/html_dir/2026/07/23/2026072380189.html"
+        ],
+        "press_list": [
+          "digitalchosun.dizzo.com"
+        ],
+        "cross_axis_partner": null,
+        "category": "가금 계열화/수직계열화",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ],
+    "사료업계 특화 용어": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "부국사료, 오너경영 본격화"
+        ],
+        "urls": [
+          "https://www.chukkyung.co.kr/news/articleView.html?idxno=82152"
+        ],
+        "press_list": [
+          "chukkyung.co.kr"
+        ],
+        "cross_axis_partner": null,
+        "category": "사료업계 특화 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ],
+    "시장/가격 용어": [
+      {
+        "issue_score": 0.7,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "[북한읽기] 설비는 밀된장용인데 생산된 제품은 옥수수된장?"
+        ],
+        "urls": [
+          "https://www.dailynk.com/20260722-4"
+        ],
+        "press_list": [
+          "dailynk.com"
+        ],
+        "cross_axis_partner": null,
+        "category": "시장/가격 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ],
+    "축종별 용어": [
+      {
+        "issue_score": 0.7,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "[위클리오늘] 영천 양돈농가·市, 악취 갈등 봉합…\"단속보다 자정노력..."
+        ],
+        "urls": [
+          "http://www.weeklytoday.com/news/articleView.html?idxno=786944"
+        ],
+        "press_list": [
+          "weeklytoday.com"
+        ],
+        "cross_axis_partner": null,
+        "category": "축종별 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ]
+  },
+  "international_by_category": {
+    "질병명": [
+      {
+        "issue_score": 2.4,
+        "mention_count": 3,
+        "raw_mention_count": 3,
+        "titles": [
+          "Queensland records first bird flu case | SBS News",
+          "First suspected H5 bird flu case recorded in Queensland | Queensland Country Life",
+          "First suspected H5 bird flu case recorded in Queensland | North Queensland Register"
+        ],
+        "urls": [
+          "https://www.sbs.com.au/news/article/bird-flu-queensland-first-case/fub12jlzo",
+          "https://www.queenslandcountrylife.com.au/story/9316738/first-suspected-h5-bird-flu-case-recorded-in-queensland/",
+          "https://www.northqueenslandregister.com.au/story/9316738/first-suspected-h5-bird-flu-case-recorded-in-queensland/"
+        ],
+        "press_list": [
+          "northqueenslandregister.com.au",
+          "queenslandcountrylife.com.au",
+          "sbs.com.au"
+        ],
+        "cross_axis_partner": null,
+        "category": "질병명",
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출 (9.4 fallback)"
+      }
+    ],
+    "사료업계 특화 용어": [
+      {
+        "issue_score": 0.7,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "De Heus expands aquaculture capabilities with marine and cold-water fish feed mill"
+        ],
+        "urls": [
+          "https://www.feedstrategy.com/animal-nutrition/aquaculture/news/15830751/de-heus-expands-aquaculture-capabilities-with-marine-and-coldwater-fish-feed-mill"
+        ],
+        "press_list": [
+          "Feed Strategy"
+        ],
+        "cross_axis_partner": null,
+        "category": "사료업계 특화 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ],
+    "스마트팜/축산 기술": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "Co - op Bank hosts Virtual Seminar promoting Smart Farming and Agriculture – Ghafla ! "
+        ],
+        "urls": [
+          "https://www.ghafla.co.ke/co-op-bank-hosts-virtual-seminar-promoting-smart-farming-and-agriculture/"
+        ],
+        "press_list": [
+          "ghafla.co.ke"
+        ],
+        "cross_axis_partner": null,
+        "category": "스마트팜/축산 기술",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ],
+    "시장/가격 용어": [
+      {
+        "issue_score": 0.7,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "Zimbabwe Emergency Food Production Project Delivers Transformative Results , Boosts Climate - Smart Agriculture and Record Wheat Harvest"
+        ],
+        "urls": [
+          "https://allafrica.com/stories/202607220010.html"
+        ],
+        "press_list": [
+          "allafrica.com"
+        ],
+        "cross_axis_partner": null,
+        "category": "시장/가격 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 재료가 얇아 요약 생략, 원문 제목만 노출 (문서 4번 섹션 (A-1))"
+      }
+    ]
+  },
+  "category_distribution": {
+    "국내": {
+      "기타": 141,
+      "정부·제도 용어": 2,
+      "가금 계열화/수직계열화": 1,
+      "사료업계 특화 용어": 3,
+      "시장/가격 용어": 1,
+      "축종별 용어": 3
+    },
+    "해외": {
+      "기타": 44,
+      "사료업계 특화 용어": 1,
+      "스마트팜/축산 기술": 1,
+      "질병명": 4,
+      "시장/가격 용어": 1
+    }
+  },
+  "gdelt_timeline": {},
+  "failed_sources": []
+}
