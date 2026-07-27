@@ -182,7 +182,17 @@ def _load_skip_state(path: str = SKIP_STATE_PATH) -> dict:
     """
     try:
         with open(path, encoding="utf-8") as f:
-            return json.load(f)
+            state = json.load(f)
+        if not isinstance(state, dict):
+            # 파일이 파싱은 됐지만 예상 구조(키워드: 정보 dict)가 아닌 경우
+            # (예: 수동 편집 실수, git 병합 충돌 잔재) - 이 파일은 학습된
+            # 힌트일 뿐이라 이상하면 그냥 빈 상태로 다시 시작하는 게
+            # 안전하다(아래 skip_state.get(keyword)가 dict가 아닌 값에
+            # 호출되면 AttributeError로 죽을 수 있어 여기서 미리 막음).
+            print(f"[gdelt] 학습된 스킵 상태 파일 구조 이상(dict 아님, 타입: "
+                  f"{type(state).__name__}) - 빈 상태로 다시 시작: {path}")
+            return {}
+        return state
     except (OSError, json.JSONDecodeError) as e:
         print(f"[gdelt] 학습된 스킵 상태 파일 읽기 실패(처음 실행이거나 파일 없음 - "
               f"정상, 빈 상태로 시작): {path} - {type(e).__name__}: {e}")
@@ -214,7 +224,9 @@ def _update_skip_state_after_run() -> None:
     state = _load_skip_state()
     now_str = datetime.now(timezone.utc).isoformat()
     for keyword in dict.fromkeys(_value_error_keywords_this_run):  # 중복 제거, 순서 유지
-        entry = state.get(keyword, {"fail_count": 0})
+        entry = state.get(keyword)
+        if not isinstance(entry, dict):
+            entry = {"fail_count": 0}  # 없거나(신규) 손상된 값이면 새로 시작
         entry["fail_count"] = entry.get("fail_count", 0) + 1
         entry["reason"] = "GDELT API가 'phrase too short' 등으로 쿼리 자체를 거부함 (자동 학습됨)"
         entry["last_seen"] = now_str
@@ -939,7 +951,7 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
             print(f"[gdelt] '{keyword}' 스킵 - {SKIP_KEYWORDS[keyword]}")
             continue
         learned_entry = skip_state.get(keyword)
-        if learned_entry and learned_entry.get("fail_count", 0) >= SKIP_STATE_FAILURE_THRESHOLD:
+        if isinstance(learned_entry, dict) and learned_entry.get("fail_count", 0) >= SKIP_STATE_FAILURE_THRESHOLD:
             print(f"[gdelt] '{keyword}' 스킵 - 학습형 스킵 목록 등재됨 "
                   f"({learned_entry.get('fail_count')}회 연속 ValueError 확인, "
                   f"{SKIP_STATE_PATH} 참고)")
