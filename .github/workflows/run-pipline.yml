@@ -1,31 +1,47 @@
-# 사료축산뉴스 큐레이션 파이프라인 - 수동 실행용 workflow
+# 사료축산뉴스 큐레이션 파이프라인 - workflow
 #
 # (알고리즘 문서 "6. 실행/오케스트레이션" / "8. GitHub Actions 유의사항" 참조)
 #
-# 지금은 수동 버튼(workflow_dispatch)만 넣었습니다 - 문서 6번 섹션에
-# "트리거(스케줄/수동 버튼) 분리는 4~6단계가 실제로 구현된 뒤 함께 작업할
-# 예정 - 현재는 아직 손대지 않음"이라고 이미 정해져 있어서, 그 방침을
-# 그대로 따랐습니다. 나중에 4~6단계(LLM 요약/저장/배포)가 붙으면 아래
-# schedule 블록 주석만 풀면 매주 자동 실행도 바로 켤 수 있습니다.
+# 트리거는 두 가지:
+#   1. workflow_dispatch(수동 버튼) - 테스트/임시 확인용. 실행 시 memo를
+#      입력하면 Actions 목록 화면의 실행 이름과 실행 상세 페이지 요약에
+#      바로 남아서, 나중에 "이 회차가 뭘 확인하려던 실행이었는지" 코드를
+#      안 열어봐도 바로 알 수 있다.
+#   2. schedule(매주 월요일 자동) - 실제 "이번 주 정식 큐레이션"은 이걸로.
+#      on: push는 의도적으로 안 씀 - 이 파이프라인은 실행될 때마다 실제
+#      이메일 발송 + LLM 호출량(일일 한도 있는 프로바이더 포함) 소모 +
+#      데이터 커밋이 일어나서, 단순 코드 수정 커밋마다 전체가 돌아버리면
+#      테스트/실제 실행이 뒤섞이는 문제가 생김.
 #
 # 실행 방법: GitHub 리포 > Actions 탭 > "사료축산뉴스 파이프라인 실행" 선택
-#           > "Run workflow" 버튼 클릭
+#           > "Run workflow" 버튼 클릭 > 메모(선택) 입력 후 실행
 # 로그 확인: 같은 화면에서 실행 중인 job을 클릭하면 각 step의 로그가
 #           실시간으로 스트리밍됩니다 (main.py의 print 출력이 그대로 보임).
 
 name: 사료축산뉴스 파이프라인 실행
 
+# Actions 목록 화면에서 각 실행이 무슨 목적이었는지 바로 보이도록 회차
+# 번호 + 메모를 실행 이름에 반영. workflow_dispatch로 memo를 입력하면
+# 그 값이, 입력 안 하면 memo input 자체의 기본값("수동 실행 메모 없음")이
+# 쓰이고, schedule(자동 실행)로 돌면 inputs 자체가 없으므로 "자동 스케줄
+# 실행"으로 표시된다.
+run-name: "회차 #${{ github.run_number }}: ${{ inputs.memo || '자동 스케줄 실행' }}"
+
 permissions:
-  contents: write  # 2026-07-23 추가: 저장 레이어(5단계) 결과물(data/YYYY-WW/)을
+  contents: write  # 저장 레이어(5단계) 결과물(data/YYYY-WW/)을
                     # 리포에 커밋/푸시하려면 필요. 기본 GITHUB_TOKEN은 리포 설정에
                     # 따라 read-only일 수 있어 명시적으로 write 권한을 준다.
 
 on:
-  workflow_dispatch: {}
-  # schedule:
-  #   # 4~6단계(LLM 요약/저장/배포) 구현 완료 후 주석 해제 예정
-  #   # 매주 월요일 00:00 UTC(한국 시간 09:00) - cron은 UTC 기준
-  #   - cron: "0 0 * * 1"
+  workflow_dispatch:
+    inputs:
+      memo:
+        description: '이번 회차에 남길 메모(선택) - Actions 목록/실행 요약에 표시됨'
+        required: false
+        default: '수동 실행 메모 없음'
+  schedule:
+    # 매주 월요일 00:00 UTC(한국 시간 09:00) - cron은 UTC 기준
+    - cron: "0 0 * * 1"
 
 concurrency:
   # 2026-07-23 추가: 이 workflow를 실수로 겹쳐 실행했다가(예: 버튼을 두 번
@@ -44,11 +60,21 @@ jobs:
     runs-on: ubuntu-latest
     # 로컬에서 체감 2시간 정도라 GDELT 429 재시도 등 변동을 감안해 여유 있게 설정
     # (9번 섹션 실측 - GDELT 수집만 최대 78분 걸린 사례 있음)
-    timeout-minutes: 480
+    timeout-minutes: 240
 
     steps:
       - name: 리포 체크아웃
         uses: actions/checkout@v4
+
+      - name: 실행 메모 기록
+        # 실행 상세 페이지 맨 위에 마크다운으로 남는 요약(Job Summary) -
+        # 나중에 이 회차 로그를 다시 찾아볼 때, 로그를 다 안 열어봐도
+        # "이번 실행이 뭘 확인하려던 건지"가 여기 바로 보이게 함.
+        run: |
+          echo "## 📝 실행 메모" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **회차:** #${{ github.run_number }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **트리거:** ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **메모:** ${{ inputs.memo || '(자동 스케줄 실행 - 메모 없음)' }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: 실행 전 디스크 사용량 확인
         run: df -h /
