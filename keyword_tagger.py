@@ -247,6 +247,11 @@ def print_uncategorized_sample(articles: list[dict], sample_size: int = 30) -> N
     무작위 추출이 아니라 리스트 앞에서부터 sample_size개만 그대로 보여준다
     - 표본 대표성을 엄밀히 따지는 통계용이 아니라 "감 잡기용" 진단
     도구라 단순하게 유지 (print_category_distribution과 같은 성격).
+
+    ** main.py의 정규 실행 경로에서는 더 이상 호출하지 않음 **: 매 실행마다
+    기사 제목을 최대 30건까지 나열해서 운영 로그가 불필요하게 길어짐 -
+    사전 보강이 필요할 때 직접 이 함수를 불러써서 확인하는 진단 도구로만
+    남겨둔다.
     """
     uncategorized = [a for a in articles if a.get("category", "기타") == "기타"]
     total = len(uncategorized)

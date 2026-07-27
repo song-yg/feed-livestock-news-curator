@@ -320,7 +320,6 @@ def run() -> None:
         articles = normalize(articles)
         keyword_tagger.tag_articles(articles)
         keyword_tagger.print_category_distribution(articles)
-        keyword_tagger.print_uncategorized_sample(articles, sample_size=30)
     except Exception as e:
         print(f"[main] [2] 정규화/태깅 단계에서 예상 못 한 오류 발생 - 원본 기사 그대로 다음 단계로 진행: "
               f"{type(e).__name__} - {e!r}")

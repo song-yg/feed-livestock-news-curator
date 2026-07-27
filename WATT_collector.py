@@ -19,7 +19,7 @@ raw.json 등에는 절대 포함하지 않는다 (저장 레이어의 save_raw_j
 import re
 import time
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
@@ -192,6 +192,13 @@ def _collect_single_page(page, source_name: str, base_url: str) -> list[dict]:
     가짜로 부풀려진 데이터를 만드는 것보다 안전하다는 판단. 7일 안에
     12건보다 많은 기사가 나온 날엔 일부 누락될 수 있다는 트레이드오프는
     감수한다.
+
+    ** 현재 실질적으로 호출되지 않는 죽은 코드 **: `SINGLE_PAGE_ONLY_SITES`
+    에 등록된 유일한 항목이었던 WATTAgNet이 SITES에서 영구 제외됐으므로
+    (Cloudflare 봇 차단, SITES 주석 참고), 지금은 `SINGLE_PAGE_ONLY_SITES`
+    에 걸리는 사이트 자체가 없어 이 함수가 실행될 일이 없다. 혹시 나중에
+    비슷한 성격(페이지네이션이 막힌)의 사이트가 추가되면 재사용할 수 있게
+    삭제하지 않고 남겨둔다.
     """
     list_url = f"{base_url}{LIST_PATH}"
     items = _fetch_listing_page(page, list_url)
@@ -296,6 +303,12 @@ def _collect_paginated(page, source_name: str, base_url: str) -> list[dict]:
 EXCLUDED_PATH_PATTERNS = ("/brand-insights/",)
 
 
+def _domain_only(url: str) -> str:
+    """로그를 짧게 남기려고 전체 URL 대신 도메인만 뽑는다 (예: https://www.feedstrategy.com/latest-news -> feedstrategy.com)."""
+    domain = urlparse(url).netloc
+    return domain[4:] if domain.startswith("www.") else domain
+
+
 def _fetch_listing_page(page, url: str) -> list[dict]:
     # page.goto() 네비게이션 자체가 실패하면(타임아웃, DNS 오류, 연결 끊김
     # 등) wait_for_selector 실패와 똑같은 패턴(빈 리스트 반환 + 로그)으로
@@ -304,7 +317,7 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
     try:
         response = page.goto(url, timeout=30000, wait_until="networkidle")
     except Exception as e:
-        print(f"[watt] 목록 페이지 이동 실패: {url} - {type(e).__name__}: {e}")
+        print(f"[watt] 목록 페이지 이동 실패: {_domain_only(url)} - {type(e).__name__}: {e}")
         return []
 
     # 실행마다 콘텐츠가 요동치는 원인이 (a) CDN/캐시 계층이 오래된 스냅샷을
@@ -318,7 +331,7 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
         headers = response.headers
         interesting_keys = ("cf-cache-status", "x-cache", "age", "cache-control", "server", "cf-ray", "vary")
         found = {k: headers[k] for k in interesting_keys if k in headers}
-        print(f"[watt] {url} - 응답 헤더(캐시/서버 관련): "
+        print(f"[watt] {_domain_only(url)} - 응답 헤더(캐시/서버 관련): "
               f"{found if found else '(해당 헤더 없음)'}")
 
     # "제목 링크로 보이는 <h5><a>" 패턴이 실제 목록 아이템과 일치함을 확인.
@@ -326,7 +339,7 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
     try:
         page.wait_for_selector("h5 a, h4 a", timeout=15000)
     except Exception:
-        print(f"[watt] 목록 로딩 실패 또는 타임아웃: {url}")
+        print(f"[watt] 목록 로딩 실패 또는 타임아웃: {_domain_only(url)}")
         return []
 
     html = page.content()
@@ -346,7 +359,7 @@ def _fetch_listing_page(page, url: str) -> list[dict]:
         if title and link and not any(pat in link for pat in EXCLUDED_PATH_PATTERNS):
             results.append({"title": title, "url": link, "category": category})
 
-    print(f"[watt] {url} - 목록에서 {len(results)}개 항목 읽음")
+    print(f"[watt] {_domain_only(url)} - 목록에서 {len(results)}개 항목 읽음")
     return results
 
 
