@@ -103,10 +103,40 @@ def _is_active(row: dict) -> bool:
     return str(row.get("active", "")).strip().upper() == "TRUE"
 
 
+def _detect_keyword_lang(keyword: str) -> str:
+    """
+    키워드 문자열 자체의 글자 구성으로 실제 언어를 판별한다("ko" 또는 "en").
+
+    시트의 lang 컬럼은 사람이 손으로 입력하는 값이라 실수로 뒤바뀔 수 있음
+    - 실제로 "ko" 행에 영어 키워드("smart farming"), "en" 행에 한글
+    키워드("사료공장")가 잘못 들어간 사고가 있었다. 이 상태로 그냥
+    돌리면 naver_collector가 엉뚱한 영어 키워드로 국내 뉴스를 검색하고,
+    gdelt_collector는 한글 키워드를 영어권 API에 계속 재시도하다 결국
+    "phrase too short"류 에러로 몇십 분을 허비하고 실패하는 낭비로
+    이어진다.
+
+    시트의 lang 컬럼을 그대로 믿는 대신, 키워드 안에 한글(가-힣) 비율이
+    일정 수준 이상이면 "ko", 아니면 "en"으로 판정해서 실제 내용 기준으로
+    올바른 수집기(naver_collector/gdelt_collector)로 가도록 한다 -
+    scorer._is_korean_title()과 같은 방식(한글 유니코드 비율).
+    """
+    if not keyword:
+        return "en"
+    hangul_count = sum(1 for ch in keyword if "\uac00" <= ch <= "\ud7a3")
+    return "ko" if (hangul_count / len(keyword)) >= 0.2 else "en"
+
+
 def get_keywords(lang: str, fallback: list[str]) -> list[str]:
     """
     lang("ko" 또는 "en")에 해당하는 활성(active=TRUE) 키워드 리스트를 구글
     시트에서 읽어온다.
+
+    시트의 lang 컬럼 값을 그대로 신뢰하지 않고, _detect_keyword_lang()으로
+    키워드 실제 내용 기준 언어를 다시 판별해서 사용한다 - 시트에 lang이
+    잘못 입력돼 있어도(위 _detect_keyword_lang docstring 참고) 실제
+    수집기 호출은 항상 올바른 언어로 가도록 자동 보정된다. 시트 값과
+    실제 판별 결과가 다른 경우 로그로 남겨서, 시트 자체도 고칠 수 있게
+    안내한다.
 
     KEYWORD_SHEET_CSV_URL 환경변수가 없거나 읽기/파싱에 실패하거나 해당
     lang의 활성 키워드가 하나도 없으면, fallback(호출부가 원래 갖고 있던
@@ -121,13 +151,46 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
     if rows is None:
         return fallback
 
-    keywords = [
-        row["keyword"].strip()
-        for row in rows
-        if row.get("lang", "").strip().lower() == lang
-        and _is_active(row)
-        and row.get("keyword", "").strip()
-    ]
+    keywords = []
+    mismatches = []
+    for row in rows:
+        keyword = row.get("keyword", "").strip()
+        declared_lang = row.get("lang", "").strip().lower()
+        if not keyword or declared_lang not in ("ko", "en") or not _is_active(row):
+            continue
+        actual_lang = _detect_keyword_lang(keyword)
+        if actual_lang != declared_lang:
+            mismatches.append((keyword, declared_lang, actual_lang))
+        if actual_lang == lang:
+            keywords.append(keyword)
+
+    if mismatches:
+        detail = ", ".join(f"'{kw}'(시트={declared} -> 실제={actual})" for kw, declared, actual in mismatches)
+        print(f"[keyword_source] 시트 lang 컬럼과 실제 키워드 언어가 다른 항목 {len(mismatches)}건 "
+              f"발견 - 실제 언어 기준으로 자동 보정해서 사용(시트도 고쳐두는 걸 권장): {detail}")
+
+    # 중복 키워드 제거 - 시트에 같은 키워드가 실수로 두 번 이상 등록되면
+    # naver_collector/gdelt_collector가 그 키워드로 API를 중복 호출하게
+    # 돼서(운영 중 쌓이면 GDELT 429/일일 호출량 부담만 늘어나고 얻는 건
+    # 없음), 여기서 한 번만 걸러내면 모든 호출부가 자동으로 혜택을 본다.
+    # 공백 차이("사료 가격" vs "사료  가격")나 대소문자 차이("Feed Price"
+    # vs "feed price")도 실질적으로 같은 검색어이므로 정규화해서 비교하고,
+    # 실제 검색에 쓰는 표기는 시트에 먼저 등장한 쪽을 그대로 유지한다.
+    seen_normalized = set()
+    deduped_keywords = []
+    duplicates = []
+    for kw in keywords:
+        normalized = " ".join(kw.split()).lower()
+        if normalized in seen_normalized:
+            duplicates.append(kw)
+            continue
+        seen_normalized.add(normalized)
+        deduped_keywords.append(kw)
+    keywords = deduped_keywords
+
+    if duplicates:
+        print(f"[keyword_source] 시트에 중복 등록된 {lang} 키워드 {len(duplicates)}건 제외(첫 등장만 유지): "
+              f"{duplicates}")
 
     if not keywords:
         print(f"[keyword_source] 구글 시트에 lang={lang} 활성 키워드가 하나도 없음 - fallback 사용")
@@ -166,4 +229,37 @@ if __name__ == "__main__":
     assert result_ko == ["구제역"]  # 조류독감은 active=FALSE라 제외돼야 함
     assert result_en == ["feed price"]
 
-    print("\n[keyword_source] 자체 점검 통과 (fallback 경로 + 정상 파싱 경로)")
+    # 실제 발생했던 사고 재현: 시트에 lang이 뒤바뀐 경우
+    # ("ko" 행에 영어 키워드, "en" 행에 한글 키워드)
+    fake_csv_swapped = (
+        "keyword,lang,active,note\n"
+        "smart farming,ko,TRUE,\n"  # 잘못 입력됨 - 실제로는 영어
+        "사료공장,en,TRUE,\n"        # 잘못 입력됨 - 실제로는 한글
+    )
+    _FakeResp.content = fake_csv_swapped.encode("utf-8-sig")
+    _cache.clear()  # 이전 테스트에서 캐시된 CSV가 재사용되지 않도록 초기화
+    result_ko_swapped = get_keywords("ko", ["fallback"])
+    result_en_swapped = get_keywords("en", ["fallback"])
+    print("[검증3] lang 뒤바뀜 자동 보정 - ko:", result_ko_swapped, "/ en:", result_en_swapped)
+    assert result_ko_swapped == ["사료공장"], "한글 키워드는 시트의 en 표기와 무관하게 ko로 가야 함"
+    assert result_en_swapped == ["smart farming"], "영어 키워드는 시트의 ko 표기와 무관하게 en으로 가야 함"
+
+    # 중복 키워드 제거 확인 - 완전 동일 중복 + 공백/대소문자만 다른 중복
+    fake_csv_dup = (
+        "keyword,lang,active,note\n"
+        "구제역,ko,TRUE,\n"
+        "구제역,ko,TRUE,\n"           # 완전 동일 중복
+        "조류  독감,ko,TRUE,\n"
+        "조류 독감,ko,TRUE,\n"         # 공백만 다른 중복
+        "feed price,en,TRUE,\n"
+        "Feed  Price,en,TRUE,\n"      # 대소문자+공백만 다른 중복
+    )
+    _FakeResp.content = fake_csv_dup.encode("utf-8-sig")
+    _cache.clear()
+    result_ko_dup = get_keywords("ko", ["fallback"])
+    result_en_dup = get_keywords("en", ["fallback"])
+    print("[검증4] 중복 제거 - ko:", result_ko_dup, "/ en:", result_en_dup)
+    assert result_ko_dup == ["구제역", "조류  독감"], "중복 제거 후 첫 등장 표기만 남아야 함"
+    assert result_en_dup == ["feed price"], "대소문자/공백만 다른 중복도 제거돼야 함"
+
+    print("\n[keyword_source] 자체 점검 통과 (fallback 경로 + 정상 파싱 경로 + lang 뒤바뀜 자동 보정 + 중복 제거)")

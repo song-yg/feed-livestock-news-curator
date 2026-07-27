@@ -411,20 +411,35 @@ def run() -> None:
             domestic_category_ranked, international_category_ranked)
 
     print("\n=== [5] 저장 ===")
-    # storage.py 내부는 이미 파일 단위로 안전하게 실패를 흡수하도록
-    # 만들었지만(storage.py docstring 참고), 예상 못 한 예외까지 완벽히
-    # 막을 순 없으므로 9.1 "소스별 독립 실행 구조"와 같은 방향으로 마지막
-    # 방어선을 하나 더 둔다 - 저장이 통째로 실패해도 이미 콘솔에 다 출력된
-    # 이번 실행 결과(수집/스코어링/요약)는 그대로 남는다.
-    try:
-        saved_dir = storage.save_week(articles, domestic_summarized, international_summarized,
-                                       domestic_category_summarized, international_category_summarized,
-                                       gdelt_timeline, failed_sources, category_distribution,
-                                       category_comparison)
-    except Exception as e:
-        print(f"[main] 저장 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
-              f"{type(e).__name__} - {e!r}")
+    # 수동 실행(workflow_dispatch)은 테스트/임시 확인용이라, 저장을 그대로
+    # 하면 "지난주 대비 증감" 비교 기준(category_aggregator.compare_with_
+    # last_week)이 실제 정식 주간 실행이 아닌 테스트 데이터로 오염될 수
+    # 있다 - 예: 토요일에 테스트로 키워드 1개만 돌렸는데 그게 다음 월요일
+    # 정식 실행의 "지난주 실적"으로 잘못 비교되는 사고. GITHUB_EVENT_NAME은
+    # GitHub Actions가 모든 스텝에 자동으로 주는 기본 환경변수라 워크플로
+    # 파일 수정 없이 바로 참조 가능(로컬 실행 등 이 값이 없는 환경에서는
+    # 안전하게 "수동 아님"으로 취급돼 기존과 동일하게 저장됨).
+    is_manual_run = os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch"
+    if is_manual_run:
+        print("[main] 수동 실행(workflow_dispatch)이라 저장을 건너뜁니다 - "
+              "'지난주 대비 증감' 비교 기준 오염 방지(콘솔에 출력된 이번 실행 결과는 "
+              "그대로 확인 가능, data/에는 안 남음)")
         saved_dir = None
+    else:
+        # storage.py 내부는 이미 파일 단위로 안전하게 실패를 흡수하도록
+        # 만들었지만(storage.py docstring 참고), 예상 못 한 예외까지 완벽히
+        # 막을 순 없으므로 9.1 "소스별 독립 실행 구조"와 같은 방향으로 마지막
+        # 방어선을 하나 더 둔다 - 저장이 통째로 실패해도 이미 콘솔에 다 출력된
+        # 이번 실행 결과(수집/스코어링/요약)는 그대로 남는다.
+        try:
+            saved_dir = storage.save_week(articles, domestic_summarized, international_summarized,
+                                           domestic_category_summarized, international_category_summarized,
+                                           gdelt_timeline, failed_sources, category_distribution,
+                                           category_comparison)
+        except Exception as e:
+            print(f"[main] 저장 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
+                  f"{type(e).__name__} - {e!r}")
+            saved_dir = None
     print("\n=== [6] 배포 ===")
     # storage.py와 같은 방향으로 마지막 방어선을 둔다 - 배포 실패가 이미
     # 끝난 나머지 단계 결과에 영향을 주면 안 됨. week_label은 저장이
@@ -440,7 +455,7 @@ def run() -> None:
               f"{type(e).__name__} - {e!r}")
 
     if failed_sources:
-        saved_dir_note = f"{saved_dir}/scored.json에도" if saved_dir else "(저장 실패로 파일에는 못 남았지만)"
+        saved_dir_note = f"{saved_dir}/scored.json에도" if saved_dir else "(data/ 파일에는 안 남았지만)"
         print(f"\n[main] 이번 실행 실패 소스: {failed_sources} (9.2 에러 리포트 - "
               f"{saved_dir_note} failed_sources로 같이 저장됨)")
 
