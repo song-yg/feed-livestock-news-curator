@@ -425,11 +425,37 @@ LLM_MODEL_OPENROUTER_3 = os.environ.get("OPENROUTER_MODEL_3") or ""
 # 실제 시도 순서. openrouter/free가 위 셋 중에 이미 없으면 맨 끝에 최종
 # 안전망으로 자동 추가 - 아무리 지정 모델들이 다 막혀도 무료 라우터
 # 자체가 완전히 죽지 않는 한 이 실행의 LLM 기능이 통째로 막히지 않게 함.
-LLM_MODEL_CHAIN_OPENROUTER = [
-    m for m in (LLM_MODEL_OPENROUTER, LLM_MODEL_OPENROUTER_2, LLM_MODEL_OPENROUTER_3) if m
-]
-if "openrouter/free" not in LLM_MODEL_CHAIN_OPENROUTER:
-    LLM_MODEL_CHAIN_OPENROUTER.append("openrouter/free")
+#
+# ** (역할 라벨, 모델명) 쌍으로 관리하는 이유 **: 실패 로그에서 "1순위/2순위/
+# 3순위/최종 안전망 중 정확히 어느 자리가 실패했는지" 구분해서 찍기 위함
+# (2026-07-28, 담당자 요청) - OPENROUTER_MODEL_2/3을 안 넣으면 체인 길이가
+# 2~4로 들쭉날쭉해서, 단순히 리스트 인덱스(0/1/2...)로는 "2번째"가 항상
+# 2순위 모델을 뜻하지 않게 됨(예: 2/3 다 비우면 인덱스 1이 바로
+# openrouter/free임) - 인덱스 대신 역할 자체를 라벨로 고정해서 어떤 조합
+# 이든 로그만 보고 정확히 어느 모델이 실패했는지 알 수 있게 함
+# (_request_llm_text 참고).
+_LLM_MODEL_CHAIN_OPENROUTER_ROLES: list[tuple[str, str]] = []
+if LLM_MODEL_OPENROUTER:
+    _LLM_MODEL_CHAIN_OPENROUTER_ROLES.append(("1순위", LLM_MODEL_OPENROUTER))
+if LLM_MODEL_OPENROUTER_2:
+    _LLM_MODEL_CHAIN_OPENROUTER_ROLES.append(("2순위", LLM_MODEL_OPENROUTER_2))
+if LLM_MODEL_OPENROUTER_3:
+    _LLM_MODEL_CHAIN_OPENROUTER_ROLES.append(("3순위", LLM_MODEL_OPENROUTER_3))
+if "openrouter/free" not in [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]:
+    _LLM_MODEL_CHAIN_OPENROUTER_ROLES.append(("최종 안전망", "openrouter/free"))
+
+# 순위 라벨 -> 실패 시 찍을 오류 코드 (역할 고정 - 체인 길이와 무관하게 항상
+# 동일한 역할은 동일한 코드로 찍힘)
+_LLM_MODEL_ROLE_ERROR_CODE = {
+    "1순위": "IG-08",
+    "2순위": "IG-09",
+    "3순위": "IG-10",
+    "최종 안전망": "IG-11",
+}
+
+# 기존 코드(다른 곳에서 로그 표시용으로 참조하는 " -> ".join(...) 등)와의
+# 하위호환을 위해 모델명만 뽑은 리스트도 그대로 유지.
+LLM_MODEL_CHAIN_OPENROUTER = [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]
 
 LLM_BATCH_SIZE = 20  # 한 번의 API 호출에 몇 쌍까지 같이 물어볼지 (호출 수 절약,
                       # OpenRouter 무료 티어 분당/일 요청 한도 감안해도 안전한 크기)
@@ -551,29 +577,42 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     """
     LLM_PROVIDER에 맞는 경로로 실제 텍스트 응답을 받아온다.
 
-    openrouter인 경우: LLM_MODEL_CHAIN_OPENROUTER(지정 모델 -> 지정 모델2 ->
-    지정 모델3 -> openrouter/free, 위 상수 선언부 참고)를 순서대로 시도한다.
-    앞 모델이 실패하면(모델 이름 오타, 무료 티어에서 빠짐, 일시적 문제 등)
-    다음 모델로 자동 재시도 - 특정 모델 하나에 고정한 설정이 그 모델만의
-    문제 때문에 3차 그룹핑 보조 전체를 막는 걸 방지한다. 체인의 마지막은
-    항상 openrouter/free라 여기까지 실패하면 더 폴백할 곳이 없으므로 예외를
-    그대로 올려보낸다 - 호출부가 기존처럼 "이 배치 전체 안 묶음"으로 흡수한다.
+    openrouter인 경우: _LLM_MODEL_CHAIN_OPENROUTER_ROLES(1순위 -> 2순위 ->
+    3순위 -> 최종 안전망(openrouter/free), 위 상수 선언부 참고)를 순서대로
+    시도한다. 앞 모델이 실패하면(모델 이름 오타, 무료 티어에서 빠짐, 일시적
+    문제 등) 다음 모델로 자동 재시도 - 특정 모델 하나에 고정한 설정이 그
+    모델만의 문제 때문에 3차 그룹핑 보조 전체를 막는 걸 방지한다. 마지막
+    "최종 안전망"까지 실패하면 더 폴백할 곳이 없으므로 예외를 그대로
+    올려보낸다 - 호출부가 기존처럼 "이 배치 전체 안 묶음"으로 흡수한다.
+
+    ** 오류 코드를 역할(순위)별로 고정해서 분리한 이유(2026-07-28) **:
+    "지정 모델 호출 실패"라는 로그 한 줄만으로는 1순위/2순위/3순위 중 정확히
+    어느 자리가 실패한 건지 구분이 안 됐음. IG-08(1순위)/IG-09(2순위)/
+    IG-10(3순위)/IG-11(최종 안전망)로 나눠서, 예를 들어 "2순위 모델만 계속
+    빠지는지"처럼 특정 자리의 실패 빈도를 로그 grep만으로 바로 알 수 있게 함.
+    최종 안전망(openrouter/free)까지 실패하는 건 이 배치가 완전히 실패하는
+    거라 🔴 조치필요로, 그 앞 순위들의 실패는 다음 후보로 자동 복구되는
+    경로라 🟡 주의로 구분.
     """
     if LLM_PROVIDER != "openrouter":
         return _request_anthropic(system_prompt, user_prompt, api_key, session)
 
+    chain = _LLM_MODEL_CHAIN_OPENROUTER_ROLES
     last_error: Exception | None = None
-    for idx, model_name in enumerate(LLM_MODEL_CHAIN_OPENROUTER):
+    for idx, (role, model_name) in enumerate(chain):
         try:
             if idx > 0:
-                print(f"[issue_grouper] 🟡 주의 - 3차 그룹핑 이전 모델 실패 - "
-                      f"'{model_name}'(으)로 재시도 ({idx + 1}/{len(LLM_MODEL_CHAIN_OPENROUTER)})")
+                print(f"[issue_grouper] 🟡 주의 - 3차 그룹핑 {role} 모델('{model_name}')로 재시도 "
+                      f"({idx + 1}/{len(chain)})")
             return _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
         except Exception as e:
             last_error = e
-            if idx < len(LLM_MODEL_CHAIN_OPENROUTER) - 1:
-                print(f"[issue_grouper] 🟡 주의 - 3차 그룹핑 지정 모델('{model_name}') 호출 실패 - "
-                      f"다음 후보 모델로 재시도: {type(e).__name__} - {e!r}")
+            code = _LLM_MODEL_ROLE_ERROR_CODE[role]
+            is_final = idx == len(chain) - 1
+            level = "🔴 조치필요" if is_final else "🟡 주의"
+            next_note = "더 시도할 모델 없음 - 이 배치 전체 '안 묶음' fallback" if is_final else "다음 후보 모델로 재시도"
+            print(f"[issue_grouper] {level} [{code}] - 3차 그룹핑 {role} 모델('{model_name}') 호출 실패 - "
+                  f"{next_note}: {type(e).__name__} - {e!r}")
     raise last_error
 
 

@@ -53,11 +53,32 @@ LLM_API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
 LLM_MODEL_OPENROUTER_2 = os.environ.get("OPENROUTER_MODEL_2") or ""
 LLM_MODEL_OPENROUTER_3 = os.environ.get("OPENROUTER_MODEL_3") or ""
 
-LLM_MODEL_CHAIN_OPENROUTER = [
-    m for m in (LLM_MODEL_OPENROUTER, LLM_MODEL_OPENROUTER_2, LLM_MODEL_OPENROUTER_3) if m
-]
-if "openrouter/free" not in LLM_MODEL_CHAIN_OPENROUTER:
-    LLM_MODEL_CHAIN_OPENROUTER.append("openrouter/free")
+# (역할 라벨, 모델명) 쌍으로 관리 - issue_grouper.py와 동일한 이유
+# (2026-07-28, 담당자 요청): 체인 길이가 OPENROUTER_MODEL_2/3 설정 여부에
+# 따라 2~4로 들쭉날쭉해서, 리스트 인덱스만으로는 "2번째"가 항상 2순위
+# 모델을 뜻하지 않게 됨 - 인덱스 대신 역할 자체를 라벨로 고정해서 로그에서
+# 어떤 조합이든 정확히 어느 모델이 실패했는지 구분 가능하게 함
+# (_request_llm_text 참고).
+_LLM_MODEL_CHAIN_OPENROUTER_ROLES: list[tuple[str, str]] = []
+if LLM_MODEL_OPENROUTER:
+    _LLM_MODEL_CHAIN_OPENROUTER_ROLES.append(("1순위", LLM_MODEL_OPENROUTER))
+if LLM_MODEL_OPENROUTER_2:
+    _LLM_MODEL_CHAIN_OPENROUTER_ROLES.append(("2순위", LLM_MODEL_OPENROUTER_2))
+if LLM_MODEL_OPENROUTER_3:
+    _LLM_MODEL_CHAIN_OPENROUTER_ROLES.append(("3순위", LLM_MODEL_OPENROUTER_3))
+if "openrouter/free" not in [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]:
+    _LLM_MODEL_CHAIN_OPENROUTER_ROLES.append(("최종 안전망", "openrouter/free"))
+
+# 순위 라벨 -> 실패 시 찍을 오류 코드 (역할 고정)
+_LLM_MODEL_ROLE_ERROR_CODE = {
+    "1순위": "RF-09",
+    "2순위": "RF-10",
+    "3순위": "RF-11",
+    "최종 안전망": "RF-12",
+}
+
+# 하위호환용 - 모델명만 뽑은 리스트(다른 곳에서 " -> ".join(...) 등으로 사용)
+LLM_MODEL_CHAIN_OPENROUTER = [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]
 
 # OpenRouter 권장 헤더(선택, ASCII 전용 - 한글 넣으면 UnicodeEncodeError남,
 # issue_grouper.py에서 이미 실측 확인된 함정).
@@ -244,30 +265,42 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     """
     LLM_PROVIDER에 맞는 경로로 실제 텍스트 응답을 받아온다.
 
-    openrouter인 경우: LLM_MODEL_CHAIN_OPENROUTER(지정 모델 -> 지정 모델2 ->
-    지정 모델3 -> openrouter/free)를 순서대로 시도한다. 앞 모델이 실패하면
-    (모델 이름 오타, 무료 티어에서 빠짐, 일시적 문제 등) 다음 모델로 자동
-    재시도 - 특정 모델 하나에 고정한 설정이 그 모델만의 문제 때문에 이
-    실행의 LLM 기능 전체(관련성 필터/재분류/그룹핑/요약 중 이 함수를 부른
-    것)를 막는 걸 방지한다. 체인의 마지막은 항상 openrouter/free라 여기까지
-    실패하면 더 폴백할 곳이 없으므로 그대로 예외를 올려보낸다 - 호출부가
-    기존처럼 "이 배치 전체 안전 처리"로 흡수한다.
+    openrouter인 경우: _LLM_MODEL_CHAIN_OPENROUTER_ROLES(1순위 -> 2순위 ->
+    3순위 -> 최종 안전망(openrouter/free))를 순서대로 시도한다. 앞 모델이
+    실패하면(모델 이름 오타, 무료 티어에서 빠짐, 일시적 문제 등) 다음
+    모델로 자동 재시도 - 특정 모델 하나에 고정한 설정이 그 모델만의 문제
+    때문에 이 실행의 LLM 기능 전체(관련성 필터/재분류/그룹핑/요약 중 이
+    함수를 부른 것)를 막는 걸 방지한다. 마지막 "최종 안전망"까지 실패하면
+    더 폴백할 곳이 없으므로 그대로 예외를 올려보낸다 - 호출부가 기존처럼
+    "이 배치 전체 안전 처리"로 흡수한다.
+
+    ** 오류 코드를 역할(순위)별로 고정해서 분리한 이유(2026-07-28) **:
+    issue_grouper.py와 동일 - "지정 모델 호출 실패"라는 로그 한 줄만으로는
+    1순위/2순위/3순위 중 어느 자리가 실패한 건지 구분이 안 됐음.
+    RF-09(1순위)/RF-10(2순위)/RF-11(3순위)/RF-12(최종 안전망)로 분리해서
+    grep만으로 특정 순위의 실패 빈도를 바로 알 수 있게 함. 최종 안전망까지
+    실패하는 건 완전 실패라 🔴 조치필요, 그 앞 순위 실패는 자동 복구되는
+    경로라 🟡 주의.
     """
     if LLM_PROVIDER != "openrouter":
         return _request_anthropic(system_prompt, user_prompt, api_key, session)
 
+    chain = _LLM_MODEL_CHAIN_OPENROUTER_ROLES
     last_error: Exception | None = None
-    for idx, model_name in enumerate(LLM_MODEL_CHAIN_OPENROUTER):
+    for idx, (role, model_name) in enumerate(chain):
         try:
             if idx > 0:
-                print(f"[relevance_filter] 🟡 주의 - {label} 이전 모델 실패 - "
-                      f"'{model_name}'(으)로 재시도 ({idx + 1}/{len(LLM_MODEL_CHAIN_OPENROUTER)})")
+                print(f"[relevance_filter] 🟡 주의 - {label} {role} 모델('{model_name}')로 재시도 "
+                      f"({idx + 1}/{len(chain)})")
             return _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
         except Exception as e:
             last_error = e
-            if idx < len(LLM_MODEL_CHAIN_OPENROUTER) - 1:
-                print(f"[relevance_filter] 🟡 주의 - {label} 지정 모델('{model_name}') 호출 실패 - "
-                      f"다음 후보 모델로 재시도: {type(e).__name__} - {e!r}")
+            code = _LLM_MODEL_ROLE_ERROR_CODE[role]
+            is_final = idx == len(chain) - 1
+            level = "🔴 조치필요" if is_final else "🟡 주의"
+            next_note = "더 시도할 모델 없음 - 이 배치 전체 안전 처리" if is_final else "다음 후보 모델로 재시도"
+            print(f"[relevance_filter] {level} [{code}] - {label} {role} 모델('{model_name}') 호출 실패 - "
+                  f"{next_note}: {type(e).__name__} - {e!r}")
     raise last_error
 
 

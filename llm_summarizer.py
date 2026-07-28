@@ -145,30 +145,42 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: reque
     와 동일한 방식).
 
     ** 지정 모델 실패 시 다음 후보 모델로 자동 재시도 **
-    openrouter인 경우 _ig.LLM_MODEL_CHAIN_OPENROUTER(지정 모델 -> 지정
-    모델2 -> 지정 모델3 -> openrouter/free, issue_grouper.py 상수 선언부
+    openrouter인 경우 _ig._LLM_MODEL_CHAIN_OPENROUTER_ROLES(1순위 -> 2순위 ->
+    3순위 -> 최종 안전망(openrouter/free), issue_grouper.py 상수 선언부
     참고)를 순서대로 시도한다. 앞 모델이 실패하면(이름 오타, 무료 티어에서
     빠짐 등) 다음 후보로 자동 재시도 - 특정 모델 하나에 고정한 설정이 그
-    모델만의 문제 때문에 이번 실행의 요약 기능 전체를 막는 걸 방지. 체인의
-    마지막은 항상 openrouter/free라 여기까지 실패해야 최종 실패로 처리.
+    모델만의 문제 때문에 이번 실행의 요약 기능 전체를 막는 걸 방지. 마지막
+    "최종 안전망"까지 실패해야 최종 실패로 처리.
+
+    ** 오류 코드를 역할(순위)별로 고정해서 분리한 이유(2026-07-28) **:
+    issue_grouper.py/relevance_filter.py와 동일 - LS-02(1순위)/LS-03(2순위)/
+    LS-04(3순위)/LS-05(최종 안전망)로 분리해서 어느 순위가 실패했는지 로그
+    grep만으로 구분 가능. 최종 실패는 아래 바깥 except가 기존처럼 LS-01로
+    한 번 더 종합 로그를 남김(이건 "요약 자체가 결국 실패했다"는 상위
+    레벨 신호, LS-05는 "그 원인이 최종 안전망까지 다 막혀서였다"는 하위
+    레벨 신호 - 역할이 다름).
     """
     data = None  # 응답 자체를 못 받았을 수도 있으니 미리 초기화(로그에서 안전하게 참조용)
     try:
         if _ig.LLM_PROVIDER == "openrouter":
+            chain = _ig._LLM_MODEL_CHAIN_OPENROUTER_ROLES
+            role_codes = {"1순위": "LS-02", "2순위": "LS-03", "3순위": "LS-04", "최종 안전망": "LS-05"}
             last_error: Exception | None = None
-            chain = _ig.LLM_MODEL_CHAIN_OPENROUTER
-            for idx, model_name in enumerate(chain):
+            for idx, (role, model_name) in enumerate(chain):
                 try:
                     if idx > 0:
-                        print(f"[llm_summarizer] 🟡 주의 - 요약 생성 이전 모델 실패 - "
-                              f"'{model_name}'(으)로 재시도 ({idx + 1}/{len(chain)})")
+                        print(f"[llm_summarizer] 🟡 주의 - 요약 생성 {role} 모델('{model_name}')로 재시도 "
+                              f"({idx + 1}/{len(chain)})")
                     text, data = _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
                     return text
                 except Exception as e:
                     last_error = e
-                    if idx < len(chain) - 1:
-                        print(f"[llm_summarizer] 🟡 주의 - 요약 생성 지정 모델('{model_name}') 호출 실패 - "
-                              f"다음 후보 모델로 재시도: {type(e).__name__} - {e!r}")
+                    code = role_codes[role]
+                    is_final = idx == len(chain) - 1
+                    level = "🔴 조치필요" if is_final else "🟡 주의"
+                    next_note = "더 시도할 모델 없음" if is_final else "다음 후보 모델로 재시도"
+                    print(f"[llm_summarizer] {level} [{code}] - 요약 생성 {role} 모델('{model_name}') "
+                          f"호출 실패 - {next_note}: {type(e).__name__} - {e!r}")
             raise last_error
         else:
             text, data = _request_anthropic(system_prompt, user_prompt, api_key, session)
