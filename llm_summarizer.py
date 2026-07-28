@@ -80,6 +80,53 @@ def _build_user_prompt(item: dict) -> str:
     return "\n".join(lines)
 
 
+def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
+                         session: requests.Session, model_name: str) -> tuple[str, dict]:
+    """반환값: (응답 텍스트, 원본 응답 dict) - dict는 실패 시 로그에 남기기 위함."""
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "content-type": "application/json",
+        # ASCII 전용이어야 함 - HTTP 헤더는 latin-1만 허용되므로
+        # 한글이 섞이면 UnicodeEncodeError. issue_grouper의
+        # 검증된 상수를 그대로 재사용
+        "X-Title": _ig._OPENROUTER_X_TITLE,
+    }
+    body = {
+        "model": model_name,
+        "temperature": 0.3,  # 자연어 생성이라 3차(판정, temperature=0)보다는 살짝 여유
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    }
+    resp = session.post(_ig.LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"].strip(), data
+
+
+def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> tuple[str, dict]:
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    body = {
+        "model": _ig.LLM_MODEL_ANTHROPIC,
+        "max_tokens": 300,
+        "temperature": 0.3,
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": user_prompt}],
+    }
+    resp = session.post(_ig.LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    text = "".join(
+        block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
+    ).strip()
+    return text, data
+
+
 def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> str | None:
     """
     issue_grouper.py의 프로바이더 설정을 재사용해 LLM을 한 번 호출하고 응답
@@ -89,54 +136,38 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: reque
     3차(_call_llm, issue_grouper.py)와 요청 형식은 거의 같지만, 3차는 JSON
     배열을 기대하는 반면 이건 자연어 문장 하나를 기대한다는 점이 달라서
     별도 함수로 둔다 - 파싱 방식이 다른데 억지로 하나로 합치면 오히려
-    코드가 더 헷갈림.
+    코드가 더 헷갈림. temperature/max_tokens도 요약 생성 용도에 맞게
+    다르게 줘야 해서(자연어 생성이라 판정보다 살짝 여유), issue_grouper의
+    요청 헬퍼를 그대로 재사용하지 않고 이 파일에 따로 둔다.
 
     session: summarize_top_issues가 이슈마다 반복 호출하므로, 세션을
     재사용해 커넥션 오버헤드를 줄인다(relevance_filter.py/issue_grouper.py
     와 동일한 방식).
+
+    ** 지정 모델 실패 시 openrouter/free 자동 재시도 **
+    openrouter이고 지정 모델(_ig.LLM_MODEL_OPENROUTER)이 openrouter/free가
+    아닌데 호출이 실패하면, openrouter/free(OpenRouter 자체 무료 라우터)로
+    한 번 더 자동 재시도한다 - 특정 모델 하나에 고정한 설정이 그 모델만의
+    문제(이름 오타, 무료 티어에서 빠짐 등) 때문에 이번 실행의 요약 기능
+    전체를 막는 걸 방지. 이미 openrouter/free를 쓰고 있으면 재시도 없이
+    바로 실패 처리.
     """
     data = None  # 응답 자체를 못 받았을 수도 있으니 미리 초기화(로그에서 안전하게 참조용)
     try:
         if _ig.LLM_PROVIDER == "openrouter":
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "content-type": "application/json",
-                # ASCII 전용이어야 함 - HTTP 헤더는 latin-1만 허용되므로
-                # 한글이 섞이면 UnicodeEncodeError. issue_grouper의
-                # 검증된 상수를 그대로 재사용
-                "X-Title": _ig._OPENROUTER_X_TITLE,
-            }
-            body = {
-                "model": _ig.LLM_MODEL_OPENROUTER,
-                "temperature": 0.3,  # 자연어 생성이라 3차(판정, temperature=0)보다는 살짝 여유
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-            }
-            resp = session.post(_ig.LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"].strip()
+            try:
+                text, data = _request_openrouter(system_prompt, user_prompt, api_key, session,
+                                                  _ig.LLM_MODEL_OPENROUTER)
+            except Exception as e:
+                if _ig.LLM_MODEL_OPENROUTER == "openrouter/free":
+                    raise
+                print(f"[llm_summarizer] 🟡 주의 - 요약 생성 지정 모델({_ig.LLM_MODEL_OPENROUTER}) 호출 실패 - "
+                      f"openrouter/free 자동 라우팅으로 재시도: {type(e).__name__} - {e!r}")
+                text, data = _request_openrouter(system_prompt, user_prompt, api_key, session, "openrouter/free")
+            return text
         else:
-            headers = {
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            }
-            body = {
-                "model": _ig.LLM_MODEL_ANTHROPIC,
-                "max_tokens": 300,
-                "temperature": 0.3,
-                "system": system_prompt,
-                "messages": [{"role": "user", "content": user_prompt}],
-            }
-            resp = session.post(_ig.LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-            return "".join(
-                block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
-            ).strip()
+            text, data = _request_anthropic(system_prompt, user_prompt, api_key, session)
+            return text
     except Exception as e:
         # data가 있으면(HTTP 호출 자체는 성공했는데 그 안에서 예상한 필드를
         # 못 찾은 경우, 예: API 응답 스키마 변경) 실제로 뭘 받았는지 잘라서

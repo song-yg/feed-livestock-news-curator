@@ -187,6 +187,75 @@ def _snippet_for_log(text: str, limit: int = 200) -> str:
     return flat[:limit] + ("..." if len(flat) > limit else "")
 
 
+def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
+                         session: requests.Session, model_name: str) -> str:
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "content-type": "application/json",
+        "X-Title": _OPENROUTER_X_TITLE,
+    }
+    body = {
+        "model": model_name,
+        "temperature": 0,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    }
+    resp = session.post(LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"].strip()
+
+
+def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> str:
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    body = {
+        "model": LLM_MODEL_ANTHROPIC,
+        "max_tokens": 1024,
+        "temperature": 0,
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": user_prompt}],
+    }
+    resp = session.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    return "".join(
+        block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
+    ).strip()
+
+
+def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session,
+                       label: str) -> str:
+    """
+    LLM_PROVIDER에 맞는 경로로 실제 텍스트 응답을 받아온다.
+
+    openrouter이고 지정 모델(LLM_MODEL_OPENROUTER)이 이미 openrouter/free가
+    아닌 경우: 지정 모델로 먼저 시도하고, 실패하면(모델 이름 오타, 그 모델이
+    무료 티어에서 빠짐, 일시적 문제 등) openrouter/free(OpenRouter 자체
+    무료 라우터)로 한 번 더 자동 재시도한다 - 특정 모델 하나에 고정한
+    설정이 그 모델만의 문제 때문에 이 실행의 LLM 기능 전체(관련성 필터/
+    재분류/그룹핑/요약 중 이 함수를 부른 것)를 막는 걸 방지한다. 이미
+    openrouter/free를 쓰고 있으면 더 폴백할 곳이 없으므로 그대로 예외를
+    올려보낸다 - 호출부가 기존처럼 "이 배치 전체 안전 처리"로 흡수한다.
+    """
+    if LLM_PROVIDER != "openrouter":
+        return _request_anthropic(system_prompt, user_prompt, api_key, session)
+
+    try:
+        return _request_openrouter(system_prompt, user_prompt, api_key, session, LLM_MODEL_OPENROUTER)
+    except Exception as e:
+        if LLM_MODEL_OPENROUTER == "openrouter/free":
+            raise
+        print(f"[relevance_filter] 🟡 주의 - {label} 지정 모델({LLM_MODEL_OPENROUTER}) 호출 실패 - "
+              f"openrouter/free 자동 라우팅으로 재시도: {type(e).__name__} - {e!r}")
+        return _request_openrouter(system_prompt, user_prompt, api_key, session, "openrouter/free")
+
+
 def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> list[bool] | None:
     """
     LLM API를 한 번 호출해서 batch 각각에 대한 relevant 판정을 받아온다.
@@ -202,43 +271,7 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
                  # 로그에서 안전하게 참조할 수 있도록 미리 초기화
 
     try:
-        if LLM_PROVIDER == "openrouter":
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "content-type": "application/json",
-                "X-Title": _OPENROUTER_X_TITLE,
-            }
-            body = {
-                "model": LLM_MODEL_OPENROUTER,
-                "temperature": 0,
-                "messages": [
-                    {"role": "system", "content": _SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-            }
-            resp = session.post(LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-            text = data["choices"][0]["message"]["content"].strip()
-        else:
-            headers = {
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            }
-            body = {
-                "model": LLM_MODEL_ANTHROPIC,
-                "max_tokens": 1024,
-                "temperature": 0,
-                "system": _SYSTEM_PROMPT,
-                "messages": [{"role": "user", "content": user_prompt}],
-            }
-            resp = session.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-            text = "".join(
-                block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
-            ).strip()
+        text = _request_llm_text(_SYSTEM_PROMPT, user_prompt, api_key, session, "관련성 필터")
 
         # 코드 펜스(```json ... ```)로 감싸서 올 때가 있어 방어적으로 벗겨낸다
         # (issue_grouper.py와 동일한 방어 로직 - 무료 모델은 이런 포맷 이탈이
@@ -432,43 +465,7 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
     text = None
 
     try:
-        if LLM_PROVIDER == "openrouter":
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "content-type": "application/json",
-                "X-Title": _OPENROUTER_X_TITLE,
-            }
-            body = {
-                "model": LLM_MODEL_OPENROUTER,
-                "temperature": 0,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-            }
-            resp = session.post(LLM_API_URL_OPENROUTER, headers=headers, json=body, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-            text = data["choices"][0]["message"]["content"].strip()
-        else:
-            headers = {
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            }
-            body = {
-                "model": LLM_MODEL_ANTHROPIC,
-                "max_tokens": 1024,
-                "temperature": 0,
-                "system": system_prompt,
-                "messages": [{"role": "user", "content": user_prompt}],
-            }
-            resp = session.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-            text = "".join(
-                block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
-            ).strip()
+        text = _request_llm_text(system_prompt, user_prompt, api_key, session, "카테고리 재분류")
 
         if text.startswith("```"):
             text = text.split("```")[1]
