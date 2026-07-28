@@ -115,8 +115,16 @@ if not getattr(requests.utils, "_gdelt_ua_patched", False):
 # 시트가 나중에 바뀌면 이 fallback도 수동으로 같이 갱신해줘야 한다(자동
 # 동기화 아님 - naver_collector.py KEYWORDS 갱신 시와 동일한 주의사항).
 KEYWORDS_EN = [
+    "foot-and-mouth disease",
     "feed price",
+    "livestock movement restriction",
+    "swine industry",
     "feed mill",
+    "feed additive",
+    "livestock import tariff",
+    "poultry vertical integration",
+    "smart farming",
+    "smart livestock barn",
 ]
 
 # --- 이미 실패가 확인된 키워드 사전 스킵 ---
@@ -139,27 +147,38 @@ SKIP_KEYWORDS = {
 # 아직 안 등록된 짧은 키워드가 시트에 새로 추가되면 등록되기 전까지 매번
 # ValueError로 요청 1번씩 계속 낭비함(길이 기반 예방적 차단은 위험해서 안 씀).
 #
-# 대신 "실제로 같은 키워드가 2번 연속 ValueError(쿼리 자체 거부)로 실패하면
-# 자동으로 스킵 목록에 편입"하는 방식을 씀 - 사람이 손으로 안 건드려도 됨.
-# GitHub Actions 러너가 매번 새 VM이라(상태가 실행 간 유지 안 됨) 이 학습
-# 결과를 파일로 저장해서 리포에 git commit해야 다음 실행에도 이어짐 -
-# storage.py가 raw.json/scored.json을 저장하는 것과 같은 패턴을 재사용함.
+# 대신 "실제로 같은 키워드에서 ValueError(쿼리 자체 거부)가 누적 2회
+# 발생하면 자동으로 스킵 목록에 편입"하는 방식을 씀 - 사람이 손으로 안
+# 건드려도 됨. GitHub Actions 러너가 매번 새 VM이라(상태가 실행 간 유지
+# 안 됨) 이 학습 결과를 파일로 저장해서 리포에 git commit해야 다음
+# 실행에도 이어짐 - storage.py가 raw.json/scored.json을 저장하는 것과
+# 같은 패턴을 재사용함.
 #
 # data/가 아니라 별도 state/ 디렉토리에 두는 이유: data/는 "주차별 결과물
 # 아카이브"라는 의미가 이미 확정돼 있는데(storage.py 참고), 이 파일은
 # 특정 주차에 속하지 않고 계속 누적되는 "파이프라인 자체의 학습된 상태"라
 # 성격이 달라 구분함.
 #
+# ** 카운팅 기준: 실행 횟수가 아니라 ValueError 발생(출력) 횟수 **
+# _update_skip_state_after_run 참고 - 한 실행 안에서 외부 재시도 라운드를
+# 여러 번 돌며 같은 키워드가 반복 실패하면, 그 반복된 실패 횟수만큼
+# fail_count가 그 실행 하나에서 한꺼번에 올라간다(예전엔 실행당 무조건
+# +1이었음). 그 결과 "2번 연속 실행에서 확인"이 아니라 "누적 2회 발생
+# 확인"으로 기준이 바뀜 - 재시도가 겹치는 키워드는 한 실행만으로도 임계값을
+# 넘어 등재될 수 있음.
+#
 # 2번(SKIP_STATE_FAILURE_THRESHOLD)으로 잡은 이유: 1번 실패만으로 바로
 # 영구 등록하면, GDELT 쪽 일시적 문제로 어쩌다 한 번 오탐이 났을 때도
-# 영구히 막혀버릴 위험이 있음 - 2번 연속 확인돼야 "진짜 이 키워드 자체의
+# 영구히 막혀버릴 위험이 있음 - 누적 2회는 확인돼야 "진짜 이 키워드 자체의
 # 문제"로 보는 게 안전하다고 판단.
 SKIP_STATE_PATH = "state/gdelt_skip_keywords.json"
 SKIP_STATE_FAILURE_THRESHOLD = 2
 
-# 이번 실행 중 ValueError(쿼리 자체 거부)로 실패한 키워드를 모아두는 용도.
-# collect() 시작 시 반드시 비워야 함(모듈이 재사용될 수 있는 테스트 환경
-# 등에서 이전 실행의 잔여물이 안 섞이도록) - collect() 본문 참고.
+# 이번 실행 중 ValueError(쿼리 자체 거부)가 발생한 키워드를 "발생할 때마다"
+# append하는 용도(중복 제거 안 함 - _update_skip_state_after_run이 발생
+# 횟수 자체를 세야 하므로 여기서는 그대로 다 쌓아둔다). collect() 시작 시
+# 반드시 비워야 함(모듈이 재사용될 수 있는 테스트 환경 등에서 이전 실행의
+# 잔여물이 안 섞이도록) - collect() 본문 참고.
 _value_error_keywords_this_run: list[str] = []
 
 
@@ -206,23 +225,55 @@ def _save_skip_state(state: dict, path: str = SKIP_STATE_PATH) -> None:
 def _update_skip_state_after_run() -> None:
     """
     collect() 끝에서 호출 - 이번 실행 중 ValueError로 실패한 키워드들의
-    fail_count를 1씩 올리고, 변경이 있었으면 파일에 저장한다.
+    fail_count를 올리고, 변경이 있었으면 파일에 저장한다.
+
+    ** 카운팅 기준: "실행 횟수"가 아니라 "이번 실행 안에서 실제로 ValueError가
+    발생한 횟수" **
+    이전엔 한 실행 안에서 같은 키워드가 여러 번 ValueError로 실패해도(예:
+    개별 요청 1차 시도 + 외부 재시도 라운드 여러 번, ValueError는 시간이
+    지나도 안 풀리는 확정적 실패라 재시도할 때마다 매번 다시 실패함 -
+    _collect_articles_for_keyword 참고) dict.fromkeys로 중복 제거해서
+    "이번 실행에서 겪었다/안 겪었다"만 반영, 무조건 +1씩만 올렸다. 그러다
+    보니 한 실행 안에서 재시도 라운드를 여러 번 도는 키워드나 단발성으로
+    한 번만 걸리는 키워드나 fail_count 증가폭이 똑같아서, "실제로 이
+    키워드가 얼마나 자주/확실하게 실패하고 있는지"가 fail_count에 제대로
+    반영되지 않는 문제가 있었음.
+
+    collections.Counter로 이번 실행 동안 키워드별 ValueError 발생 횟수
+    자체를 세서, 그 횟수만큼 fail_count에 더한다 - 재시도 라운드를 많이
+    돈 키워드일수록(=그만큼 여러 번 확실하게 실패를 반복 확인한 것이므로)
+    fail_count가 더 빨리 쌓여 학습형 스킵 목록에 더 빨리 등재된다.
+
+    ** 주의 - SKIP_STATE_FAILURE_THRESHOLD(2)의 의미가 달라짐 **
+    기존엔 "2번의 서로 다른 실행에서 연속 확인"이었는데, 이제는 한 실행
+    안에서 재시도가 2번 이상 겹치면(외부 재시도 라운드가 있으면 실제로
+    흔함) 그 실행 하나만으로도 임계값을 넘어 바로 다음 실행부터 스킵
+    대상이 될 수 있다 - "여러 실행에 걸친 재현성 확인"에서 "충분히 반복
+    확인된 실패"로 판단 기준이 바뀐 것. 더 빠르게 학습되는 대신, 아주
+    드물게 그 실행에서만 일시적으로 겹쳐 실패했을 가능성까지 완전히
+    배제하진 못한다는 트레이드오프가 있음.
     """
     if not _value_error_keywords_this_run:
         return
 
+    from collections import Counter
+    occurrence_counts = Counter(_value_error_keywords_this_run)
+
     state = _load_skip_state()
     now_str = datetime.now(timezone.utc).isoformat()
-    for keyword in dict.fromkeys(_value_error_keywords_this_run):  # 중복 제거, 순서 유지
+    for keyword, occurrences in occurrence_counts.items():
         entry = state.get(keyword)
         if not isinstance(entry, dict):
             entry = {"fail_count": 0}  # 없거나(신규) 손상된 값이면 새로 시작
-        entry["fail_count"] = entry.get("fail_count", 0) + 1
+        entry["fail_count"] = entry.get("fail_count", 0) + occurrences
         entry["reason"] = "GDELT API가 'phrase too short' 등으로 쿼리 자체를 거부함 (자동 학습됨)"
         entry["last_seen"] = now_str
         state[keyword] = entry
+        if occurrences > 1:
+            print(f"[gdelt] '{keyword}' - 이번 실행에서 ValueError {occurrences}회 발생 확인 "
+                  f"(재시도 라운드 반복 실패) - fail_count {occurrences}만큼 증가")
         if entry["fail_count"] >= SKIP_STATE_FAILURE_THRESHOLD:
-            print(f"[gdelt] 🟡 주의 [GD-03] - '{keyword}' - {entry['fail_count']}회 연속 ValueError 확인됨 "
+            print(f"[gdelt] 🟡 주의 [GD-03] - '{keyword}' - 누적 ValueError {entry['fail_count']}회 확인됨 "
                   f"(임계값 {SKIP_STATE_FAILURE_THRESHOLD}) - 다음 실행부터 자동 스킵 대상으로 등록")
 
     _save_skip_state(state)
