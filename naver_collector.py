@@ -139,7 +139,7 @@ def collect() -> list[dict]:
             except requests.exceptions.RequestException as e:
                 # 이 키워드의 나머지 페이지는 못 가져왔지만, 지금까지 모은
                 # keyword_results는 아래에서 그대로 살려서 반영한다.
-                print(f"[naver] 🟡 주의 [NV-01] - '{keyword}' 수집 중 오류 발생(지금까지 모은 "
+                print(f"[naver] 🔴 조치필요 [NV-01] - '{keyword}' 수집 중 오류 발생(지금까지 모은 "
                       f"{len(keyword_results)}건은 보존하고 다음 키워드로 진행): {type(e).__name__} - {e!r}")
 
             all_results.extend(keyword_results)

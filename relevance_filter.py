@@ -1,46 +1,409 @@
 """
-relevance_filter.py
-관련성 필터 - 정규화(URL dedup + 키워드 태깅) 직후, 이슈 그룹핑
-(임베딩 로드) 전에 실행한다.
+issue_grouper.py
+이슈 그룹핑 담당 모듈.
 
-배경: 키워드 매칭만으로는 걸러지지 않는 오매칭 유형이 다수 확인됨 -
-동음이의어(질병명이 유튜버 닉네임인 경우), 검색어가 기관명/법안명 등
-고유명사의 일부로만 등장하는 경우, 기사의 핵심 주제는 따로 있고 축산 관련
-내용은 통계 나열 중 한 줄로만 등장하는 "각주성 언급" 등. 이런 유형은
-키워드를 아무리 좁혀도(복합어, near() 등) 구조적으로 해결이 안 되는데,
-LLM이 제목/요약 맥락을 읽으면 정확히 구분 가능한 문제라 필터 단계로 신설.
+하이브리드 파이프라인을 전부 구현:
+  1차 - KR<->EN 키워드 사전 매칭         -> 구현은 됐으나 현재 사전을 비워둠
+                                          (ISSUE_SYNONYM_GROUPS 주석 참조)
+  2차 - BGE-M3 임베딩 코사인 유사도       -> 구현
+  3차 - LLM 그룹핑 보조 (임계값 애매 구간) -> 구현 완료 (아래 "3차: LLM
+                                          그룹핑 보조" 섹션 참조). LLM을
+                                          호출해 borderline_pairs만 최종
+                                          판단한다.
 
-설계는 issue_grouper.py의 "3차 LLM 보조"와 동일한 패턴을 그대로 재사용한다
-(provider 스위치, 배치 호출, 출력 개수/형식 검증, 실패 시 안전한 기본값
-fallback) - 두 모듈이 서로 다른 판정을 하지만 LLM 호출 방식 자체는 같은
-철학을 공유하므로 일관성을 위해 통일함.
-
-기본값 방향이 issue_grouper와 반대라는 점에 주의: 그룹핑 3차는 "애매하면
-false(안 묶음)"가 안전하지만, 이 필터는 "애매하면 true(통과)"가 안전하다 -
-관련 있는 기사를 잘못 걸러내는 것보다, 무관한 기사가 몇 개 더 통과하는 편이
-손실이 적다. 배치 호출 자체가 실패해도 마찬가지 이유로 그 배치는 전부
-통과시킨다(안 걸러진 채로 이후 단계로 넘어감).
-
-소스별로 LLM에 줄 수 있는 컨텍스트 양이 다르다는 한계가 있음 - 네이버는
-description(짧은 요약), WATT는 body(본문 앞부분), GDELT는 제목뿐(GDELT는
-스펙상 본문을 안 줌). GDELT 기사는 상대적으로 판정 근거가 부족하다.
+group_issues()가 1~3차를 순서대로 실행해 최종 그룹 리스트를 만든다.
 """
 
+import csv
 import json
 import os
+from itertools import combinations
 
 import requests
 
+# keyword_tagger.py가 이미 "AI"를 매칭에서 제외하기로 확정한 이유와 완전히
+# 똑같은 문제가 여기서도 재현됐다 (아래 ISSUE_SYNONYM_GROUPS 주석 및
+# _stage1_match_keys 참고) - 같은 판단 기준을 두 파일에 따로 관리하면
+# 나중에 하나만 고치고 하나는 놓치는 사고가 나기 쉬우므로, keyword_tagger의
+# EXCLUDED_TERMS를 그대로 재사용해 기준을 한 곳으로 통일한다.
+from keyword_tagger import EXCLUDED_TERMS
+
+
 # ---------------------------------------------------------------------------
-# LLM 프로바이더 설정 - issue_grouper.py와 완전히 동일한 스위치 방식 재사용
-# (같은 프로젝트 안에서 프로바이더 전환 기준이 파일마다 다르면 혼란스러우므로
-# 통일함). LLM_PROVIDER=anthropic(기본값) 또는 openrouter.
+# 1차: KR<->EN 키워드 사전 매칭
+# ---------------------------------------------------------------------------
 #
-# os.environ.get(key, default) 대신 or를 쓰는 이유: GitHub Actions Variables에
-# 빈 문자열로 설정된 경우 os.environ.get(key, default)는 default를 못 돌려주고
-# 빈 문자열을 그대로 반환하는 버그가 이미 확인된 바 있음(issue_grouper.py
-# 참고) - 같은 함정을 여기서도 피하기 위해 동일한 패턴 사용.
+# 문서 예시: "조류독감"/"AI" <-> "avian flu"/"HPAI" 처럼, 같은 이슈를 가리키는
+# 한글/영어 표현들을 하나의 묶음(set)으로 등록해둔다. 제목 안에 같은 묶음의
+# 단어가 들어있는 두 기사는 "1차에서 바로 매칭"된다.
+#
+# 주의 - keyword_tagger.py의 CATEGORY_KEYWORDS와는 목적이 다르다:
+#   - keyword_tagger: "이 기사가 질병명/시장가격/제도 중 어떤 카테고리인가"
+#     (넓은 카테고리 분류용, 이미 구현됨)
+#   - 여기(ISSUE_SYNONYM_GROUPS): "이 두 기사가 완전히 같은 사건을 다루는가"
+#     (개별 이슈 매칭용, 카테고리보다 훨씬 좁고 구체적인 단위)
+# 예를 들어 keyword_tagger는 "조류독감"과 "구제역"을 둘 다 "질병명" 카테고리
+# 하나로 묶지만, 여기서는 서로 다른 이슈이므로 별개 그룹이어야 한다.
+#
+# ** 이슈 그룹핑의 정의: "동일 사건만" **
+# (예: 한국 조류독감 발생과 미국 조류독감 발생은 같은 질병이어도 별도 이슈)
+# 이유: 세계적으로 큰 이슈면 각 발생건이 각자 랭킹에 자연스럽게 올라올 테니
+# 억지로 합칠 필요 없음.
+#
+# 이 정의 때문에 "질병명" 단위로 묶던 사전 매칭은 국가/사건을 구분 못해서
+# 정의와 안 맞는다는 게 재검증에서 확인됨 - 예를 들어 "조류독감" 묶음은
+# 국내 기사 1건과 필리핀/캄보디아/호주/미국 등 전혀 다른 나라의 bird flu
+# 기사들을 전부 한 그룹으로 묶어버렸고, "구제역" 묶음도 한국 예천 발생
+# 기사들과 South Africa의 FMD 백신 관련 기사가 섞여버렸다. 그래서 이
+# 사전은 비워둔다 - "완전 동일 사건" 매칭은 국가/장소/시점까지 구분해야
+# 하는 훨씬 좁은 단위라 질병명 키워드 매칭으로는 애초에 표현이 불가능함.
+# 2차(BGE-M3 임베딩)에만 의존하는 구조로 전환 - 임베딩은 제목 전체의
+# 의미를 보므로 "어느 나라 사건인지" 같은 맥락도 (완벽하진 않아도) 어느
+# 정도 반영됨.
+#
+# 아래 함수(_stage1_match_keys, stage1_group)는 인프라 자체는 남겨둔다 -
+# 나중에 "완전 동일 사건"을 표현할 수 있는 더 구체적인 키(예: 특정 지명+
+# 특정 발생 시점 조합)로 다시 채울 가능성이 있을 때 재사용 가능. 지금은
+# 빈 리스트라 이 함수들이 항상 매칭 없음(빈 set)을 반환 - 즉 모든 기사가
+# 2차(임베딩)로 그대로 넘어감.
+ISSUE_SYNONYM_GROUPS: list[set[str]] = []
+
+
+def _stage1_match_keys(title: str) -> set[int]:
+    """
+    제목 하나가 ISSUE_SYNONYM_GROUPS의 몇 번 묶음(들)에 걸리는지 반환한다.
+    (대소문자 무시 부분 문자열 매칭 - keyword_tagger.py의 tag_title과 같은 방식)
+
+    반환값은 "걸린 묶음의 인덱스 집합" - 한 제목이 여러 묶음에 걸릴 수도
+    있어서(예: "조류독감과 구제역 동시 발생" 같은 드문 제목) 인덱스 하나가
+    아니라 set으로 돌려준다.
+    """
+    title_lower = title.lower()
+    matched = set()
+    for idx, synonyms in enumerate(ISSUE_SYNONYM_GROUPS):
+        usable_synonyms = synonyms - EXCLUDED_TERMS
+        if any(syn.lower() in title_lower for syn in usable_synonyms):
+            matched.add(idx)
+    return matched
+
+
 # ---------------------------------------------------------------------------
+# 그룹 병합 로직 (Union-Find, 일명 "합집합-찾기" 구조)
+# ---------------------------------------------------------------------------
+#
+# 왜 필요한가: "A와 B가 매칭", "B와 C가 매칭"이라는 개별 판정 결과가 나왔을 때,
+# 최종적으로는 "A, B, C가 전부 한 그룹"이어야 한다 (B를 통해 A와 C도 간접
+# 연결됨). 이렇게 "여러 개의 쌍(pair) 매칭 결과를 하나의 그룹으로 합쳐주는"
+# 표준 자료구조가 Union-Find다. 코드 자체는 짧지만 동작 원리가 직관적이지
+# 않을 수 있어서 아래에 최대한 풀어서 주석을 달았다.
+class UnionFind:
+    """
+    각 기사(인덱스)를 하나의 "그룹 대표"에 연결해두는 구조.
+    - find(i): i가 속한 그룹의 "대표"가 누구인지 찾는다
+    - union(i, j): i와 j를 같은 그룹으로 합친다
+    """
+
+    def __init__(self, n: int):
+        # 처음엔 모두가 "자기 자신"을 대표로 하는 독립된 그룹
+        self.parent = list(range(n))
+
+    def find(self, i: int) -> int:
+        # i의 대표를 찾아 올라간다. 대표가 자기 자신이 아니면 계속 위로.
+        while self.parent[i] != i:
+            # 경로 압축: 다음에 더 빨리 찾도록 중간 노드를 대표에 바로 연결
+            self.parent[i] = self.parent[self.parent[i]]
+            i = self.parent[i]
+        return i
+
+    def union(self, i: int, j: int) -> None:
+        root_i, root_j = self.find(i), self.find(j)
+        if root_i != root_j:
+            self.parent[root_j] = root_i
+
+    def groups(self) -> list[list[int]]:
+        """최종 그룹들을 [[기사 인덱스, ...], ...] 형태로 뽑아낸다."""
+        buckets: dict[int, list[int]] = {}
+        for i in range(len(self.parent)):
+            root = self.find(i)
+            buckets.setdefault(root, []).append(i)
+        return list(buckets.values())
+
+
+# ---------------------------------------------------------------------------
+# 1차 매칭만으로 그룹 만들기 (2차 임베딩은 다음 스텝에서 추가)
+# ---------------------------------------------------------------------------
+
+def stage1_group(articles: list[dict]) -> tuple[list[list[dict]], list[dict]]:
+    """
+    1차 키워드 사전 매칭만으로 그룹을 만든다.
+
+    반환값:
+      grouped: 1차에서 이미 묶인 그룹들 (list[list[기사]])
+                - 묶였다는 건 "같은 묶음(ISSUE_SYNONYM_GROUPS)에 걸린 기사가
+                  2건 이상"이라는 뜻. 딱 1건만 걸린 경우는 "그룹"이 아니라
+                  그냥 매칭 안 된 기사와 동일하게 취급해 unmatched로 보낸다
+                  (그룹은 최소 2건부터 의미가 있음).
+      unmatched: 1차에서 못 잡은 기사들 -> 다음 스텝(2차 임베딩)으로 넘길 대상
+    """
+    n = len(articles)
+    uf = UnionFind(n)
+
+    # 각 묶음(synonym group) 인덱스에 걸린 기사들끼리 전부 union
+    key_to_article_indices: dict[int, list[int]] = {}
+    for i, article in enumerate(articles):
+        keys = _stage1_match_keys(article.get("title", ""))
+        for key in keys:
+            key_to_article_indices.setdefault(key, []).append(i)
+
+    for indices in key_to_article_indices.values():
+        for a, b in combinations(indices, 2):
+            uf.union(a, b)
+
+    grouped = []
+    unmatched = []
+    for indices in uf.groups():
+        if len(indices) >= 2:
+            grouped.append([articles[i] for i in indices])
+        else:
+            unmatched.append(articles[indices[0]])
+
+    return grouped, unmatched
+
+
+# ---------------------------------------------------------------------------
+# 2차: BGE-M3 임베딩 코사인 유사도 매칭
+# ---------------------------------------------------------------------------
+#
+# 1차에서 못 잡은 기사만 대상으로,
+# 전체 기사끼리(국내x해외 뿐 아니라 국내-국내/해외-해외도 포함) 코사인
+# 유사도를 계산해서 threshold 이상이면 그룹핑한다.
+#
+# 임계값(THRESHOLD)은 아직 미확정 값이다. scorer.py의 PRESS_DEDUP_CAP과
+# 같은 성격의 "잠정 상수" - issue_grouper.export_similarity_scores()로
+# 뽑은 유사도 디버그 CSV를 직접 보고 조정한다.
+THRESHOLD = 0.7
+
+# threshold 근처 "애매한 구간"의 폭. 예를 들어 THRESHOLD=0.7,
+# BORDERLINE_MARGIN=0.06이면 0.64~0.70 사이가 애매 구간 -> 3차(LLM 보조)
+# 대상. 3차(stage3_llm_assist)가 실제로 이 borderline_pairs를 입력받아
+# 처리한다 - LLM이 "같은 사건"으로 확정한 쌍만 병합되고, 그 외(API 키
+# 없음/호출 실패 등)는 여전히 "안 묶는" 보수적 기본값으로 fallback.
+BORDERLINE_MARGIN = 0.06
+
+
+def _embedding_text(article: dict) -> str:
+    """
+    임베딩에 넣을 텍스트를 만든다 - "제목 + 있으면 본문 요약 일부".
+    본문(body)이 있는 소스(WATT)는 앞부분 200자만 덧붙인다 - 본문 전체를
+    넣으면 계산량만 늘고, 어차피 "같은 이슈인지" 판단엔 도입부만으로 충분한
+    경우가 대부분이라 짧게 자른다.
+    """
+    title = article.get("title", "")
+    body = article.get("body")
+    if body:
+        return f"{title} {body[:200]}"
+    return title
+
+
+def _cosine_similarity_matrix(vectors):
+    """
+    벡터 리스트 전체에 대한 N x N 코사인 유사도 행렬을 계산한다.
+    numpy만 있으면 되고, BGE-M3가 이미 정규화된 벡터를 주는 편이지만
+    혹시 몰라 직접 정규화도 한 번 해준다 (이중으로 해도 결과는 동일 -
+    이미 정규화된 벡터를 다시 정규화해도 크기가 안 변하므로 안전).
+    """
+    import numpy as np
+
+    vectors = np.array(vectors)
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    normalized = vectors / norms
+    return normalized @ normalized.T
+
+
+def export_similarity_scores(articles: list[dict], sim_matrix, threshold: float,
+                              borderline_margin: float, path: str = "similarity_debug/similarity_scores.csv",
+                              min_score: float = 0.4) -> str | None:
+    """
+    THRESHOLD/BORDERLINE_MARGIN을 눈으로 보고 직접 튜닝할 수 있도록,
+    stage2_group이 계산한 유사도 행렬 전체를 CSV로 내보낸다. threshold-margin
+    ~ threshold 구간(borderline)만이 아니라 그 좁은 구간 밖의 값들도 봐야
+    "임계값을 어디로 옮기면 어떤 쌍들이 추가/제외되는지"를 판단할 수 있어서
+    훨씬 넓게 뽑는다.
+
+    min_score: 이 값 미만인 쌍은 아예 제외한다. 기사 수가 n이면 쌍이
+    n*(n-1)/2개라 전부 다 내보내면(대부분 0에 가까운 무관한 쌍) 파일이
+    쓸데없이 커지고, 정작 튜닝에 필요한 "임계값 근처" 구간은 찾기 어려워짐 -
+    0.4는 잠정값으로, 필요하면 나중에 조정.
+
+    status 컬럼은 "지금 설정(THRESHOLD/BORDERLINE_MARGIN)으로는 이 쌍이
+    어떻게 처리됐는지" 참고용으로 같이 넣음(merged/borderline/none) - 다만
+    이건 어디까지나 현재 값 기준 참고이고, 실제 튜닝 판단은 similarity 값과
+    제목 쌍을 직접 보고 하면 됨.
+
+    실패해도(디스크 문제 등) 예외를 던지지 않고 로그만 남긴다 - 이건
+    진단/튜닝용 부가 기능이라, 실패했다고 그룹핑 자체가 죽으면 안 됨
+    (storage.py의 파일 쓰기 실패 흡수 패턴과 같은 방향).
+    """
+    n = len(articles)
+    rows = []
+    for i, j in combinations(range(n), 2):
+        sim = float(sim_matrix[i][j])
+        if sim < min_score:
+            continue
+        if sim >= threshold:
+            status = "merged"
+        elif threshold - borderline_margin <= sim < threshold:
+            status = "borderline"
+        else:
+            status = "none"
+        rows.append((sim, articles[i], articles[j], status))
+
+    rows.sort(key=lambda r: r[0], reverse=True)  # 유사도 높은 순 - 경계선을 위아래로 훑기 편하게
+
+    try:
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        with open(path, "w", newline="", encoding="utf-8-sig") as f:
+            # utf-8-sig: 엑셀에서 한글 CSV 열 때 깨지는 문제 방지(BOM 포함)
+            writer = csv.writer(f)
+            writer.writerow(["similarity", "status", "title_a", "title_b",
+                              "category_a", "category_b", "source_a", "source_b"])
+            for sim, a, b, status in rows:
+                writer.writerow([
+                    f"{sim:.4f}", status,
+                    a.get("title", ""), b.get("title", ""),
+                    a.get("category", ""), b.get("category", ""),
+                    a.get("source", ""), b.get("source", ""),
+                ])
+    except OSError as e:
+        print(f"[issue_grouper] 🟡 주의 [IG-01] - 유사도 디버그 CSV 저장 실패(그룹핑 결과에는 영향 없음): "
+              f"{path} - {type(e).__name__}: {e}")
+        return None
+
+    print(f"[issue_grouper] 유사도 디버그 CSV 저장 완료 ({len(rows)}쌍, "
+          f"min_score={min_score} 이상만) -> {path}")
+    return path
+
+
+def stage2_group(
+    articles: list[dict],
+    model=None,
+    threshold: float = THRESHOLD,
+    borderline_margin: float = BORDERLINE_MARGIN,
+) -> tuple[list[list[dict]], list[dict], list[tuple[dict, dict, float]]]:
+    """
+    1차에서 못 잡은 기사들을 BGE-M3 임베딩으로 매칭한다.
+
+    model: sentence_transformers.SentenceTransformer 인스턴스를 주입받는다
+           (함수 안에서 직접 모델을 로드하지 않는 이유: 모델 로드 자체가
+           무거운 작업이라, 기사 배치마다 매번 새로 로드하면 안 되기 때문 -
+           호출하는 쪽(main.py)에서 한 번만 로드해서 넘겨주는 구조로 설계)
+
+    반환값:
+      grouped: 2차에서 새로 묶인 그룹들
+      still_unmatched: 2차에서도 못 잡은 기사들 (혼자 남는 "단독 기사" -
+                        llm_summarizer의 (A-1) fallback 대상이 됨)
+      borderline_pairs: threshold 근처 애매 구간에 걸린 (기사A, 기사B, 유사도)
+                        쌍 목록 - group_issues()가 이 목록을 3차 LLM 보조
+                        (stage3_llm_assist)에 넘겨 최종 병합 여부를 판단한다
+    """
+    if not articles:
+        return [], [], []
+
+    texts = [_embedding_text(a) for a in articles]
+    vectors = model.encode(texts, normalize_embeddings=True)
+    sim_matrix = _cosine_similarity_matrix(vectors)
+
+    # 임계값 튜닝용 디버그 CSV - 그룹핑 로직 자체와는 무관, 실패해도
+    # 안전하게 로그만 남기고 계속 진행함.
+    export_similarity_scores(articles, sim_matrix, threshold, borderline_margin)
+
+    n = len(articles)
+    uf = UnionFind(n)
+
+    # ** 2-pass로 분리한 이유 **
+    # 한 pass 안에서 "threshold 이상이면 union, 아니면 borderline"을 같이
+    # 처리하면, i-j가 서로 직접은 threshold 미만이라도 다른 기사 k를 거쳐
+    # 간접적으로(transitively) 이미 같은 그룹으로 묶인 경우까지 borderline에
+    # 중복으로 기록되는 문제가 생긴다 - 이미 그룹핑 결과가 확정된 쌍인데도
+    # LLM 보조 대상으로 잡혀서, "전수 호출 아님, 비용 고려" 설계 의도가
+    # 실제 스케일에서 깨질 수 있다.
+    #
+    # 그래서 1st pass에서 union만 먼저 전부 끝내고(간접 연결까지 확정), 2nd
+    # pass에서 borderline 후보를 검사할 때 "두 기사가 이미 같은 그룹인가"를
+    # 같이 확인해서, 이미 그룹이 확정된 쌍은 건너뛴다. 오직 "이 쌍의 판정에
+    # 따라 최종 그룹핑 결과가 실제로 달라지는" 쌍만 LLM 보조 대상으로 남는다.
+    for i, j in combinations(range(n), 2):
+        sim = float(sim_matrix[i][j])
+        if sim >= threshold:
+            uf.union(i, j)
+
+    borderline_pairs = []
+    for i, j in combinations(range(n), 2):
+        if uf.find(i) == uf.find(j):
+            # 이미 같은 그룹으로 확정됨 (직접이든 다른 기사를 거친 간접
+            # 연결이든) - 이 쌍의 판정은 최종 결과에 영향이 없으므로 스킵
+            continue
+        sim = float(sim_matrix[i][j])
+        if threshold - borderline_margin <= sim < threshold:
+            borderline_pairs.append((articles[i], articles[j], sim))
+
+    grouped = []
+    still_unmatched = []
+    for indices in uf.groups():
+        if len(indices) >= 2:
+            grouped.append([articles[i] for i in indices])
+        else:
+            still_unmatched.append(articles[indices[0]])
+
+    return grouped, still_unmatched, borderline_pairs
+
+
+# ---------------------------------------------------------------------------
+# 3차: LLM 그룹핑 보조 (임계값 애매 구간)
+# ---------------------------------------------------------------------------
+#
+# 2차(임베딩) 유사도가 threshold 근처 애매 구간에
+# 걸린 쌍만 LLM에 물어봐서 "같은 사건인지 아닌지" 최종 판단한다.
+# (전수 호출 아님 - stage2_group에서 이미 borderline_pairs로 걸러진 소수만 대상)
+#
+# 판정 기준은 이슈 그룹핑의 정의를 그대로 따른다: "같은 사건"
+# 이란 같은 질병/주제여도 국가·장소·시점이 다르면 별개 이슈다(예: 한국
+# 조류독감 발생과 미국 조류독감 발생은 별개). 이 기준을 LLM에게도 시스템
+# 프롬프트로 명시한다.
+#
+# ** 프로바이더 스위치 **
+# 기본은 Anthropic(Haiku 4.5) - 이 프로젝트 규모에서
+# 유료 API 비용은 무시 가능한 수준이고, 은퇴 공지 의무가 있어 장기 운영에
+# 안전하다. 다만 API 키 발급 결재가 아직 안 난 상태에서 로컬 개발/검증을
+# 막을 이유는 없으므로, 환경변수 LLM_PROVIDER로 임시 대체 경로(OpenRouter
+# 무료 모델)를 켤 수 있게 했다 - 프로바이더별 설정을 이 블록 하나에 모아둔다.
+#
+#   LLM_PROVIDER=anthropic (기본값, 아무것도 안 하면 이 경로) - ANTHROPIC_API_KEY 사용
+#   LLM_PROVIDER=openrouter                                  - OPENROUTER_API_KEY 사용
+#
+# ** 중요 - openrouter는 "로컬 검증 전용" 임시 경로다 **
+# 무료 모델은 예고 없는 정책 변경/모델 제거 위험이 있으므로,
+# GitHub Actions 등 실제 운영 환경에는 LLM_PROVIDER를
+# 설정하지 말고 기본값(anthropic)을 그대로 둘 것 - 키 발급이 승인되면 이
+# 환경변수 자체를 지우기만 하면 원래 경로로 돌아간다.
+#
+# 무료 모델 하나를 못 박지 않고 OpenRouter의 자체 무료 라우터(openrouter/free)
+# 를 기본값으로 쓴 이유: 개별 :free 모델은 공급사가 예고 없이 무료 태그를
+# 뗄 수 있어 코드가 조용히 깨질 수 있는데,
+# openrouter/free는 그 라우팅 자체를 OpenRouter가 대신 처리해준다. 특정
+# 모델을 고정하고 싶으면 OPENROUTER_MODEL 환경변수로 덮어쓸 수 있다.
+#
+# ** os.environ.get(key, default) 대신 or를 쓰는 이유 **
+# GitHub Actions에서 리포에 등록 안 된 Variable을 `${{ vars.X }}`로 참조하면
+# "아예 안 넘어옴"이 아니라 "빈 문자열로 채워진 환경변수"가 된다(GitHub 공식
+# 문서: "설정 안 된 configuration variable을 참조하면 빈 문자열로 평가됨").
+# `os.environ.get(key, default)`의 default는 키가 "아예 없을 때"만 적용되고
+# 빈 문자열이 있으면 그 빈 문자열을 그대로 돌려주므로, OPENROUTER_MODEL을
+# Variables에 등록 안 한 상태로 두면 LLM_MODEL_OPENROUTER가 빈 문자열이
+# 되어 OpenRouter API가 "model" 필드 없음으로 400 Bad Request를 던진다.
+# `or` 연산자를 쓰면 빈 문자열도 falsy라 기본값으로 자연스럽게 대체된다.
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER") or "anthropic"
 
 LLM_MODEL_ANTHROPIC = "claude-haiku-4-5-20251001"
@@ -49,137 +412,69 @@ LLM_API_URL_ANTHROPIC = "https://api.anthropic.com/v1/messages"
 LLM_MODEL_OPENROUTER = os.environ.get("OPENROUTER_MODEL") or "openrouter/free"
 LLM_API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
 
-# OpenRouter 권장 헤더(선택, ASCII 전용 - 한글 넣으면 UnicodeEncodeError남,
-# issue_grouper.py에서 이미 실측 확인된 함정).
-_OPENROUTER_X_TITLE = "feed-livestock-news-relevance-filter"
+LLM_BATCH_SIZE = 20  # 한 번의 API 호출에 몇 쌍까지 같이 물어볼지 (호출 수 절약,
+                      # OpenRouter 무료 티어 분당/일 요청 한도 감안해도 안전한 크기)
 
-# 한 번의 API 호출에 몇 건까지 같이 물어볼지. issue_grouper의 LLM_BATCH_SIZE(20,
-# 페어 단위)와 맞춤. 무료 라우터가 배치가 클 때 개수를 자주 못 맞추는
-# 경향이 있어(예: 30건 배치에서 29건/31건 등) 20으로 유지 - id 기반 매칭
-# (아래 _call_llm 참고)으로 어긋나도 배치 전체를 안 버리지만, 애초에
-# 어긋나는 빈도 자체를 줄이는 것도 유효한 보강이라 같이 적용.
-BATCH_SIZE = 20
+# OpenRouter 요청에 붙이는 선택적 식별 헤더. HTTP 헤더 값은 latin-1(ASCII 계열)
+# 인코딩만 허용되므로 반드시 ASCII 문자열이어야 한다 - 한글을 넣으면 매
+# 배치가 UnicodeEncodeError로 죽는다(아래 자체 테스트에 이 상수의 ASCII
+# 여부를 검증하는 assert가 있음).
+_OPENROUTER_X_TITLE = "feed-livestock-news-issue-grouping-stage3"
 
-# 기사 본문/요약 스니펫을 프롬프트에 넣을 때 자를 최대 길이. 너무 길면 배치당
-# 토큰이 커져서 비용/실패 위험이 늘고, 판정에는 앞부분 몇 문장이면 충분하다고
-# 판단.
-SNIPPET_MAX_CHARS = 150
-
-
-_SYSTEM_PROMPT = (
-    # 영어로 작성 - 특히 작은 무료 모델일수록 학습 데이터가 영어 위주라
-    # 형식 지시(JSON만 출력 등) 준수율이 더 안정적인 경향이 있고, 판단
-    # 대상(기사 제목) 자체도 다국어라 지시문을 영어로 통일하는 게 더
-    # 자연스럽다는 판단. 요약 생성 프롬프트(llm_summarizer.py)는 결과물이
-    # 한국어여야 하므로 한국어로 유지.
-    "You are a relevance classifier for a feed and livestock industry news "
-    "curation system. For each article, decide whether it substantively "
-    "covers the \"feed industry\" or \"livestock industry\" (animal "
-    "husbandry, disease control, distribution, policy, etc.) as its actual "
-    "topic.\n\n"
-    "RELEVANT (true):\n"
-    "- Articles whose core topic is livestock (cattle/pigs/chickens/ducks "
-    "etc.) rearing, disease, disease control, livestock product "
-    "(meat/eggs/milk etc.) production, pricing, trade, or livestock-related "
-    "government policy/legislation\n"
-    "- Articles whose core topic is feed ingredients (grains such as corn, "
-    "soybean meal, wheat; international grain market conditions), feed "
-    "additives (amino acids, probiotics, enzymes, antibiotic alternatives, "
-    "etc.), or feed manufacturing/distribution (feed mills, premixes, "
-    "compound feed, TMR, etc.)\n\n"
-    "NOT RELEVANT (false) - the following are mismatch patterns that have "
-    "actually been confirmed to repeat, so filter them out with particular "
-    "care:\n"
-    "1. Homonyms: the search term spells the same but refers to something "
-    "different (e.g. a disease name that is actually a person's name/"
-    "nickname, or \"feed\" referring to the pet food industry - pet food is "
-    "out of scope for this project)\n"
-    "2. Appears only as part of a proper noun: the search term is merely "
-    "part of an institution name, bill name, etc. (e.g. embedded in the "
-    "name of a National Assembly standing committee - the article's actual "
-    "subject is unrelated political news)\n"
-    "3. Footnote-level mention: the article's core topic is something else "
-    "entirely (e.g. semiconductor exports, overall price index), and "
-    "livestock-related content appears only briefly as one line among many "
-    "statistics/items\n"
-    "4. Grain not used for feed: articles about corn, wheat, soybeans, etc. "
-    "where the grain is not for feed but for food, bioenergy (ethanol), or "
-    "the general agricultural commodity market broadly, with no mention of "
-    "feed or livestock at all (e.g. a corn price article that only "
-    "discusses food-ingredient supply like popcorn/cereal or ethanol "
-    "feedstock)\n\n"
-    "Examples that MUST be kept as relevant (true) - these types have "
-    "actually been mistakenly filtered out before, so pay special "
-    "attention:\n"
-    "- Articles about consumer prices/supply of livestock products "
-    "(eggs/meat/milk etc.) are relevant even if the title doesn't contain "
-    "words like \"livestock\" or \"animal husbandry\". This is true even "
-    "for titles with a light tone using slang or buzzwords. For example, "
-    "an article discussing the cause of an egg price surge using the "
-    "buzzword \"rocket eggs\" is an article about egg (a livestock product) "
-    "prices, so it is true - do not judge it false just because the tone "
-    "is light or the word \"livestock\" doesn't appear.\n"
-    "- Before marking such an article false, first confirm it doesn't "
-    "actually match any of NOT RELEVANT criteria 1-4 (homonym / part of "
-    "proper noun / footnote mention / grain not for feed) - if it clearly "
-    "doesn't match any of them, it is automatically relevant.\n\n"
-    "The \"category\" value provided alongside each article is just a "
-    "reference hint from automatic dictionary-keyword matching, not a "
-    "confirmed answer - make your final judgment based on the actual "
-    "title/summary content.\n\n"
-    "If the judgment is ambiguous, answer true (conservative default - it "
-    "is safer to let a few irrelevant articles through than to wrongly "
-    "filter out a relevant one).\n\n"
+_LLM_SYSTEM_PROMPT = (
+    # 영어로 작성 - relevance_filter.py와 같은 이유(무료 소형 모델의 형식
+    # 지시 준수율, 다국어 입력과의 일관성).
+    "You are a judge that assists news issue grouping. Given two article "
+    "titles, decide whether the two articles cover \"exactly the same "
+    "event\". "
+    "Even if they cover the same disease/topic, judge them as separate "
+    "events if the country, location, or timing differs (e.g. an article "
+    "about an avian influenza outbreak in Korea and one in the US are "
+    "separate events even though the disease name is the same). "
+    "This applies not only at the country level but also to different "
+    "domestic regions (province/city/county) within the same country "
+    "(e.g. an article about heatwave damage to livestock in Gyeongnam and "
+    "one in Jeju are both domestic and cover the same kind of issue, but "
+    "are separate events if the affected region differs). "
+    "Also judge them as separate events when one article covers a single "
+    "issue (A) alone and the other article covers several issues "
+    "including that one (A, B, C, D, etc.) together - overlapping on one "
+    "issue does not make them the same event, because the scope and focus "
+    "covered are different (e.g. a standalone article on \"Gyeongnam "
+    "livestock heatwave damage\" and an article on \"Gyeongnam livestock "
+    "damage from heatwave, flooding, and typhoon combined\" are not the "
+    "same event even though the heatwave damage overlaps, because the "
+    "latter is a separate roundup-style article covering multiple "
+    "disasters together). "
     "Titles may be in different languages (Korean/English/other languages "
-    "mixed) - judge by the same criteria regardless of language.\n\n"
+    "mixed) - judge them as the same event if they refer to the same "
+    "event, regardless of language. "
+    "If you are not certain, you must answer false (conservative default "
+    "- it is safer not to group than to group incorrectly). "
     "Output only a JSON array with no other explanation. Each element must "
-    "be in the form {\"id\": number, \"relevant\": true|false}, and id must "
-    "exactly match the number of the input article."
+    "be in the form {\"id\": number, \"same_event\": true|false}, and id must "
+    "exactly match the number of the input pair."
 )
 
 
-def _snippet(article: dict) -> str | None:
-    """
-    기사에서 판정 근거로 쓸 스니펫을 뽑는다. 네이버는 description(짧은 요약),
-    WATT는 body(본문 앞부분)를 쓰고, GDELT는 스펙상 본문이 아예 없어(body가
-    항상 None) None을 반환한다 - 이 경우 프롬프트에 "요약 없음"으로 명시해
-    모델이 없는 정보를 있는 척 채워 넣지 않게 한다(_build_user_prompt 참고).
-    """
-    text = article.get("description") or article.get("body")
-    if not text:
-        return None
-    return text[:SNIPPET_MAX_CHARS]
-
-
-def _build_user_prompt(batch: list[dict]) -> str:
-    # 지시문은 영어로 작성(시스템 프롬프트와 같은 이유). "카테고리" 값
-    # 자체(예: "기타", "질병명")는 keyword_tagger.py가 정하는 프로젝트
-    # 전역 한글 라벨이라 번역 대상 아님 - 지시문 안에 한글 값이 섞여 들어가는
-    # 건 정상(모델이 다국어 입력을 다루는 데는 문제없음).
-    lines = ["Judge whether each of the following articles is relevant to feed/livestock industry news.\n"]
-    for idx, article in enumerate(batch, start=1):
-        title = article.get("title", "")
-        category = article.get("category", "기타")
-        snippet = _snippet(article)
-        snippet_part = f'"{snippet}"' if snippet else "(none - judge from title only)"
-        lines.append(
-            f'{idx}. Title: "{title}" / Category: {category} / Summary: {snippet_part}'
-        )
+def _build_llm_user_prompt(pairs: list[tuple[dict, dict, float]]) -> str:
+    # 지시문은 영어로 작성(시스템 프롬프트와 같은 이유).
+    lines = ["Judge whether each of the following pairs of article titles covers exactly the same event.\n"]
+    for idx, (a, b, _sim) in enumerate(pairs, start=1):
+        lines.append(f"{idx}. A: \"{a.get('title', '')}\" / B: \"{b.get('title', '')}\"")
     lines.append(
-        f'\nThere are {len(batch)} articles total. Include the number above as "id" in each '
-        f'element and answer with a JSON array only (e.g. [{{"id": 1, "relevant": true}}, '
-        f'{{"id": 2, "relevant": false}}, ...]). Do not omit any id or change the order.'
+        f'\nThere are {len(pairs)} pairs total. Include the number above as "id" in each '
+        f'element and answer with a JSON array only (e.g. [{{"id": 1, "same_event": true}}, '
+        f'{{"id": 2, "same_event": false}}, ...]). Do not omit any id or change the order.'
     )
     return "\n".join(lines)
 
 
 def _snippet_for_log(text: str, limit: int = 200) -> str:
     """
-    LLM 원본 응답을 로그에 안전하게 남기기 위해 자른다. 파싱 실패/형식
-    이상 로그에 "실제로 뭘 받았는지"가 없으면(예: 거부 메시지였는지, 빈
-    문자열이었는지, JSON이 깨진 건지) 운영자가 원인을 구분할 방법이 없어서
-    추가함. 너무 길면 로그가 지저분해지니 앞부분만 자르고, 줄바꿈은 한
-    줄로 정리한다.
+    LLM 원본 응답을 로그에 안전하게 남기기 위해 자른다(relevance_filter.py
+    의 동일 함수와 같은 목적) - 파싱 실패/형식 이상 로그에 "실제로 뭘
+    받았는지"가 없으면 운영자가 원인을 구분할 방법이 없어서 추가함.
     """
     if not text:
         return "(빈 응답)"
@@ -192,6 +487,10 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
     headers = {
         "Authorization": f"Bearer {api_key}",
         "content-type": "application/json",
+        # OpenRouter 권장 헤더(선택) - 프로젝트 식별용, 없어도 동작함.
+        # HTTP 헤더 값은 latin-1 인코딩만 허용되므로 ASCII 전용
+        # 문자열이어야 함(한글이 섞이면 UnicodeEncodeError로 매
+        # 배치가 실패함).
         "X-Title": _OPENROUTER_X_TITLE,
     }
     body = {
@@ -217,7 +516,7 @@ def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, sessi
     body = {
         "model": LLM_MODEL_ANTHROPIC,
         "max_tokens": 1024,
-        "temperature": 0,
+        "temperature": 0,  # 판정 일관성 우선 - temperature 낮게 유지
         "system": system_prompt,
         "messages": [{"role": "user", "content": user_prompt}],
     }
@@ -229,8 +528,7 @@ def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, sessi
     ).strip()
 
 
-def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session,
-                       label: str) -> str:
+def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> str:
     """
     LLM_PROVIDER에 맞는 경로로 실제 텍스트 응답을 받아온다.
 
@@ -238,10 +536,9 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     아닌 경우: 지정 모델로 먼저 시도하고, 실패하면(모델 이름 오타, 그 모델이
     무료 티어에서 빠짐, 일시적 문제 등) openrouter/free(OpenRouter 자체
     무료 라우터)로 한 번 더 자동 재시도한다 - 특정 모델 하나에 고정한
-    설정이 그 모델만의 문제 때문에 이 실행의 LLM 기능 전체(관련성 필터/
-    재분류/그룹핑/요약 중 이 함수를 부른 것)를 막는 걸 방지한다. 이미
-    openrouter/free를 쓰고 있으면 더 폴백할 곳이 없으므로 그대로 예외를
-    올려보낸다 - 호출부가 기존처럼 "이 배치 전체 안전 처리"로 흡수한다.
+    설정이 그 모델만의 문제 때문에 3차 그룹핑 보조 전체를 막는 걸 방지한다.
+    이미 openrouter/free를 쓰고 있으면 더 폴백할 곳이 없으므로 그대로
+    예외를 올려보낸다 - 호출부가 기존처럼 "이 배치 전체 안 묶음"으로 흡수한다.
     """
     if LLM_PROVIDER != "openrouter":
         return _request_anthropic(system_prompt, user_prompt, api_key, session)
@@ -251,312 +548,431 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     except Exception as e:
         if LLM_MODEL_OPENROUTER == "openrouter/free":
             raise
-        print(f"[relevance_filter] 🟡 주의 - {label} 지정 모델({LLM_MODEL_OPENROUTER}) 호출 실패 - "
+        print(f"[issue_grouper] 🟡 주의 - 3차 그룹핑 지정 모델({LLM_MODEL_OPENROUTER}) 호출 실패 - "
               f"openrouter/free 자동 라우팅으로 재시도: {type(e).__name__} - {e!r}")
         return _request_openrouter(system_prompt, user_prompt, api_key, session, "openrouter/free")
 
 
-def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> list[bool] | None:
+def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requests.Session) -> list[bool] | None:
     """
-    LLM API를 한 번 호출해서 batch 각각에 대한 relevant 판정을 받아온다.
-    실패(호출 에러/JSON 파싱 실패/개수 불일치)하면 None을 반환한다 - 호출부
-    (filter_articles)는 None이면 그 배치를 전부 통과시킨다.
+    LLM API를 한 번 호출해서 pairs 각각에 대한 same_event 판정을 받아온다.
+    LLM_PROVIDER 값에 따라 Anthropic(claude-haiku-4-5-20251001) 또는
+    OpenRouter(무료 라우터/모델)로 분기한다 - 요청 형식은 프로바이더마다
+    다르지만(Anthropic: content 블록 리스트, OpenRouter: OpenAI 호환
+    choices[0].message.content), 이후 파싱/검증 로직은 공통이다.
 
-    session: filter_articles가 배치마다 반복 호출하므로, 매번
-    requests.post()로 새 연결을 맺는 대신 세션 하나를 재사용해 커넥션
-    오버헤드를 줄인다.
+    session: stage3_llm_assist가 배치마다 반복 호출하므로, 세션을
+    재사용해 커넥션 오버헤드를 줄인다(relevance_filter.py와 동일한 방식).
+
+    입력/출력 개수 불일치, JSON 파싱 실패, API 에러, 항목 형식 이상 등
+    신뢰할 수 없는 응답이면 None을 반환한다 - 출력 형식을 코드로 자동
+    검증해서 어긋나면 fallback하는 원칙을 여기서도 그대로 적용 (fallback은 이
+    함수를 부르는 stage3_llm_assist 쪽에서 "안 묶음"으로 처리).
     """
-    user_prompt = _build_user_prompt(batch)
-    text = None  # 예외가 어느 지점에서 났든(응답을 아예 못 받았을 수도 있음)
-                 # 로그에서 안전하게 참조할 수 있도록 미리 초기화
-
-    try:
-        text = _request_llm_text(_SYSTEM_PROMPT, user_prompt, api_key, session, "관련성 필터")
-
-        # 코드 펜스(```json ... ```)로 감싸서 올 때가 있어 방어적으로 벗겨낸다
-        # (issue_grouper.py와 동일한 방어 로직 - 무료 모델은 이런 포맷 이탈이
-        # Haiku보다 잦을 수 있어 특히 중요).
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            text = text[4:] if text.startswith("json") else text
-        parsed = json.loads(text.strip())
-    except Exception as e:
-        snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
-        print(f"[relevance_filter] 🔴 조치필요 [RF-01] - LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치"
-              f"({len(batch)}건) 전부 통과 처리: {type(e).__name__} - {e!r} "
-              f"| 실제 응답: {snippet}")
-        return None
-
-    if not isinstance(parsed, list) or not parsed:
-        actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
-        print(f"[relevance_filter] 🔴 조치필요 [RF-02] - LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 "
-              f"아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 통과 처리 "
-              f"| 실제 응답: {_snippet_for_log(text)}")
-        return None
-
-    # "출력 개수 != 입력 개수"면 배치 전체를 버리는 대신, id를 명시적으로
-    # 주고받게 해서 어긋나도 "일치하는 것만 살리고, 안 맞는 것만 개별적으로
-    # 안전한 기본값(통과)으로 처리"한다 - 경미한 개수 어긋남에도 배치
-    # 전체가 낭비되는 걸 방지.
-    by_id: dict[int, bool] = {}
-    for item in parsed:
-        try:
-            by_id[int(item["id"])] = bool(item["relevant"])
-        except (KeyError, TypeError, ValueError):
-            continue  # id/relevant 형식이 이상한 개별 항목만 무시하고 계속 진행
-
-    results = []
-    missing = []
-    for idx in range(1, len(batch) + 1):
-        if idx in by_id:
-            results.append(by_id[idx])
-        else:
-            missing.append(idx)
-            results.append(True)  # 안전한 기본값 - 통과
-
-    if missing:
-        print(f"[relevance_filter] 🟡 주의 [RF-03] - LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
-              f"(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 통과 처리, "
-              f"나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
-
-    return results
-
-
-def filter_articles(articles: list[dict]) -> list[dict]:
-    """
-    정규화+태깅이 끝난 articles를 받아, LLM이 "사료·축산업 뉴스가 아니다"라고
-    확실히 판단한 것만 걸러내고 나머지를 반환한다.
-
-    API 키가 없거나(LLM_PROVIDER에 맞는 키 환경변수 미설정) 모든 배치 호출이
-    실패하면, 안전하게 원본 articles를 그대로 반환한다(필터를 그냥 안 거친
-    것과 동일한 안전한 기본값).
-
-    ** WATT 소스는 LLM 호출 없이 자동 통과 **
-    WATT(WATTAgNet/Feed Strategy)는 그 자체가 사료·축산업 전문지라, 이
-    필터가 잡으려는 오매칭 유형(동음이의어, 기관명 일부로만 등장, 각주성
-    언급)은 "키워드 검색으로 긁어온" 네이버/GDELT에서만 발생하는 구조적
-    문제고 WATT엔 애초에 해당 안 됨 - 그래서 LLM 호출 없이 안전하게
-    통과시켜 호출 수를 아낀다. keyword_tagger.py가 site_category를 채울지
-    판단할 때 쓰는 것과 같은 부정 조건(source not in ("네이버", "GDELT"))을
-    재사용 - 같은 조건이라 같은 취약점도 그대로 적용됨: 나중에 새 소스가
-    추가되면 그것도 "WATT 취급"돼 자동 통과될 위험이 있음(keyword_tagger.py
-    tag_articles의 관련 주석 참고) - 현재 신규 소스 계획이 없어 그대로 둠.
-    자동 통과된 기사는 반환 리스트 앞쪽에 모이므로, 이 함수를 거치면
-    원래 수집 순서가 그대로 보존되지는 않는다 - 이후 단계(이슈 그룹핑/
-    스코어링)는 순서에 의존하지 않으므로 문제 없음.
-    """
-    if not articles:
-        return articles
-
-    watt_articles = [a for a in articles if a.get("source") not in ("네이버", "GDELT")]
-    llm_target_articles = [a for a in articles if a.get("source") in ("네이버", "GDELT")]
-
-    if watt_articles:
-        print(f"[relevance_filter] WATT 소스 {len(watt_articles)}건은 업계 전문지 특성상 "
-              f"LLM 호출 없이 자동 통과")
-
-    if not llm_target_articles:
-        return watt_articles
-
-    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
-    api_key = os.environ.get(key_env_var)
-    if not api_key:
-        print(f"[relevance_filter] 🟡 주의 [RF-04] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
-              f"관련성 필터 생략, {len(llm_target_articles)}건(네이버/GDELT) 전부 통과")
-        return articles
-
-    model_name = LLM_MODEL_OPENROUTER if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
-    print(f"[relevance_filter] 관련성 필터 시작 - provider={LLM_PROVIDER}, "
-          f"model={model_name}, 대상 {len(llm_target_articles)}건(네이버/GDELT만, "
-          f"WATT {len(watt_articles)}건 제외)")
-
-    kept = list(watt_articles)
-    dropped_samples = []
-    total_batches = (len(llm_target_articles) + BATCH_SIZE - 1) // BATCH_SIZE
-    with requests.Session() as session:
-        for batch_num, i in enumerate(range(0, len(llm_target_articles), BATCH_SIZE), start=1):
-            batch = llm_target_articles[i:i + BATCH_SIZE]
-            print(f"[relevance_filter] 배치 {batch_num}/{total_batches} 처리 중 ({len(batch)}건)")
-            results = _call_llm(batch, api_key, session)
-            if results is None:
-                kept.extend(batch)  # 이 배치는 전부 통과 (안전한 기본값)
-                continue
-            for article, relevant in zip(batch, results):
-                if relevant:
-                    kept.append(article)
-                else:
-                    dropped_samples.append(article.get("title", ""))
-
-    dropped_count = len(articles) - len(kept)
-    print(f"[relevance_filter] 관련성 필터 완료 - 전체 {len(articles)}건(WATT 자동통과 "
-          f"{len(watt_articles)}건 포함) 중 {dropped_count}건 제외, {len(kept)}건 유지")
-    if dropped_samples:
-        sample_n = min(10, len(dropped_samples))
-        print(f"[relevance_filter] 제외된 기사 샘플 (최대 {sample_n}건):")
-        for title in dropped_samples[:sample_n]:
-            print(f"   - {title}")
-
-    return kept
-
-
-# ---------------------------------------------------------------------------
-# 카테고리 재분류
-# ---------------------------------------------------------------------------
-#
-# keyword_tagger.py는 사전(CATEGORY_KEYWORDS) 단어가 제목에 있는지만 보고
-# category를 정하는데, relevance_filter는 완전히 다른 기준(LLM이 "진짜
-# 사료·축산 뉴스인가?")으로 관련성을 판단한다 - 그래서 사전 매칭엔 안 걸려
-# category="기타"로 붙었는데 relevance_filter가 "관련 있음"으로 확정한
-# 기사가 생길 수 있다. 이 기사는 필터를 통과해 살아남지만 category는
-# 여전히 "기타"라서, "카테고리별 Top N"(기타 제외 설계)에는 영원히 못
-# 들어가는 공백이 있었음 - 이 함수로 그 공백을 메운다.
-#
-# 관련성 판정(filter_articles)의 이진 true/false 스키마는 안 건드리고
-# (더 복잡한 스키마를 물어보면 무료 모델의 JSON 파싱 실패율이 올라갈
-# 위험이 있어서), 이미 "관련 있다"고 확정된 기사 중 category="기타"인
-# 것만 별도 배치로 추려서 다시 LLM에 묻는 방식으로 분리했다 - 범위를
-# 좁혀서 실패해도 영향이 제한적이게 함.
-
-CATEGORY_RECLASSIFY_SYSTEM_PROMPT_TEMPLATE = (
-    "You are a categorization assistant for a feed and livestock industry "
-    "news curation system. Each article below was not matched by "
-    "dictionary-based keyword tagging and is currently labeled \"기타\" "
-    "(uncategorized), but it has already been confirmed relevant to the "
-    "feed/livestock industry by a separate relevance check. Assign the "
-    "single best-fitting category for each article from the following "
-    "exact list. Respond with the Korean label written exactly as shown "
-    "below, character for character - do not translate, abbreviate, or "
-    "modify it in any way:\n\n"
-    "{category_list}\n\n"
-    "If none of the categories are a good fit, respond with \"기타\" "
-    "(i.e. leave it uncategorized) rather than forcing a poor match.\n\n"
-    "Output only a JSON array with no other explanation. Each element must "
-    "be in the form {{\"id\": number, \"category\": \"<one label from the "
-    "list above, or 기타>\"}}, and id must exactly match the number of the "
-    "input article."
-)
-
-
-def _build_category_user_prompt(batch: list[dict]) -> str:
-    lines = ["Assign the best-fitting category to each of the following articles.\n"]
-    for idx, article in enumerate(batch, start=1):
-        title = article.get("title", "")
-        snippet = _snippet(article)
-        snippet_part = f'"{snippet}"' if snippet else "(none - judge from title only)"
-        lines.append(f'{idx}. Title: "{title}" / Summary: {snippet_part}')
-    lines.append(
-        f'\nThere are {len(batch)} articles total. Include the number above as "id" in each '
-        f'element and answer with a JSON array only. Do not omit any id or change the order.'
-    )
-    return "\n".join(lines)
-
-
-def _call_category_llm(batch: list[dict], api_key: str, session: requests.Session,
-                        category_choices: list[str], system_prompt: str) -> list[str] | None:
-    """
-    _call_llm과 같은 호출/방어 패턴(코드펜스 벗기기, id 기반 부분 복구)을
-    재분류용으로 그대로 재사용한 버전. 다른 점: 응답이 bool이 아니라
-    category_choices 중 하나(또는 "기타")인 문자열이어야 하고, 그 목록에
-    없는 값이 오면(모델이 카테고리명을 살짝 바꿔서 답하는 등) 안전하게
-    무시한다(개별 항목만 "안 바뀜=기타 유지"로 처리 - id 자체가 아예
-    누락된 경우와 동일하게 다룸).
-    """
-    user_prompt = _build_category_user_prompt(batch)
+    user_prompt = _build_llm_user_prompt(pairs)
     text = None
 
     try:
-        text = _request_llm_text(system_prompt, user_prompt, api_key, session, "카테고리 재분류")
+        text = _request_llm_text(_LLM_SYSTEM_PROMPT, user_prompt, api_key, session)
 
+        # 코드 펜스(```json ... ```)로 감싸서 올 때가 있어 방어적으로 벗겨낸다
+        # (무료 모델은 이런 포맷 이탈이 Haiku보다 잦을 수 있어 특히 중요)
         if text.startswith("```"):
             text = text.split("```")[1]
             text = text[4:] if text.startswith("json") else text
         parsed = json.loads(text.strip())
     except Exception as e:
         snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
-        print(f"[relevance_filter] 🔴 조치필요 [RF-05] - 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
-              f"이 배치({len(batch)}건) 전부 '기타' 유지: {type(e).__name__} - {e!r} "
-              f"| 실제 응답: {snippet}")
+        print(f"[issue_grouper] 🔴 조치필요 [IG-02] - 3차 LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치({len(pairs)}쌍)는 "
+              f"전부 '안 묶음' fallback: {type(e).__name__} - {e!r} | 실제 응답: {snippet}")
         return None
 
     if not isinstance(parsed, list) or not parsed:
         actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
-        print(f"[relevance_filter] 🔴 조치필요 [RF-06] - 카테고리 재분류 LLM({LLM_PROVIDER}) 출력 형식 이상"
-              f"(리스트가 아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 '기타' 유지 "
+        print(f"[issue_grouper] 🔴 조치필요 [IG-03] - 3차 LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 아니거나 "
+              f"비어있음, 실제 {actual}) - 이 배치({len(pairs)}쌍) 전부 '안 묶음' fallback "
               f"| 실제 응답: {_snippet_for_log(text)}")
         return None
 
-    valid_choices = set(category_choices) | {"기타"}
-    by_id: dict[int, str] = {}
+    # id 기반 부분 복구 - "출력 개수 != 입력 개수"면 배치 전체를 버리는
+    # 대신, id를 명시적으로 주고받게 해서 어긋나도 "일치하는 것만 살리고,
+    # 안 맞는 것만 개별적으로 안전한 기본값(안 묶음)으로 처리"한다.
+    # relevance_filter.py와는 기본값 방향이 다름에 주의 - 거기는 "애매하면
+    # 통과(true)"가 안전하지만, 여기는 "애매하면 안 묶음(false)"이
+    # 안전하다(잘못 묶는 것보다 안 묶는 게 안전).
+    by_id: dict[int, bool] = {}
     for item in parsed:
         try:
-            category = str(item["category"])
-            idx = int(item["id"])
+            by_id[int(item["id"])] = bool(item["same_event"])
         except (KeyError, TypeError, ValueError):
-            continue
-        if category not in valid_choices:
-            continue  # 목록에 없는 값 - 이 항목만 무시(기타 유지)
-        by_id[idx] = category
+            continue  # id/same_event 형식이 이상한 개별 항목만 무시하고 계속 진행
 
     results = []
     missing = []
-    for idx in range(1, len(batch) + 1):
+    for idx in range(1, len(pairs) + 1):
         if idx in by_id:
             results.append(by_id[idx])
         else:
             missing.append(idx)
-            results.append("기타")  # 안전한 기본값 - 재분류 안 하고 기타 유지
+            results.append(False)  # 안전한 기본값 - 안 묶음
 
     if missing:
-        print(f"[relevance_filter] 🟡 주의 [RF-07] - 카테고리 재분류 LLM({LLM_PROVIDER}) 출력에서 id {missing} "
-              f"누락/형식 이상(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 "
-              f"'기타' 유지, 나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
+        print(f"[issue_grouper] 🟡 주의 [IG-04] - 3차 LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
+              f"(기대 {len(pairs)}쌍 중 {len(missing)}쌍) - 그 쌍들만 '안 묶음' 기본값 처리, "
+              f"나머지 {len(pairs) - len(missing)}쌍은 정상 판정 사용")
 
     return results
 
 
-def recategorize_uncategorized(articles: list[dict]) -> list[dict]:
+def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]]) -> list[tuple[dict, dict, float]]:
     """
-    filter_articles()를 통과했지만 category="기타"로 남아있는 기사를 LLM으로
-    재분류한다. main.py에서 filter_articles() 바로 다음 단계로 부른다.
+    2차에서 애매 구간에 걸린 쌍들을 LLM에 물어봐서, "같은 사건"으로 확정된
+    쌍만 골라 반환한다 (그룹을 지우는 게 아니라 묶을지 말지만 판단).
 
-    API 키가 없거나 전부 실패해도 안전하게 원본 그대로(재분류 없이) 반환.
+    LLM_PROVIDER(기본 anthropic)에 따라 필요한 API 키 환경변수가 다르다:
+      anthropic  -> ANTHROPIC_API_KEY
+      openrouter -> OPENROUTER_API_KEY (임시 로컬 검증용 - 위 프로바이더
+                    스위치 주석 참조, 운영 환경에서는 쓰지 않을 것)
+
+    해당 키가 없거나 모든 배치 호출이 실패하면, "안 묶음"
+    보수적 기본값으로 안전하게 fallback한다 - 이 경우 group_issues의 최종
+    결과는 3차가 아예 없던 이전 동작과 동일해지므로 전체 파이프라인이
+    죽지 않는다.
     """
-    targets = [a for a in articles if a.get("category") == "기타"]
-    if not targets:
-        return articles
+    if not borderline_pairs:
+        return []
 
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[relevance_filter] 🟡 주의 [RF-08] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
-              f"카테고리 재분류 생략, {len(targets)}건 '기타' 그대로 유지")
-        return articles
-
-    import keyword_tagger
-    category_choices = list(keyword_tagger.CATEGORY_KEYWORDS.keys())
-    category_list_text = "\n".join(f"- {c}" for c in category_choices)
-    system_prompt = CATEGORY_RECLASSIFY_SYSTEM_PROMPT_TEMPLATE.format(category_list=category_list_text)
+        print(f"[issue_grouper] 🔴 조치필요 [IG-05] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - 3차 LLM 보조 생략, "
+              f"애매 구간 {len(borderline_pairs)}쌍 전부 '안 묶음' 기본값 유지")
+        return []
 
     model_name = LLM_MODEL_OPENROUTER if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
-    print(f"[relevance_filter] 카테고리 재분류 시작 - provider={LLM_PROVIDER}, "
-          f"model={model_name}, 대상 {len(targets)}건('기타'로 남았지만 관련성 확인된 기사)")
+    print(f"[issue_grouper] 3차 LLM 보조 시작 - provider={LLM_PROVIDER}, model={model_name}, "
+          f"대상 {len(borderline_pairs)}쌍")
 
-    reclassified_count = 0
-    total_batches = (len(targets) + BATCH_SIZE - 1) // BATCH_SIZE
+    confirmed = []
     with requests.Session() as session:
-        for batch_num, i in enumerate(range(0, len(targets), BATCH_SIZE), start=1):
-            batch = targets[i:i + BATCH_SIZE]
-            print(f"[relevance_filter] 카테고리 재분류 배치 {batch_num}/{total_batches} "
-                  f"처리 중 ({len(batch)}건)")
-            results = _call_category_llm(batch, api_key, session, category_choices, system_prompt)
+        for i in range(0, len(borderline_pairs), LLM_BATCH_SIZE):
+            batch = borderline_pairs[i:i + LLM_BATCH_SIZE]
+            results = _call_llm(batch, api_key, session)
             if results is None:
-                continue  # 이 배치는 전부 '기타' 유지 (원본 이미 '기타'라 손댈 것 없음)
-            for article, new_category in zip(batch, results):
-                if new_category != "기타":
-                    article["category"] = new_category
-                    reclassified_count += 1
+                continue  # 이 배치만 안 묶음 유지, 다음 배치는 계속 시도
+            for (a, b, sim), same_event in zip(batch, results):
+                if same_event:
+                    confirmed.append((a, b, sim))
 
-    print(f"[relevance_filter] 카테고리 재분류 완료 - {len(targets)}건 중 "
-          f"{reclassified_count}건 재분류됨, {len(targets) - reclassified_count}건 '기타' 유지")
+    print(f"[issue_grouper] 3차 LLM 보조 완료 - 애매 구간 {len(borderline_pairs)}쌍 중 "
+          f"{len(confirmed)}쌍 '같은 사건'으로 최종 병합")
+    return confirmed
 
-    return articles
+
+# ---------------------------------------------------------------------------
+# 최종 진입점: 1차 + 2차 + 3차를 합쳐서 scorer.py에 바로 넘길 수 있는 형태로 반환
+# ---------------------------------------------------------------------------
+
+def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
+    """
+    1차(사전) + 2차(임베딩) + 3차(LLM 보조)를 순서대로 실행해 최종 이슈 그룹
+    리스트를 만든다.
+
+    이 함수의 반환값은 scorer.score_and_rank()가 받는 입력과 형태가 동일하다
+    (list[list[dict]]) - main.py의 score()가 이 함수를 호출해서 씀.
+
+    ** 3차 병합 방식 **
+    stage2_group의 결과(stage2_grouped 각 그룹 + still_unmatched 각 기사)를
+    "구성요소(component)"로 보고, stage3_llm_assist가 "같은 사건"으로 확정한
+    쌍만 이 구성요소들끼리 추가로 union한다 (Union-Find를 구성요소 단위로
+    한 번 더 적용 - 그룹 안에 이미 묶인 기사와 아직 단독인 기사가 한 쌍으로
+    확정될 수도 있으므로, "기사 단위"가 아니라 "구성요소 단위"로 합쳐야
+    한다). article의 url을 구성요소 식별에 쓴다 - 이 시스템의 공통 스키마상
+    url은 항상 존재하고 고유하다("완전 동일 기사 제거" 로직도
+    같은 전제로 URL을 키로 씀).
+
+    ** 연쇄(사슬) 병합 방지 **
+    확정된 쌍을 Union-Find로 그냥 다 묶으면, "A~B 확정 + B~C 확정"이라는
+    이유만으로 A~C를 LLM에 직접 물어본 적 없는데도 A+B+C가 한 그룹이 되는
+    문제가 있음 - 특히 "지역이 다르면 별개 사건", "단신 vs 종합기사는 별개
+    사건" 같은 판정은 두 기사를 직접 비교했을 때만 유효해서, 간접 연결만
+    으로 셋 이상을 묶으면 위험함. 3개 이상이 연결된 경우, 그 안의 모든
+    쌍이 실제로 LLM에게 직접 확인됐는지(완전 그래프/클리크인지) 검증하고,
+    클리크가 아니면(사슬로만 연결됐으면) 병합하지 않고 개별 컴포넌트로
+    유지한다(애매하면 안 묶는 게 안전하다는 원칙과 같은 방향).
+    """
+    stage1_grouped, stage1_unmatched = stage1_group(articles)
+
+    if model is None:
+        # 모델이 안 주어졌으면(예: 아직 설치 전 단계 테스트) 2차 없이
+        # 1차 결과 + 나머지를 단독 그룹으로 반환 - to_singleton_groups와
+        # 동일한 안전한 fallback (2차가 없으면 3차의 재료인 borderline_pairs
+        # 자체가 안 생기므로 3차도 자연히 생략됨)
+        print("[issue_grouper] 🟡 주의 [IG-06] - 임베딩 모델이 없어 2차(임베딩) 매칭 생략 - 1차 결과만 사용")
+        singleton = [[a] for a in stage1_unmatched]
+        return stage1_grouped + singleton
+
+    stage2_grouped, still_unmatched, borderline_pairs = stage2_group(stage1_unmatched, model=model)
+
+    confirmed_pairs: list[tuple[dict, dict, float]] = []
+    if borderline_pairs:
+        print(f"[issue_grouper] 임계값 애매 구간 {len(borderline_pairs)}쌍 발견 - 3차 LLM 보조로 최종 판단")
+        confirmed_pairs = stage3_llm_assist(borderline_pairs)
+
+    components = stage2_grouped + [[a] for a in still_unmatched]
+    components = _merge_confirmed_components(components, confirmed_pairs)
+
+    return stage1_grouped + components
+
+
+def _merge_confirmed_components(components: list[list[dict]],
+                                 confirmed_pairs: list[tuple[dict, dict, float]]) -> list[list[dict]]:
+    """
+    stage3_llm_assist가 확정한 쌍(confirmed_pairs)을 이용해 components(각각
+    이미 확정된 이슈 그룹 혹은 단독 기사)를 추가로 병합한다.
+
+    confirmed_pairs를 그냥 Union-Find로만 병합하면 "A~B가 확정되고 B~C가
+    확정됐다"는 이유만으로 A~C를 LLM에 한 번도 직접 물어본 적 없는데도
+    A+B+C가 통째로 한 그룹이 되는 연쇄(transitive chaining) 문제가 있다.
+    _LLM_SYSTEM_PROMPT의 "지역이 다르면 별개 사건", "단신 vs 종합기사는
+    별개 사건" 같은 판정은 두 기사를 직접 비교했을 때만 유효한 결론이라,
+    간접 연결만으로 셋 이상을 한 그룹으로 넘겨짚으면 위험하다.
+
+    수정 방식: edges(확정된 쌍)를 집합으로 따로 보관해두고, Union-Find
+    결과로 나온 각 연결 그룹에 대해 "그 그룹 안의 모든 쌍이 실제로 전부
+    직접 확정됐는지"(완전 그래프/클리크인지) 검증한다.
+      - 클리크면(모든 쌍이 직접 확인됨) 안전하게 병합.
+      - 클리크가 아니면(사슬로만 연결됐으면) "애매하면 안 묶는 게
+        안전하다"는 원칙에 따라 그 컴포넌트들을 병합하지 않고 그대로 둔다
+        (로그로 남김 - 왜 안 묶였는지 사후 확인 가능하게).
+    """
+    if not confirmed_pairs:
+        return components
+
+    url_to_component: dict[str, int] = {}
+    for idx, comp in enumerate(components):
+        for article in comp:
+            url_to_component[article.get("url")] = idx
+
+    edges: set[tuple[int, int]] = set()
+    for a, b, _sim in confirmed_pairs:
+        idx_a = url_to_component.get(a.get("url"))
+        idx_b = url_to_component.get(b.get("url"))
+        if idx_a is not None and idx_b is not None and idx_a != idx_b:
+            edges.add((min(idx_a, idx_b), max(idx_a, idx_b)))
+
+    if not edges:
+        return components
+
+    comp_uf = UnionFind(len(components))
+    for idx_a, idx_b in edges:
+        comp_uf.union(idx_a, idx_b)
+
+    merged_components = []
+    for indices in comp_uf.groups():
+        if len(indices) <= 2:
+            # 쌍 하나뿐이면 그 자체가 직접 확인된 관계라 연쇄 문제가 생길
+            # 여지가 없음 - 바로 병합.
+            merged_group = []
+            for idx in indices:
+                merged_group.extend(components[idx])
+            merged_components.append(merged_group)
+            continue
+
+        is_clique = all(
+            (min(x, y), max(x, y)) in edges
+            for x, y in combinations(indices, 2)
+        )
+        if is_clique:
+            merged_group = []
+            for idx in indices:
+                merged_group.extend(components[idx])
+            merged_components.append(merged_group)
+        else:
+            print(f"[issue_grouper] 🟡 주의 [IG-07] - 3차 확정 쌍이 사슬로만 연결됨(컴포넌트 "
+                  f"{len(indices)}개 - 일부 쌍은 LLM에 직접 확인된 적 없음) "
+                  f"- 연쇄 병합 방지로 안 묶고 개별 유지")
+            for idx in indices:
+                merged_components.append(components[idx])
+
+    return merged_components
+
+
+
+
+class _FakeEmbeddingModel:
+    """
+    ** 테스트 전용 - 실제 프로젝트 코드에서는 안 씀 **
+
+    진짜 BGE-M3(sentence-transformers)를 설치하지 않고도 stage2_group의
+    "유사도 계산 -> threshold 판단 -> 그룹 병합" 로직 자체가 맞는지 확인하기
+    위한 가짜 모델. 미리 정해둔 제목들에는 의도적으로 비슷한 벡터를,
+    나머지는 서로 확실히 먼 벡터를 부여한다.
+
+    ** 무관한 텍스트끼리 "우연히" 비슷해지는 문제를 피하는 설계 **
+    매칭 안 되는 텍스트에 그냥 낮은 차원의 랜덤 벡터를 부여하면, 랜덤
+    벡터끼리도 코사인 유사도가 threshold를 우연히 넘는 경우가 생길 수
+    있다(차원이 낮을수록 이 위험이 커짐) - 실제로 안 묶여야 할 두 기사가
+    잘못 묶이는 사고로 이어질 수 있어 아래처럼 설계했다.
+
+    매칭 안 되는 텍스트마다 서로 직교(orthogonal)하는 전용 축을 하나씩
+    배정한다(원-핫 벡터 + 아주 작은 노이즈). 직교 벡터는 코사인 유사도가
+    정확히 0에 가깝게 나오도록 수학적으로 보장되므로, 랜덤 시드가 뭐가
+    됐든 "무관한 텍스트끼리 우연히 유사해지는" 일 자체가 구조적으로
+    발생할 수 없다. 곡물/사료 그룹은 0번 축에 다 같이 모아서 "의미가
+    비슷한 문장은 가까운 벡터"라는 원래 취지는 그대로 유지.
+
+    실제 모델(model.encode(texts, normalize_embeddings=True))과 같은
+    인터페이스(encode 메서드, 텍스트 리스트 -> 벡터 리스트)만 흉내낸다.
+    """
+
+    def encode(self, texts: list[str], normalize_embeddings: bool = True):
+        import numpy as np
+
+        rng = np.random.default_rng(seed=42)
+        # 차원 수: 0번 축(곡물/사료 그룹 전용) + 매칭 안 되는 텍스트 개수만큼
+        # 여유 있게 잡는다 - 텍스트 수보다 넉넉하면 축이 남아도 무해함.
+        dim = len(texts) + 1
+
+        vectors = []
+        next_free_axis = 1  # 0번은 곡물/사료 그룹 전용으로 예약
+        for text in texts:
+            vec = np.zeros(dim)
+            if "옥수수" in text or "grain" in text.lower() or "feed price" in text.lower():
+                vec[0] = 1.0
+            else:
+                vec[next_free_axis] = 1.0
+                next_free_axis += 1
+            vec += rng.normal(scale=0.02, size=dim)  # 완전 동일/완전 0인 벡터는 피하려는 소량 노이즈
+            vectors.append(vec)
+        return np.array(vectors)
+
+
+if __name__ == "__main__":
+    # === 1차만 단독 확인 (무거운 설치 없이) ===
+    sample_articles = [
+        {"title": "전북서 고병원성 조류독감 추가 발생", "url": "https://a.com/1"},
+        {"title": "USDA reports new avian flu outbreak in Iowa", "url": "https://b.com/1"},
+        {"title": "구제역 확산에 한우 수출 잠정 중단", "url": "https://a.com/2"},
+        {"title": "Feed prices expected to rise amid grain shortage", "url": "https://b.com/2"},  # 매칭 안 되어야 함
+        {"title": "옥수수 국제가격 상승, 배합사료 원가 부담 커져", "url": "https://a.com/3"},       # 위와 같은 이슈지만
+                                                                                                    # 1차 사전엔 없음 -> 2차(임베딩)가 잡아야 할 케이스
+    ]
+
+    grouped, unmatched = stage1_group(sample_articles)
+    print(f"=== 1차 매칭으로 묶인 그룹: {len(grouped)}개 ===")
+    for g in grouped:
+        print(f"  - {len(g)}건: {[a['title'] for a in g]}")
+    print(f"\n=== 1차에서 못 잡은 기사(2차로 넘길 대상): {len(unmatched)}건 ===")
+    for a in unmatched:
+        print(f"  - {a['title']}")
+
+    # === 2차까지 포함한 전체 파이프라인 확인 (가짜 모델 사용) ===
+    print("\n\n=== group_issues() 전체 실행 (가짜 임베딩 모델) ===")
+    fake_model = _FakeEmbeddingModel()
+    final_groups = group_issues(sample_articles, model=fake_model)
+
+    print(f"\n최종 그룹 수: {len(final_groups)}개")
+    for g in final_groups:
+        titles = [a["title"] for a in g]
+        tag = "그룹" if len(g) >= 2 else "단독"
+        print(f"  [{tag}, {len(g)}건] {titles}")
+
+    # 기대 결과: "옥수수 국제가격..."과 "Feed prices..."가 2차에서 같은
+    # 그룹으로 묶여야 함 (가짜 모델이 두 문장에 비슷한 벡터를 부여했으므로)
+    merged_ok = any(
+        len(g) == 2 and
+        {"옥수수 국제가격 상승, 배합사료 원가 부담 커져", "Feed prices expected to rise amid grain shortage"}
+        == {a["title"] for a in g}
+        for g in final_groups
+    )
+    print(f"\n[검증] 2차 임베딩으로 사료가격 이슈 그룹핑 성공: {merged_ok}")
+    assert merged_ok, "2차 임베딩 그룹핑 로직에 문제가 있음"
+
+    # ** 음성(negative) 검증 **
+    # "무관한 기사는 절대 안 묶여야 한다"를 명시적으로 확인. 이게 없으면
+    # _FakeEmbeddingModel이 우연히 이상한 벡터를 내놔도 테스트가 조용히
+    # 통과해버린다.
+    def _same_group(title_a: str, title_b: str) -> bool:
+        return any({title_a, title_b} <= {a["title"] for a in g} for g in final_groups)
+
+    unrelated_pairs = [
+        ("전북서 고병원성 조류독감 추가 발생", "구제역 확산에 한우 수출 잠정 중단"),  # 질병명 자체가 다름
+        ("USDA reports new avian flu outbreak in Iowa", "구제역 확산에 한우 수출 잠정 중단"),
+        ("USDA reports new avian flu outbreak in Iowa", "옥수수 국제가격 상승, 배합사료 원가 부담 커져"),
+    ]
+    for title_a, title_b in unrelated_pairs:
+        wrongly_merged = _same_group(title_a, title_b)
+        print(f"[검증] '{title_a[:20]}...' <-> '{title_b[:20]}...' 안 묶임: {not wrongly_merged}")
+        assert not wrongly_merged, f"무관한 기사가 잘못 묶임: {title_a} <-> {title_b}"
+    print("\n[검증] 무관한 기사 오탐 없음 - 전부 통과")
+
+    # === 3차 LLM 보조가 실제로 배선(wiring)돼 있는지 mock으로 확인 ===
+    # (실제 API 키 없이도, borderline_pairs가 있으면 stage3_llm_assist가
+    # 정말 호출되고 응답을 파싱해 병합까지 이어지는지 구조만 검증한다.
+    # borderline_pairs 자체가 안 생기면 stage3가 호출조차 안 되므로, 이
+    # 스모크 테스트는 borderline_pairs를 강제로 만들어서 배선이 정상임을
+    # 확인한다.)
+    print("\n\n=== 3차 LLM 보조 배선 확인 (mock API, 실제 네트워크 호출 없음) ===")
+    import os as _os
+    import requests as _requests
+
+    _mock_calls = []
+
+    def _mock_session_post(self, url, headers=None, json=None, timeout=None):
+        # _call_llm은 requests.post가 아니라 session.post(Session 인스턴스
+        # 메서드)를 호출하므로, requests.Session.post(클래스 메서드) 자체를
+        # 바꿔치기해서 어떤 Session 인스턴스에서 호출되든 잡히게 한다(self는 무시).
+        _mock_calls.append(url)
+        pairs_count = json["messages"][0]["content"].count('A: "')
+        # _call_llm이 id 기반 매칭을 쓰므로, mock 응답에도 id를 넣어야
+        # 한다(안 넣으면 전부 파싱 실패로 처리돼 False 기본값이 되면서
+        # 이 테스트의 assert가 깨짐).
+        results = [{"id": i, "same_event": True} for i in range(1, pairs_count + 1)]  # 이 스모크 테스트는 전부 True로 응답
+        text = __import__("json").dumps(results)
+
+        class _MockResp:
+            status_code = 200
+            def raise_for_status(self): pass
+            def json(self):
+                return {"content": [{"type": "text", "text": text}]}
+        return _MockResp()
+
+    _original_session_post = _requests.Session.post
+    _requests.Session.post = _mock_session_post
+    _os.environ["ANTHROPIC_API_KEY"] = "sk-ant-smoke-test-dummy-key"
+    try:
+        fake_borderline = [
+            (
+                {"title": "전북 조류독감 추가 확진", "url": "https://smoke/1"},
+                {"title": "Jeonbuk confirms new avian flu case", "url": "https://smoke/2"},
+                0.72,
+            )
+        ]
+        confirmed = stage3_llm_assist(fake_borderline)
+        assert len(confirmed) == 1, "mock 응답이 전부 True인데 confirmed가 1개가 아님 - 배선 문제"
+        assert _mock_calls, "session.post가 한 번도 호출 안 됨 - stage3가 실제로 API를 안 부름"
+        print(f"[검증] stage3_llm_assist 배선 정상 - mock 호출 {len(_mock_calls)}회, "
+              f"confirmed {len(confirmed)}쌍")
+    finally:
+        _requests.Session.post = _original_session_post
+        del _os.environ["ANTHROPIC_API_KEY"]
+
+    # === OpenRouter 요청 헤더가 실제로 인코딩 가능한지 확인 ===
+    # 배경: X-Title 헤더에 한글이 섞이면 UnicodeEncodeError로 3차 LLM 보조의
+    # 모든 배치가 실패한다(requests.post를 통째로 mock으로 바꿔치기하는 위
+    # 스모크 테스트는 실제 HTTP 헤더 인코딩 단계를 건너뛰기 때문에 이 버그를
+    # 못 잡음). HTTP 헤더 인코딩은 실제로는 urllib3/http.client가 소켓에
+    # 쓰기 직전(더 아래 레이어)에서 수행하고 requests.models.PreparedRequest.
+    # prepare_headers()는 값만 저장할 뿐 이 검증을 안 하므로, 실제 실패와
+    # 동일한 지점인 str.encode("latin-1")을 직접 호출해서 검증한다. 헤더에
+    # 비-ASCII 문자가 섞이면 여기서 바로 실패해야 한다.
+    for header_name, header_value in {
+        "Authorization": "Bearer dummy-key-for-header-encoding-check",
+        "content-type": "application/json",
+        "X-Title": _OPENROUTER_X_TITLE,
+    }.items():
+        header_value.encode("latin-1")  # 실패하면 UnicodeEncodeError로 여기서 바로 죽음
+    print(f"[검증] OpenRouter 요청 헤더(X-Title='{_OPENROUTER_X_TITLE}') latin-1 인코딩 가능 확인 - 통과")
+
+    print("\n[issue_grouper] 자체 점검 전체 통과 (1차/2차 그룹핑 + 음성 검증 + 3차 배선 확인 + 헤더 인코딩 확인)")
