@@ -58,9 +58,13 @@ concurrency:
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    # 로컬에서 체감 2시간 정도라 GDELT 429 재시도 등 변동을 감안해 여유 있게 설정
-    # (9번 섹션 실측 - GDELT 수집만 최대 78분 걸린 사례 있음)
-    timeout-minutes: 240
+    # GitHub 호스팅 러너(ubuntu-latest)는 작업 하나당 최대 360분(6시간)이
+    # 하드 제한이라(GitHub 인프라 자체의 캡, 워크플로 설정으로 못 늘림),
+    # 그 이상 적어도 의미가 없어 360으로 맞춤. GDELT 429 재시도 등 변동을
+    # 감안해도 로컬 체감(약 2시간)보다 넉넉한 여유. 만약 실제로 6시간을
+    # 넘겨야 하는 상황이 온다면 self-hosted 러너로 전환해야 함(이 제한이
+    # 없어짐 - 대신 24시간 켜둘 서버/PC가 별도로 필요).
+    timeout-minutes: 360
 
     steps:
       - name: 리포 체크아웃
@@ -234,7 +238,7 @@ jobs:
         # main에 이 job이 모르는 새 커밋이 생겨서(예: 같은 파이프라인을 겹쳐
         # 실행) non-fast-forward로 거부됨. 이 파이프라인은 GDELT 429
         # 백오프 때문에 체크아웃부터 push까지 최대 몇 시간씩 걸릴 수 있어
-        # (job 전체 timeout-minutes: 240), 그 사이 원격이 앞서갈 여지가
+        # (job 전체 timeout-minutes: 360), 그 사이 원격이 앞서갈 여지가
         # 충분함. push 직전에 git pull --rebase로 원격 변경사항을 먼저
         # 반영해서 최신 위에 이 커밋을 얹도록 수정. rebase 자체가 충돌나면
         # (예: 같은 주차 파일을 동시에 건드린 경우) 사람이 봐야 하므로
