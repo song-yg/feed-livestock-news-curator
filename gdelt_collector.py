@@ -115,16 +115,8 @@ if not getattr(requests.utils, "_gdelt_ua_patched", False):
 # 시트가 나중에 바뀌면 이 fallback도 수동으로 같이 갱신해줘야 한다(자동
 # 동기화 아님 - naver_collector.py KEYWORDS 갱신 시와 동일한 주의사항).
 KEYWORDS_EN = [
-    "foot-and-mouth disease",
     "feed price",
-    "livestock movement restriction",
-    "swine industry",
     "feed mill",
-    "feed additive",
-    "livestock import tariff",
-    "poultry vertical integration",
-    "smart farming",
-    "smart livestock barn",
 ]
 
 # --- 이미 실패가 확인된 키워드 사전 스킵 ---

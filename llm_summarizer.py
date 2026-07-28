@@ -144,27 +144,32 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: reque
     재사용해 커넥션 오버헤드를 줄인다(relevance_filter.py/issue_grouper.py
     와 동일한 방식).
 
-    ** 지정 모델 실패 시 openrouter/free 자동 재시도 **
-    openrouter이고 지정 모델(_ig.LLM_MODEL_OPENROUTER)이 openrouter/free가
-    아닌데 호출이 실패하면, openrouter/free(OpenRouter 자체 무료 라우터)로
-    한 번 더 자동 재시도한다 - 특정 모델 하나에 고정한 설정이 그 모델만의
-    문제(이름 오타, 무료 티어에서 빠짐 등) 때문에 이번 실행의 요약 기능
-    전체를 막는 걸 방지. 이미 openrouter/free를 쓰고 있으면 재시도 없이
-    바로 실패 처리.
+    ** 지정 모델 실패 시 다음 후보 모델로 자동 재시도 **
+    openrouter인 경우 _ig.LLM_MODEL_CHAIN_OPENROUTER(지정 모델 -> 지정
+    모델2 -> 지정 모델3 -> openrouter/free, issue_grouper.py 상수 선언부
+    참고)를 순서대로 시도한다. 앞 모델이 실패하면(이름 오타, 무료 티어에서
+    빠짐 등) 다음 후보로 자동 재시도 - 특정 모델 하나에 고정한 설정이 그
+    모델만의 문제 때문에 이번 실행의 요약 기능 전체를 막는 걸 방지. 체인의
+    마지막은 항상 openrouter/free라 여기까지 실패해야 최종 실패로 처리.
     """
     data = None  # 응답 자체를 못 받았을 수도 있으니 미리 초기화(로그에서 안전하게 참조용)
     try:
         if _ig.LLM_PROVIDER == "openrouter":
-            try:
-                text, data = _request_openrouter(system_prompt, user_prompt, api_key, session,
-                                                  _ig.LLM_MODEL_OPENROUTER)
-            except Exception as e:
-                if _ig.LLM_MODEL_OPENROUTER == "openrouter/free":
-                    raise
-                print(f"[llm_summarizer] 🟡 주의 - 요약 생성 지정 모델({_ig.LLM_MODEL_OPENROUTER}) 호출 실패 - "
-                      f"openrouter/free 자동 라우팅으로 재시도: {type(e).__name__} - {e!r}")
-                text, data = _request_openrouter(system_prompt, user_prompt, api_key, session, "openrouter/free")
-            return text
+            last_error: Exception | None = None
+            chain = _ig.LLM_MODEL_CHAIN_OPENROUTER
+            for idx, model_name in enumerate(chain):
+                try:
+                    if idx > 0:
+                        print(f"[llm_summarizer] 🟡 주의 - 요약 생성 이전 모델 실패 - "
+                              f"'{model_name}'(으)로 재시도 ({idx + 1}/{len(chain)})")
+                    text, data = _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
+                    return text
+                except Exception as e:
+                    last_error = e
+                    if idx < len(chain) - 1:
+                        print(f"[llm_summarizer] 🟡 주의 - 요약 생성 지정 모델('{model_name}') 호출 실패 - "
+                              f"다음 후보 모델로 재시도: {type(e).__name__} - {e!r}")
+            raise last_error
         else:
             text, data = _request_anthropic(system_prompt, user_prompt, api_key, session)
             return text

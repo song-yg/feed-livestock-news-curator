@@ -412,6 +412,25 @@ LLM_API_URL_ANTHROPIC = "https://api.anthropic.com/v1/messages"
 LLM_MODEL_OPENROUTER = os.environ.get("OPENROUTER_MODEL") or "openrouter/free"
 LLM_API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
 
+# --- 2단계 추가 폴백 모델 ---
+#
+# 기존엔 "지정 모델 1개 실패 -> openrouter/free" 1단계 폴백뿐이었는데,
+# 지정 모델 자체가 여러 개 후보가 있을 때(예: 무료 티어에서 어떤 모델이
+# 갑자기 빠질지 예측이 안 되는 상황) 중간 후보를 더 두고 싶다는 요청으로
+# 2단계를 추가함. 둘 다 선택사항(비워두면 그 자리는 그냥 건너뜀) - 아무것도
+# 안 넣으면 기존과 동일하게 "지정 모델 1개 -> openrouter/free" 그대로 동작.
+LLM_MODEL_OPENROUTER_2 = os.environ.get("OPENROUTER_MODEL_2") or ""
+LLM_MODEL_OPENROUTER_3 = os.environ.get("OPENROUTER_MODEL_3") or ""
+
+# 실제 시도 순서. openrouter/free가 위 셋 중에 이미 없으면 맨 끝에 최종
+# 안전망으로 자동 추가 - 아무리 지정 모델들이 다 막혀도 무료 라우터
+# 자체가 완전히 죽지 않는 한 이 실행의 LLM 기능이 통째로 막히지 않게 함.
+LLM_MODEL_CHAIN_OPENROUTER = [
+    m for m in (LLM_MODEL_OPENROUTER, LLM_MODEL_OPENROUTER_2, LLM_MODEL_OPENROUTER_3) if m
+]
+if "openrouter/free" not in LLM_MODEL_CHAIN_OPENROUTER:
+    LLM_MODEL_CHAIN_OPENROUTER.append("openrouter/free")
+
 LLM_BATCH_SIZE = 20  # 한 번의 API 호출에 몇 쌍까지 같이 물어볼지 (호출 수 절약,
                       # OpenRouter 무료 티어 분당/일 요청 한도 감안해도 안전한 크기)
 
@@ -532,25 +551,30 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     """
     LLM_PROVIDER에 맞는 경로로 실제 텍스트 응답을 받아온다.
 
-    openrouter이고 지정 모델(LLM_MODEL_OPENROUTER)이 이미 openrouter/free가
-    아닌 경우: 지정 모델로 먼저 시도하고, 실패하면(모델 이름 오타, 그 모델이
-    무료 티어에서 빠짐, 일시적 문제 등) openrouter/free(OpenRouter 자체
-    무료 라우터)로 한 번 더 자동 재시도한다 - 특정 모델 하나에 고정한
-    설정이 그 모델만의 문제 때문에 3차 그룹핑 보조 전체를 막는 걸 방지한다.
-    이미 openrouter/free를 쓰고 있으면 더 폴백할 곳이 없으므로 그대로
-    예외를 올려보낸다 - 호출부가 기존처럼 "이 배치 전체 안 묶음"으로 흡수한다.
+    openrouter인 경우: LLM_MODEL_CHAIN_OPENROUTER(지정 모델 -> 지정 모델2 ->
+    지정 모델3 -> openrouter/free, 위 상수 선언부 참고)를 순서대로 시도한다.
+    앞 모델이 실패하면(모델 이름 오타, 무료 티어에서 빠짐, 일시적 문제 등)
+    다음 모델로 자동 재시도 - 특정 모델 하나에 고정한 설정이 그 모델만의
+    문제 때문에 3차 그룹핑 보조 전체를 막는 걸 방지한다. 체인의 마지막은
+    항상 openrouter/free라 여기까지 실패하면 더 폴백할 곳이 없으므로 예외를
+    그대로 올려보낸다 - 호출부가 기존처럼 "이 배치 전체 안 묶음"으로 흡수한다.
     """
     if LLM_PROVIDER != "openrouter":
         return _request_anthropic(system_prompt, user_prompt, api_key, session)
 
-    try:
-        return _request_openrouter(system_prompt, user_prompt, api_key, session, LLM_MODEL_OPENROUTER)
-    except Exception as e:
-        if LLM_MODEL_OPENROUTER == "openrouter/free":
-            raise
-        print(f"[issue_grouper] 🟡 주의 - 3차 그룹핑 지정 모델({LLM_MODEL_OPENROUTER}) 호출 실패 - "
-              f"openrouter/free 자동 라우팅으로 재시도: {type(e).__name__} - {e!r}")
-        return _request_openrouter(system_prompt, user_prompt, api_key, session, "openrouter/free")
+    last_error: Exception | None = None
+    for idx, model_name in enumerate(LLM_MODEL_CHAIN_OPENROUTER):
+        try:
+            if idx > 0:
+                print(f"[issue_grouper] 🟡 주의 - 3차 그룹핑 이전 모델 실패 - "
+                      f"'{model_name}'(으)로 재시도 ({idx + 1}/{len(LLM_MODEL_CHAIN_OPENROUTER)})")
+            return _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
+        except Exception as e:
+            last_error = e
+            if idx < len(LLM_MODEL_CHAIN_OPENROUTER) - 1:
+                print(f"[issue_grouper] 🟡 주의 - 3차 그룹핑 지정 모델('{model_name}') 호출 실패 - "
+                      f"다음 후보 모델로 재시도: {type(e).__name__} - {e!r}")
+    raise last_error
 
 
 def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requests.Session) -> list[bool] | None:
@@ -649,8 +673,8 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]]) -> list[
               f"애매 구간 {len(borderline_pairs)}쌍 전부 '안 묶음' 기본값 유지")
         return []
 
-    model_name = LLM_MODEL_OPENROUTER if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
-    print(f"[issue_grouper] 3차 LLM 보조 시작 - provider={LLM_PROVIDER}, model={model_name}, "
+    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER) if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
+    print(f"[issue_grouper] 3차 LLM 보조 시작 - provider={LLM_PROVIDER}, model={model_desc}, "
           f"대상 {len(borderline_pairs)}쌍")
 
     confirmed = []
