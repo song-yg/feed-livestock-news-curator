@@ -404,6 +404,26 @@ TIMELINE_TIMESPAN = "8d"
 # (naver처럼 start 파라미터로 추가 페이지네이션하는 기능 자체가 없음 - API 레벨 한계)
 MAX_RECORDS = 250
 
+# --- 시간 예산(전체 GDELT 수집 하드 데드라인) ---
+#
+# GitHub 호스팅 러너는 작업(job) 전체가 최대 360분(6시간)으로 하드
+# 제한된다(GitHub 인프라 자체의 캡, 워크플로 설정으로 못 늘림). 키워드
+# 개수가 늘어날수록 배치/재시도 횟수가 늘고, 429가 걸릴 때마다 최대 900초
+# 백오프 + 외부 재시도 라운드 대기까지 겹치면서, 키워드가 많을 때는 GDELT
+# 수집 하나만으로 6시간을 넘길 수 있다(실측: 키워드를 크게 늘려 테스트한
+# 실행에서 외부 재시도 1라운드까지만 4시간 소요).
+#
+# WATT/네이버 수집, 의존성 설치, 임베딩 모델 로드, 스코어링, LLM 요약,
+# 저장/배포, git 커밋·푸시까지 GDELT 이후 단계에도 시간이 필요하므로,
+# GDELT 수집 자체에 6시간을 전부 쓸 수는 없다 - 나머지 단계에 여유를 남기고
+# GDELT에는 5시간(18000초)까지만 예산으로 준다. 이 시간을 넘기면 아직 시도
+# 안 한 키워드는 이번 실행에서 과감히 포기하고, 그때까지 모은 결과만
+# 가지고 다음 단계로 넘어간다("일부 키워드 손실 감수하더라도 전체 파이프
+# 라인은 시간 안에 끝내는 것"을 우선하기로 한 결정) - 포기된 키워드는
+# 다음 실행에서 처음부터 다시 시도되므로(학습형 스킵/크라우딩 목록과
+# 달리 "실패"로 기록되지 않음) 매주 조금씩이라도 커버리지가 쌓인다.
+TIME_BUDGET_SECONDS = 5 * 60 * 60  # 5시간
+
 # --- 적응형 배치 수집 ---
 #
 # 배경: 키워드를 전부 OR로 합치면 250건 상한을 광범위한 키워드 하나가
@@ -1055,12 +1075,31 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     if not active_keywords and not known_crowders:
         return all_articles, timeline_by_keyword
 
+    # --- 시간 예산 추적 시작 ---
+    # time.monotonic()은 시스템 시각 변경(NTP 보정 등)에 영향 안 받는
+    # 경과 시간 측정용 시계라 이런 용도에 적합.
+    collect_start = time.monotonic()
+    budget_exceeded = False
+    skipped_due_to_budget: list[str] = []
+
+    def _over_budget() -> bool:
+        return (time.monotonic() - collect_start) >= TIME_BUDGET_SECONDS
+
     # --- 1단계: 배치 단위 수집 + 크라우딩 감지 ---
     batches = [active_keywords[i:i + BATCH_SIZE] for i in range(0, len(active_keywords), BATCH_SIZE)]
     pending_individual: list[str] = list(known_crowders)  # 학습된 크라우딩 키워드는 처음부터 개별 처리 대상
     pending_batches: list[list[str]] = []  # 배치 요청 자체가 실패해서 배치로 재시도할 것들
 
-    for batch in batches:
+    for batch_idx, batch in enumerate(batches):
+        if _over_budget():
+            remaining = [kw for b in batches[batch_idx:] for kw in b]
+            skipped_due_to_budget.extend(remaining)
+            budget_exceeded = True
+            print(f"[gdelt] 🟡 주의 - 시간 예산({TIME_BUDGET_SECONDS // 3600}시간) 소진 - "
+                  f"남은 배치 {len(batches) - batch_idx}개(키워드 {len(remaining)}개)는 "
+                  f"이번 실행에서 건너뜀. 다음 실행에서 다시 시도됨.")
+            break
+
         if len(batch) == 1:
             # 배치 크기 1은 그냥 개별 요청과 같으므로 굳이 OR로 묶지 않고 바로 개별 처리 대상으로 보냄
             pending_individual.append(batch[0])
@@ -1113,9 +1152,24 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     # 섹션(아래)의 "OUTER_RETRY_PASSES+1번 시도"와 총 시도 횟수 기준이
     # 어긋남 - 개별 섹션은 round_keywords가 "아직 한 번도 개별로 안 뚫려본
     # 것"부터 세는 반면, 여기는 이미 1회 시도가 끝난 것부터 세는 차이).
+    #
+    # 이미 1단계에서 시간 예산을 다 썼으면(budget_exceeded) 이 단계 자체를
+    # 건너뛴다 - pending_batches에 남은 키워드는 "미시도"로 넘긴다.
+    if budget_exceeded:
+        skipped_due_to_budget.extend(kw for b in pending_batches for kw in b)
+        pending_batches = []
+
     batch_round = pending_batches
     for round_num in range(1, OUTER_RETRY_PASSES + 1):
         if not batch_round:
+            break
+        if _over_budget():
+            remaining = [kw for b in batch_round for kw in b]
+            skipped_due_to_budget.extend(remaining)
+            budget_exceeded = True
+            print(f"[gdelt] 🟡 주의 - 시간 예산 소진 - 배치 재시도 중단"
+                  f"(키워드 {len(remaining)}개는 이번 실행에서 건너뜀)")
+            batch_round = []
             break
         print(f"[gdelt] --- 배치 재시도 라운드 {round_num}/{OUTER_RETRY_PASSES} - "
               f"이전 라운드 실패 배치 {len(batch_round)}개 ---")
@@ -1123,7 +1177,15 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
         time.sleep(OUTER_RETRY_WAIT_SECONDS)
 
         still_failed_batches = []
-        for batch in batch_round:
+        for batch_idx2, batch in enumerate(batch_round):
+            if _over_budget():
+                remaining = [kw for b in batch_round[batch_idx2:] for kw in b]
+                skipped_due_to_budget.extend(remaining)
+                budget_exceeded = True
+                print(f"[gdelt] 🟡 주의 - 시간 예산 소진 - 배치 재시도 라운드 도중 중단"
+                      f"(키워드 {len(remaining)}개는 이번 실행에서 건너뜀)")
+                still_failed_batches = []
+                break
             success, batch_articles = _collect_articles_for_keywords(gd, batch)
             if success:
                 all_articles.extend(batch_articles)
@@ -1150,6 +1212,12 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
             pending_individual.extend(batch)
 
     # --- 2단계: 개별 보충 요청 - 실패한 것만 외부 재시도 라운드 ---
+    # 이미 시간 예산을 다 썼으면 이 단계 자체를 건너뛴다 - pending_individual에
+    # 쌓인 키워드는 전부 "미시도"로 넘긴다.
+    if budget_exceeded:
+        skipped_due_to_budget.extend(pending_individual)
+        pending_individual = []
+
     round_keywords = list(dict.fromkeys(pending_individual))  # 순서 유지하며 중복 제거
     failed_keywords: list[str] = []
     # 키워드별 마지막 실패 사유(예외 타입+메시지) - 라운드를 거듭할수록
@@ -1173,7 +1241,16 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
 
         failed_keywords = []
 
-        for keyword in round_keywords:
+        for kw_idx, keyword in enumerate(round_keywords):
+            if _over_budget():
+                remaining = round_keywords[kw_idx:]
+                skipped_due_to_budget.extend(remaining)
+                print(f"[gdelt] 🟡 주의 - 시간 예산 소진 - 개별 요청 중단"
+                      f"(키워드 {len(remaining)}개는 이번 실행에서 건너뜀)")
+                failed_keywords = []  # 남은 라운드도 더 안 돎(아래 break로 바로 빠져나감)
+                round_keywords = []
+                break
+
             success, keyword_articles, reason = _collect_articles_for_keyword(gd, keyword)
             if success:
                 all_articles.extend(keyword_articles)
@@ -1188,10 +1265,22 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
                 failure_reasons[keyword] = reason or "사유 불명"
             time.sleep(REQUEST_INTERVAL)
 
+        if not round_keywords:
+            # 위에서 시간 예산 소진으로 강제 종료된 경우 - 더 이상 라운드를 안 돎
+            break
+
     if failed_keywords:
         detail = ", ".join(f"{kw} ({failure_reasons.get(kw, '사유 불명')})" for kw in failed_keywords)
         print(f"[gdelt] 🔴 조치필요 [GD-11] - 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
               f"기사 0건으로 처리됨): {detail}")
+
+    if skipped_due_to_budget:
+        unique_skipped = list(dict.fromkeys(skipped_due_to_budget))
+        print(f"[gdelt] 🟡 주의 - 시간 예산 초과로 이번 실행에서 아예 시도 못 한 키워드 "
+              f"{len(unique_skipped)}개(실패로 기록되지 않음, 다음 실행에서 처음부터 재시도됨): "
+              f"{unique_skipped}")
+
+
 
     # --- 시계열 수집 완전 제거 결정 ---
     # timelinevol 단독(키워드 5개) 실전 규모 테스트에서도 429 백오프 4단계를
