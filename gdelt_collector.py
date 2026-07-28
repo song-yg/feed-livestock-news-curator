@@ -127,25 +127,25 @@ KEYWORDS_EN = [
     "smart livestock barn",
 ]
 
-# --- 이미 실패가 확인된 키워드 사전 스킵 ---
+# --- 수동 사전 스킵 목록 제거됨 (학습형 스킵으로 일원화) ---
 #
-# "HPAI"는 GDELT API가 매번 ValueError("The specified phrase is too short.")
-# 로 거부하는 게 확인됨. 문제는 이 에러가 429 재시도 루프를 다 태우고
-# 나서야(최대 4단계 백오프, 아래 MAX_RETRIES 참고) 도달하는 진짜 에러라서,
-# 매 실행마다 어차피 실패할 키워드에 시간을 낭비하게 된다.
-#
-# "몇 글자부터 너무 짧다고 판단하는지"는 GDELT가 공식적으로 공개한 기준이 아니라서(추정으로 길이 임계값을 정하면 다른 정상 키워드까지 잘못 걸러낼 위험이 있음), 길이 기반 자동 필터 대신 "실제로 실패가 확인된 키워드"만 명시적으로 등록하는 스킵 리스트로 처리한다.
-# 새 키워드를 추가했는데 계속 같은 ValueError로 실패하는 게 확인되면 여기 추가할 것.
-
-SKIP_KEYWORDS = {
-    "HPAI": "GDELT API가 'phrase too short'로 거부함 (재현 확인됨)",
-}
+# 예전엔 "HPAI"처럼 GDELT API가 매번 ValueError("The specified phrase is too
+# short.")로 거부하는 게 확인된 키워드를 사람이 SKIP_KEYWORDS에 직접 등록해
+# 1회차부터 즉시 건너뛰게 했었다. 그런데 학습형 스킵(바로 아래
+# _load_skip_state 등)의 카운팅 기준이 "실행 횟수"에서 "이번 실행 안에서
+# 실제 ValueError가 발생한 횟수"로 바뀌면서(_update_skip_state_after_run
+# 참고), 확정적으로 실패하는 키워드는 재시도 라운드 중 반복 실패가 겹쳐
+# 첫 실행 안에서도 SKIP_STATE_FAILURE_THRESHOLD(2)를 넘기고 곧바로 다음
+# 실행부터 자동 스킵되는 경우가 흔해졌다 - 사람이 미리 등록해 아끼는
+# "1~2회 낭비"의 실익이 예전만큼 크지 않다고 판단해 수동 목록을 없애고
+# 학습형 스킵 하나로 통일한다. 새로 짧은 키워드가 시트에 추가돼도 늦어도
+# 두 번째 실행부터는(운이 나쁘면 첫 실행부터) 자동으로 걸러진다.
 
 # --- 학습형 스킵 목록 ---
 #
-# 위 SKIP_KEYWORDS는 사람이 로그를 보고 손으로 채워넣는 "수동" 목록이라,
-# 아직 안 등록된 짧은 키워드가 시트에 새로 추가되면 등록되기 전까지 매번
-# ValueError로 요청 1번씩 계속 낭비함(길이 기반 예방적 차단은 위험해서 안 씀).
+# 사람이 미리 등록해야 하는 수동 목록 없이, 새로 시트에 추가된 짧은
+# 키워드가 매번 ValueError로 요청을 낭비하는 걸 막기 위한 자동화(길이
+# 기반 예방적 차단은 위험해서 안 씀 - 아래 참고).
 #
 # 대신 "실제로 같은 키워드에서 ValueError(쿼리 자체 거부)가 누적 2회
 # 발생하면 자동으로 스킵 목록에 편입"하는 방식을 씀 - 사람이 손으로 안
@@ -368,7 +368,7 @@ def _update_crowding_state_after_run() -> None:
 #   (수족구병 - 어린이 질환, 전혀 다른 병)가 그대로 포함 매칭됨
 #
 # 길이 기반이나 정규식 기반의 일반화된 해법 대신, "실제로 오매칭이 확인된 키워드"에 한해 제외 패턴을 명시적으로 등록하는 방식을 쓴다
-# (SKIP_KEYWORDS와 동일한 철학 - 추정으로 일반 규칙을 만들면 다른 정상 매칭까지 잘못 걸러낼 위험이 있음).
+# (추정으로 일반 규칙을 만들면 다른 정상 매칭까지 잘못 걸러낼 위험이 있어, "실제로 확인된 것만 명시적으로 등록"하는 철학을 여기서도 동일하게 적용).
 # 새 오매칭 패턴이 확인되면 여기 추가할 것.
 #
 # 형태: {검색 키워드: [제목에 이 문자열(대소문자 무시)이 포함되면 제외, ...]}
@@ -800,7 +800,7 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
 
     except ValueError as e:
         # 쿼리 자체가 거부된 경우(예: "phrase too short")는 시간이 지나도
-        # 안 풀리는 확정적 실패라, 위 SKIP_KEYWORDS/학습형 스킵 목록
+        # 안 풀리는 확정적 실패라, 학습형 스킵 목록
         # (_update_skip_state_after_run 참고)의 대상이 됨 - 여기서 발생
         # 시점에 바로 기록해둔다. 일반 Exception과 구분해서 잡는 이유는
         # 네트워크 오류 같은 일시적 실패까지 "이 키워드가 문제"로 학습되면
@@ -1092,9 +1092,6 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     active_keywords = []
     known_crowders = []
     for keyword in target_keywords:
-        if keyword in SKIP_KEYWORDS:
-            print(f"[gdelt] '{keyword}' 스킵 - {SKIP_KEYWORDS[keyword]}")
-            continue
         learned_entry = skip_state.get(keyword)
         if isinstance(learned_entry, dict) and learned_entry.get("fail_count", 0) >= SKIP_STATE_FAILURE_THRESHOLD:
             print(f"[gdelt] '{keyword}' 스킵 - 학습형 스킵 목록 등재됨 "
