@@ -71,10 +71,10 @@ if "openrouter/free" not in [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]:
 
 # 순위 라벨 -> 실패 시 찍을 오류 코드 (역할 고정)
 _LLM_MODEL_ROLE_ERROR_CODE = {
-    "1순위": "RF-08",
-    "2순위": "RF-09",
-    "3순위": "RF-10",
-    "최종 안전망": "RF-11",
+    "1순위": "RF-07",
+    "2순위": "RF-08",
+    "3순위": "RF-09",
+    "최종 안전망": "RF-10",
 }
 
 # 하위호환용 - 모델명만 뽑은 리스트(다른 곳에서 " -> ".join(...) 등으로 사용)
@@ -277,7 +277,7 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     ** 오류 코드를 역할(순위)별로 고정해서 분리한 이유(2026-07-28) **:
     issue_grouper.py와 동일 - "지정 모델 호출 실패"라는 로그 한 줄만으로는
     1순위/2순위/3순위 중 어느 자리가 실패한 건지 구분이 안 됐음.
-    RF-08(1순위)/RF-09(2순위)/RF-10(3순위)/RF-11(최종 안전망)로 분리해서
+    RF-07(1순위)/RF-08(2순위)/RF-09(3순위)/RF-10(최종 안전망)로 분리해서
     grep만으로 특정 순위의 실패 빈도를 바로 알 수 있게 함. 최종 안전망까지
     실패하는 건 완전 실패라 🔴 조치필요, 그 앞 순위 실패는 자동 복구되는
     경로라 🟡 주의.
@@ -286,7 +286,7 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     호출은 성공했는데 응답 형식이 이상한 경우도 호출 실패와 동일하게
     취급해 같은 재시도 체인에 태운다. validate(text, is_final)에서 예외를
     던지면 이번 모델 시도가 실패한 것으로 보고 다음 순위 모델로 재시도
-    (위 RF-08~11 로그 경로 재사용). is_final=True는 최종 안전망까지 온
+    (위 RF-07~10 로그 경로 재사용). is_final=True는 최종 안전망까지 온
     시도라는 뜻 - 호출부가 여기서도 실패 시 예외를 던질지, 부분 복구로
     관대하게 처리할지 판단하는 데 씀.
     """
@@ -323,61 +323,64 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
     session: filter_articles가 배치마다 반복 호출하므로, 매번
     requests.post()로 새 연결을 맺는 대신 세션 하나를 재사용해 커넥션
     오버헤드를 줄인다.
+
+    ** 형식 이상·id 누락 둘 다 모델 체인 재시도 대상 (2026-07-28) **:
+    `_call_category_llm`에 적용한 것과 동일한 방식 - 호출은 성공했는데
+    응답이 못 쓰는 수준(리스트가 아니거나 비어있음)이거나 id 일부가
+    누락되면, "이 모델이 이번엔 못 쓰는 응답을 줬다"는 점에서 호출 실패와
+    다를 게 없다고 보고 _request_llm_text의 validate 콜백으로 옮겨 다음
+    순위 모델로 자동 재시도되게 함(RF-07~10 로그 경로 재사용). id 누락은
+    최종 안전망(openrouter/free)까지 갔는데도 여전히 누락이면 더 물어볼
+    곳이 없으니 예외 대신 있는 만큼만 살리고 나머지는 안전한 기본값
+    (통과)으로 채워서 반환한다(RF-02로 로그) - 완전히 포기(RF-01)하는
+    것보다 부분 성공이 낫다는 원칙 유지.
     """
     user_prompt = _build_user_prompt(batch)
-    text = None  # 예외가 어느 지점에서 났든(응답을 아예 못 받았을 수도 있음)
-                 # 로그에서 안전하게 참조할 수 있도록 미리 초기화
 
-    try:
-        text = _request_llm_text(_SYSTEM_PROMPT, user_prompt, api_key, session, "관련성 필터")
-
+    def _validate(text: str, is_final: bool) -> list[bool]:
         # 코드 펜스(```json ... ```)로 감싸서 올 때가 있어 방어적으로 벗겨낸다
         # (issue_grouper.py와 동일한 방어 로직 - 무료 모델은 이런 포맷 이탈이
         # Haiku보다 잦을 수 있어 특히 중요).
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            text = text[4:] if text.startswith("json") else text
-        parsed = json.loads(text.strip())
+        cleaned = text
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("```")[1]
+            cleaned = cleaned[4:] if cleaned.startswith("json") else cleaned
+        parsed = json.loads(cleaned.strip())  # 실패하면 그대로 예외 -> 재시도 대상
+
+        if not isinstance(parsed, list) or not parsed:
+            actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
+            raise ValueError(f"리스트가 아니거나 비어있음(실제 {actual}) | 실제 응답: {_snippet_for_log(text)}")
+
+        # "출력 개수 != 입력 개수"면 배치 전체를 버리는 대신, id를 명시적으로
+        # 주고받게 해서 어긋나도 "일치하는 것만 살리고, 안 맞는 것만 개별적으로
+        # 안전한 기본값(통과)으로 처리"한다 - 경미한 개수 어긋남에도 배치
+        # 전체가 낭비되는 걸 방지.
+        by_id: dict[int, bool] = {}
+        for item in parsed:
+            try:
+                by_id[int(item["id"])] = bool(item["relevant"])
+            except (KeyError, TypeError, ValueError):
+                continue  # id/relevant 형식이 이상한 개별 항목만 무시하고 계속 진행
+
+        missing = [idx for idx in range(1, len(batch) + 1) if idx not in by_id]
+        if missing and not is_final:
+            # 최종 안전망 전이면 물어볼 모델이 아직 남아있으니, 더 나은
+            # 결과를 기대하고 다음 순위 모델로 재시도
+            raise ValueError(f"id {missing} 누락(기대 {len(batch)}건 중 {len(missing)}건) - 다음 모델로 재시도")
+
+        results = [by_id.get(idx, True) for idx in range(1, len(batch) + 1)]  # 안전한 기본값 - 통과
+        if missing:
+            print(f"[relevance_filter] 🟡 주의 [RF-02] - 관련성 필터 최종 안전망까지 갔지만 id {missing} "
+                  f"여전히 누락(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 통과 처리, "
+                  f"나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
+        return results
+
+    try:
+        return _request_llm_text(_SYSTEM_PROMPT, user_prompt, api_key, session, "관련성 필터", validate=_validate)
     except Exception as e:
-        snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
         print(f"[relevance_filter] 🔴 조치필요 [RF-01] - LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치"
-              f"({len(batch)}건) 전부 통과 처리: {type(e).__name__} - {e!r} "
-              f"| 실제 응답: {snippet}")
+              f"({len(batch)}건) 전부 통과 처리: {type(e).__name__} - {e!r}")
         return None
-
-    if not isinstance(parsed, list) or not parsed:
-        actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
-        print(f"[relevance_filter] 🔴 조치필요 [RF-02] - LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 "
-              f"아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 통과 처리 "
-              f"| 실제 응답: {_snippet_for_log(text)}")
-        return None
-
-    # "출력 개수 != 입력 개수"면 배치 전체를 버리는 대신, id를 명시적으로
-    # 주고받게 해서 어긋나도 "일치하는 것만 살리고, 안 맞는 것만 개별적으로
-    # 안전한 기본값(통과)으로 처리"한다 - 경미한 개수 어긋남에도 배치
-    # 전체가 낭비되는 걸 방지.
-    by_id: dict[int, bool] = {}
-    for item in parsed:
-        try:
-            by_id[int(item["id"])] = bool(item["relevant"])
-        except (KeyError, TypeError, ValueError):
-            continue  # id/relevant 형식이 이상한 개별 항목만 무시하고 계속 진행
-
-    results = []
-    missing = []
-    for idx in range(1, len(batch) + 1):
-        if idx in by_id:
-            results.append(by_id[idx])
-        else:
-            missing.append(idx)
-            results.append(True)  # 안전한 기본값 - 통과
-
-    if missing:
-        print(f"[relevance_filter] 🟡 주의 [RF-03] - LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
-              f"(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 통과 처리, "
-              f"나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
-
-    return results
 
 
 def filter_articles(articles: list[dict]) -> list[dict]:
@@ -419,7 +422,7 @@ def filter_articles(articles: list[dict]) -> list[dict]:
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-04] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+        print(f"[relevance_filter] 🔴 조치필요 [RF-03] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"관련성 필터 생략, {len(llm_target_articles)}건(네이버/GDELT) 전부 통과")
         return articles
 
@@ -522,17 +525,19 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
     ** 형식 이상·id 누락 둘 다 모델 체인 재시도 대상 (2026-07-28) **:
     둘 다 "이 모델이 이번엔 못 쓰는 응답을 줬다"는 점에서 호출 실패와 다를
     게 없다고 보고, _request_llm_text의 validate 콜백으로 옮겨 실패 시
-    다음 순위 모델로 자동 재시도되게 함(RF-08~11 로그 경로 재사용). 형식
-    이상 전용 코드(당시 번호로 RF-06)는 이걸로 완전히 은퇴했고, 뒤이어
-    같은 날 코드 번호를 한 칸씩 당겨서 빈 번호 없이 재배정했다(그래서
-    지금 RF-06은 이 형식 이상 코드가 아니라 바로 아래 "최종 안전망까지
-    갔는데도 id 누락"을 가리킨다 - 오류코드_전체목록.txt 참고). id 누락은
-    issue_grouper.py의 id 누락(IG-03)과 달리 "완전 재시도 대상"으로
-    넣었는데(사용자 요청), 대신 최종 안전망(openrouter/free)까지 갔는데도
-    여전히 누락이면 더 물어볼 곳이 없으니 예외를 던지는 대신 있는 만큼만
-    살리고 나머지는 안전한 기본값("기타")으로 채워서 반환한다(RF-06으로
-    로그) - 완전히 포기(RF-05)하는 것보다 부분 성공이 낫다는 기존 원칙
-    유지.
+    다음 순위 모델로 자동 재시도되게 함(RF-07~10 로그 경로 재사용). 형식
+    이상 전용 코드는 이걸로 완전히 은퇴했다. id 누락은 issue_grouper.py의
+    id 누락(IG-03)과 달리 "완전 재시도 대상"으로 넣었는데(사용자 요청),
+    대신 최종 안전망(openrouter/free)까지 갔는데도 여전히 누락이면 더
+    물어볼 곳이 없으니 예외를 던지는 대신 있는 만큼만 살리고 나머지는
+    안전한 기본값("기타")으로 채워서 반환한다(현재 RF-05로 로그 - 완전히
+    포기(RF-04)하는 것보다 부분 성공이 낫다는 기존 원칙 유지).
+
+    ** 코드 번호는 시간이 지나며 재배정됐다 **: 은퇴한 코드가 남긴 빈
+    번호를 그때그때 당겨서 채우는 정책이라(담당자 요청), 이 파일의 오류
+    코드 번호는 2026-07-28 하루에만 두 차례 바뀌었다 - 코드 안 주석에
+    적힌 번호가 실제 print문과 다르게 보이면 이 파일이 진실이 아니라
+    오류코드_전체목록.txt(항상 최신 기준으로 재추출)를 확인할 것.
     """
     user_prompt = _build_category_user_prompt(batch)
     valid_choices = set(category_choices) | {"기타"}
@@ -567,7 +572,7 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
 
         results = [by_id.get(idx, "기타") for idx in range(1, len(batch) + 1)]
         if missing:
-            print(f"[relevance_filter] 🟡 주의 [RF-06] - 카테고리 재분류 최종 안전망까지 갔지만 id {missing} "
+            print(f"[relevance_filter] 🟡 주의 [RF-05] - 카테고리 재분류 최종 안전망까지 갔지만 id {missing} "
                   f"여전히 누락(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 "
                   f"'기타' 유지, 나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
         return results
@@ -575,7 +580,7 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
     try:
         return _request_llm_text(system_prompt, user_prompt, api_key, session, "카테고리 재분류", validate=_validate)
     except Exception as e:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-05] - 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
+        print(f"[relevance_filter] 🔴 조치필요 [RF-04] - 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
               f"이 배치({len(batch)}건) 전부 '기타' 유지: {type(e).__name__} - {e!r}")
         return None
 
@@ -594,7 +599,7 @@ def recategorize_uncategorized(articles: list[dict]) -> list[dict]:
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-07] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+        print(f"[relevance_filter] 🔴 조치필요 [RF-06] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"카테고리 재분류 생략, {len(targets)}건 '기타' 그대로 유지")
         return articles
 

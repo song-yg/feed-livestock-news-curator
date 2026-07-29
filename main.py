@@ -47,11 +47,17 @@ import relevance_filter
 import storage
 import deploy
 
-# 카테고리별 Top N (국내/해외 축과 별개로, 카테고리 축에서도 Top N을 뽑는
-# 기능 - "주간 Top N + 카테고리별 Top N" 중 카테고리 축 담당). LLM 요약
-# 호출이 카테고리 수(최대 9개) x 국내/해외(2) x 이 값만큼 늘어나므로 낮게
-# 유지 - 여기서만 바꾸면 전체에 반영됨.
-CATEGORY_TOP_N = 1
+# 주간 Top N (국내/해외 축 각각 몇 건까지 뽑을지) + 카테고리별 Top N
+# (카테고리 축에서도 별도로 몇 건까지 뽑을지) - 둘 다 환경변수로 조정
+# 가능하게 함(2026-07-28, 담당자 요청). 미설정 시 기존과 동일한 기본값
+# (5 / 1)으로 동작 - 하위호환.
+#
+# CATEGORY_TOP_N 관련: LLM 요약 호출이 카테고리 수(최대 9개) x 국내/해외(2)
+# x 이 값만큼 늘어나므로 무작정 올리면 API 호출이 급격히 늘어남 - 특히
+# OpenRouter 무료 티어 일일 요청 한도(위 "4. LLM 요약" 섹션 참고)를 고려해서
+# 조정할 것.
+TOP_N = int(os.environ.get("TOP_N") or 5)
+CATEGORY_TOP_N = int(os.environ.get("CATEGORY_TOP_N") or 1)
 
 
 # ---------------------------------------------------------------------------
@@ -133,7 +139,7 @@ def normalize(articles: list[dict]) -> list[dict]:
 # 3) 스코어링 - scorer.py 그대로 사용
 # ---------------------------------------------------------------------------
 
-def score(articles: list[dict], model, top_n: int = 5) -> tuple[list[dict], list[dict], dict, dict]:
+def score(articles: list[dict], model, top_n: int = TOP_N) -> tuple[list[dict], list[dict], dict, dict]:
     """
     이슈 그룹핑(issue_grouper.group_issues) + 국내/해외 개별 랭킹(Top N)까지 수행.
 
@@ -287,9 +293,8 @@ def step4_llm_summary(domestic_ranked: list[dict],
     호출부다. (B) 그룹핑 보조는 issue_grouper.stage3_llm_assist가 처리한다
     - 여기서는 (A)/(A-1)만 다룬다.
 
-    domestic_ranked/international_ranked는 score()에서 이미 top_n=5로 제한된
-    상태로 들어온다 (초기엔 주간 Top 5로 제한 운영하는 방침 그대로 -
-    여기서 추가로 자르지 않음).
+    domestic_ranked/international_ranked는 score()에서 이미 TOP_N(환경변수
+    미설정 시 기본 5)으로 제한된 상태로 들어온다 (여기서 추가로 자르지 않음).
 
     반환값은 입력과 같은 형태(list[dict])에 "summary"/"summary_skipped_reason"
     필드가 추가된 것 - storage.py 저장 단계에 그대로 넘긴다.
@@ -353,9 +358,9 @@ def run() -> None:
     print("\n=== [3] 스코어링 ===")
     try:
         (domestic_ranked, international_ranked,
-         domestic_category_ranked, international_category_ranked) = score(articles, embedding_model, top_n=5)
-        scorer.print_top_n("국내", domestic_ranked, n=5)
-        scorer.print_top_n("해외", international_ranked, n=5)
+         domestic_category_ranked, international_category_ranked) = score(articles, embedding_model, top_n=TOP_N)
+        scorer.print_top_n("국내", domestic_ranked, n=TOP_N)
+        scorer.print_top_n("해외", international_ranked, n=TOP_N)
         scorer.print_category_top_n("국내", domestic_category_ranked, n=CATEGORY_TOP_N)
         scorer.print_category_top_n("해외", international_category_ranked, n=CATEGORY_TOP_N)
     except Exception as e:
