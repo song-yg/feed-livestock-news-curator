@@ -800,14 +800,16 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
     url은 항상 존재하고 고유하다("완전 동일 기사 제거" 로직도
     같은 전제로 URL을 키로 씀).
 
-    ** 연쇄(사슬) 병합 방지 **
+    ** 연쇄(사슬) 병합 방지 + 빠진 쌍 재확인 (2026-07-28 개선) **
     확정된 쌍을 Union-Find로 그냥 다 묶으면, "A~B 확정 + B~C 확정"이라는
     이유만으로 A~C를 LLM에 직접 물어본 적 없는데도 A+B+C가 한 그룹이 되는
     문제가 있음 - 특히 "지역이 다르면 별개 사건", "단신 vs 종합기사는 별개
     사건" 같은 판정은 두 기사를 직접 비교했을 때만 유효해서, 간접 연결만
     으로 셋 이상을 묶으면 위험함. 3개 이상이 연결된 경우, 그 안의 모든
     쌍이 실제로 LLM에게 직접 확인됐는지(완전 그래프/클리크인지) 검증하고,
-    클리크가 아니면(사슬로만 연결됐으면) 병합하지 않고 개별 컴포넌트로
+    클리크가 아니면(사슬로만 연결됐으면) 바로 포기하는 대신 "빠진 쌍만"
+    대표 기사로 한 번 더 LLM에 확인한다(_merge_confirmed_components 참고)
+    - 그래도 여전히 클리크가 안 되면 그때는 병합하지 않고 개별 컴포넌트로
     유지한다(애매하면 안 묶는 게 안전하다는 원칙과 같은 방향).
     """
     stage1_grouped, stage1_unmatched = stage1_group(articles)
@@ -829,13 +831,14 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
         confirmed_pairs = stage3_llm_assist(borderline_pairs)
 
     components = stage2_grouped + [[a] for a in still_unmatched]
-    components = _merge_confirmed_components(components, confirmed_pairs)
+    components = _merge_confirmed_components(components, confirmed_pairs, extra_confirm=stage3_llm_assist)
 
     return stage1_grouped + components
 
 
 def _merge_confirmed_components(components: list[list[dict]],
-                                 confirmed_pairs: list[tuple[dict, dict, float]]) -> list[list[dict]]:
+                                 confirmed_pairs: list[tuple[dict, dict, float]],
+                                 extra_confirm=None) -> list[list[dict]]:
     """
     stage3_llm_assist가 확정한 쌍(confirmed_pairs)을 이용해 components(각각
     이미 확정된 이슈 그룹 혹은 단독 기사)를 추가로 병합한다.
@@ -851,9 +854,28 @@ def _merge_confirmed_components(components: list[list[dict]],
     결과로 나온 각 연결 그룹에 대해 "그 그룹 안의 모든 쌍이 실제로 전부
     직접 확정됐는지"(완전 그래프/클리크인지) 검증한다.
       - 클리크면(모든 쌍이 직접 확인됨) 안전하게 병합.
-      - 클리크가 아니면(사슬로만 연결됐으면) "애매하면 안 묶는 게
-        안전하다"는 원칙에 따라 그 컴포넌트들을 병합하지 않고 그대로 둔다
-        (로그로 남김 - 왜 안 묶였는지 사후 확인 가능하게).
+      - 클리크가 아니면(사슬로만 연결됐으면) 아래 "빠진 쌍 재확인" 라운드로
+        넘어간다.
+
+    ** 빠진 쌍 재확인 라운드 (2026-07-28, 담당자 결정) **:
+    "LLM이 실수 안 한다는 가정이면 사슬도 그냥 묶어도 된다"는 논리는
+    맞지만, 그 가정 자체가 항상 보장되진 않는다(배치가 다르면 같은 기준도
+    독립적으로 판단되고, 무료 모델은 특히 판단 일관성이 떨어질 수 있음).
+    그렇다고 "안 묶고 포기"만 하면 진짜 같은 사건인데 놓치는 경우도 생기니,
+    절충안으로 클리크 완성에 "빠진 쌍"만 딱 골라 LLM에 한 번 더 직접
+    확인한다 - 컴포넌트가 3개 이상이면 그룹당 여러 쌍이 빠질 수 있는데,
+    이미 확인된 쌍은 다시 안 묻고 정말 빠진 것만 추가로 물어본다(불필요한
+    중복 호출 방지). 각 컴포넌트를 대표하는 기사 1건(첫 기사)로 비교
+    쌍을 만든다 - 컴포넌트 안 기사가 여러 건이어도 "같은 사건인지"는
+    대표 기사 하나만으로 충분히 판단 가능하다는 전제(다른 3차 로직과
+    같은 전제).
+
+    extra_confirm: callable(pairs: list[tuple[dict, dict, float]]) ->
+    list[tuple[dict, dict, float]] - 넘긴 쌍 중 "같은 사건"으로 확정된
+    것만 골라 돌려주는 함수. group_issues가 stage3_llm_assist를 그대로
+    넘겨줘서 같은 모델 체인/배치/로그 경로를 재사용한다. None이면(예:
+    테스트에서 LLM 없이 순수 로직만 검증하고 싶을 때) 재확인 없이 기존처럼
+    바로 포기 처리한다.
     """
     if not confirmed_pairs:
         return components
@@ -878,6 +900,7 @@ def _merge_confirmed_components(components: list[list[dict]],
         comp_uf.union(idx_a, idx_b)
 
     merged_components = []
+    pending_recheck: list[tuple[int, ...]] = []  # 클리크 아닌 컴포넌트들 - 재확인 대상
     for indices in comp_uf.groups():
         if len(indices) <= 2:
             # 쌍 하나뿐이면 그 자체가 직접 확인된 관계라 연쇄 문제가 생길
@@ -898,9 +921,49 @@ def _merge_confirmed_components(components: list[list[dict]],
                 merged_group.extend(components[idx])
             merged_components.append(merged_group)
         else:
+            pending_recheck.append(indices)
+
+    if pending_recheck and extra_confirm is not None:
+        # 각 컴포넌트의 대표 기사(첫 기사)로 "아직 직접 확인 안 된" 쌍만 골라
+        # 한 번 더 물어본다. pair_lookup은 대표 기사 url 쌍 -> (idx_a, idx_b)
+        # 매핑 - extra_confirm이 돌려준 확정 쌍을 다시 컴포넌트 인덱스로
+        # 되짚어오기 위함.
+        extra_candidates: list[tuple[dict, dict, float]] = []
+        pair_lookup: dict[tuple, tuple[int, int]] = {}
+        for indices in pending_recheck:
+            for x, y in combinations(indices, 2):
+                key = (min(x, y), max(x, y))
+                if key in edges:
+                    continue  # 이미 직접 확인된 쌍은 다시 안 물어봄
+                rep_a, rep_b = components[x][0], components[y][0]
+                extra_candidates.append((rep_a, rep_b, 0.0))
+                pair_lookup[(rep_a.get("url"), rep_b.get("url"))] = key
+
+        if extra_candidates:
+            print(f"[issue_grouper] 사슬로만 연결된 컴포넌트 {len(pending_recheck)}개 발견 - "
+                  f"빠진 쌍 {len(extra_candidates)}개만 대표 기사로 3차 LLM에 추가 확인")
+            newly_confirmed = extra_confirm(extra_candidates)
+            for a, b, _sim in newly_confirmed:
+                key = pair_lookup.get((a.get("url"), b.get("url")))
+                if key:
+                    edges.add(key)
+
+    for indices in pending_recheck:
+        is_clique_now = all(
+            (min(x, y), max(x, y)) in edges
+            for x, y in combinations(indices, 2)
+        )
+        if is_clique_now:
+            print(f"[issue_grouper] 사슬 컴포넌트 재확인으로 클리크 완성(컴포넌트 {len(indices)}개) - 병합")
+            merged_group = []
+            for idx in indices:
+                merged_group.extend(components[idx])
+            merged_components.append(merged_group)
+        else:
+            recheck_note = ("빠진 쌍을 추가로 재확인했지만 여전히 일부는 직접 확인 안 됨"
+                             if extra_confirm is not None else "일부 쌍은 LLM에 직접 확인된 적 없음")
             print(f"[issue_grouper] 🟡 주의 [IG-07] - 3차 확정 쌍이 사슬로만 연결됨(컴포넌트 "
-                  f"{len(indices)}개 - 일부 쌍은 LLM에 직접 확인된 적 없음) "
-                  f"- 연쇄 병합 방지로 안 묶고 개별 유지")
+                  f"{len(indices)}개 - {recheck_note}) - 연쇄 병합 방지로 안 묶고 개별 유지")
             for idx in indices:
                 merged_components.append(components[idx])
 
