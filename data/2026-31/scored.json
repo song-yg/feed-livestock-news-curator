@@ -1,0 +1,577 @@
+{
+  "generated_at": "2026-07-28T07:34:49.243184+00:00",
+  "domestic": [
+    {
+      "issue_score": 12.5,
+      "mention_count": 23,
+      "raw_mention_count": 25,
+      "titles": [
+        "논에서도 잘 자라는 여름 풀사료 '사료피'… 신품종 개발로 자급률 높인...",
+        "'여름철 논에서 잘 자라요'…사료피 주목",
+        "\"폭염과 장마에도 끄떡없다\"…여름철 풀사료 '만온'",
+        "농진청, 여름철 풀사료 '사료피' 논 활용 높이고 자급기반 넓힌다",
+        "장마에 강한 여름철 풀사료 개발",
+        "여름철 풀사료 '사료피' 주목…논 활용 높이고 자급기반 넓힌다",
+        "여름철 풀사료 ‘사료피’ 논 활용도 높이고 자급기반 넓힌다",
+        "더위-습기강한 풀사료 작물 '사료피' 새품종 개발",
+        "농진청, 논 재배용 '사료피' 신품종 개발",
+        "“무더위·장마에도 잘 버텨”…만생종 사료피 ‘만온’ 개발",
+        "경제성·생산성 높인 논 재배용 '사료피' 개발 … 풀사료 자급 확대",
+        "논에서 잘 자라는 '사료피'…풀사료 자급 확대 나선다",
+        "농진청, 논에서 잘 자라는 하계 사료피 개발…\"벼 대신 재배시 농가소득...",
+        "수입 조사료 의존 낮춘다…농진청, 사료피 신품종 개발",
+        "논에서도 잘 자라는 여름철 풀사료 ‘사료피’…“경제성·생산성 효과...",
+        "농진청, 논 풀사료 '사료피' 신품종 개발…자급률 제고",
+        "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
+        "사료풀 '만온' 품종 개발 발표하는 조용민 국립축산과학원장",
+        "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
+        "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
+        "국립축산과학원, 만생종 '만온' 품종 개발 발표",
+        "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
+        "논에 벼 대신 풀 심는다…'사료피'가 전략작물 새 카드로",
+        "[현장인터뷰] 조용민 국립축산과학원장",
+        "논에서도 잘 자라는 ‘사료피’ 나왔다…여름철 풀사료 자급 확대 기대"
+      ],
+      "urls": [
+        "http://www.youngnong.co.kr/news/articleView.html?idxno=61190",
+        "https://www.obsnews.co.kr/news/articleView.html?idxno=1531895",
+        "http://news.lghellovision.net/news/articleView.html?idxno=549270",
+        "https://www.kenews.co.kr/news/article.html?no=89712",
+        "https://www.naeil.com/news/read/596230?ref=naver",
+        "https://www.farmnmarket.com/news/article.html?no=27195",
+        "https://www.newsam.co.kr/news/article.html?no=43554",
+        "http://www.jjn.co.kr/news/articleView.html?idxno=1047249",
+        "https://www.asiatoday.co.kr/kn/view.php?key=20260722010007983",
+        "https://www.nongmin.com/article/20260722500076",
+        "https://biz.newdaily.co.kr/site/data/html/2026/07/22/2026072200209.html",
+        "https://news.tf.co.kr/read/economy/2345859.htm",
+        "https://view.asiae.co.kr/article/2026072214075694660",
+        "https://www.etnews.com/20260722000220",
+        "https://www.mediapen.com/news/view/1111503",
+        "https://www.newsis.com/view/NISX20260722_0003718640",
+        "https://www.news1.kr/photos/8019830",
+        "https://www.news1.kr/photos/8019829",
+        "https://www.news1.kr/photos/8019831",
+        "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
+        "https://www.news1.kr/photos/8019828",
+        "https://www.news1.kr/photos/8019832",
+        "https://www.mt.co.kr/economy/2026/07/23/2026072213341472182",
+        "http://www.amnews.co.kr/news/articleView.html?idxno=73612",
+        "https://biz.heraldcorp.com/article/10815810?ref=naver"
+      ],
+      "press_list": [
+        "amnews.co.kr",
+        "asiatoday.co.kr",
+        "biz.heraldcorp.com",
+        "biz.newdaily.co.kr",
+        "dailian.co.kr",
+        "etnews.com",
+        "farmnmarket.com",
+        "jjn.co.kr",
+        "kenews.co.kr",
+        "mediapen.com",
+        "mt.co.kr",
+        "naeil.com",
+        "news.lghellovision.net",
+        "news.tf.co.kr",
+        "news1.kr",
+        "newsam.co.kr",
+        "newsis.com",
+        "nongmin.com",
+        "obsnews.co.kr",
+        "view.asiae.co.kr",
+        "youngnong.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": "농촌진흥청 국립축산과학원이 논 재배에 적합한 만생종 사료피 신품종 '만온(Manon)'을 개발해 폭염과 장마에도 안정적인 수확이 가능해졌다. 이 품종은 동계 풀사료와 이모작이 가능해 논 한 곳에서 연중 풀사료를 생산할 수 있으며, 쌀 수급 안정과 국내 풀사료 자급률 향상에 기여할 것으로 기대된다. 농진청은 체계적인 종자 증식과 보급을 통해 현장 안착을 추진할 계획이다.",
+      "summary_skipped_reason": null
+    },
+    {
+      "issue_score": 3.0,
+      "mention_count": 3,
+      "raw_mention_count": 3,
+      "titles": [
+        "경주시, 산지 휴경농지 활용 '알팔파' 재배 확대",
+        "경주시, 산지 휴경지서 고단백 조사료 키운다...알팔파 자급화 본격 시...",
+        "경주시, 산지 휴경농지 활용 알팔파 재배 확대"
+      ],
+      "urls": [
+        "https://www.m-i.kr/news/articleView.html?idxno=1395273",
+        "https://www.hidomin.com/news/articleView.html?idxno=714703",
+        "https://www.kbmaeil.com/article/20260726500106"
+      ],
+      "press_list": [
+        "hidomin.com",
+        "kbmaeil.com",
+        "m-i.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": "경주시가 산지 휴경농지를 활용해 알팔파 재배를 확대하며 축산농가의 사료비 절감과 조사료 자급률 제고에 나섰다. 알팔파는 한 번 파종하면 여러 해 수확 가능한 다년생 작물로 안정적인 조사료 생산 기반 마련에 유리하다. 주낙영 시장은 수입 조사료 의존도를 낮추고 축산농가 생산비 부담을 줄이기 위해 재배 기반을 지속 확대하겠다고 밝혔다.",
+      "summary_skipped_reason": null
+    },
+    {
+      "issue_score": 1.0,
+      "mention_count": 1,
+      "raw_mention_count": 1,
+      "titles": [
+        "고성군, 농어업인수당 선불카드 배부"
+      ],
+      "urls": [
+        "https://www.newsgn.com/news/articleView.html?idxno=564733"
+      ],
+      "press_list": [
+        "newsgn.com"
+      ],
+      "cross_axis_partner": null,
+      "summary": "고성군이 농어업인 경영 안정을 위해 농어업인수당을 선불카드 형태로 지급하기 시작했다. 치솟는 비료값과 사료값으로 인한 농어가의 부담을 덜고 지역 골목상권 활성화에도 기여할 것으로 기대된다. 카드 사용 기한은 2026년 12월 31일까지이다.",
+      "summary_skipped_reason": null
+    },
+    {
+      "issue_score": 1.0,
+      "mention_count": 1,
+      "raw_mention_count": 1,
+      "titles": [
+        "고령성주축협, 선진지 견학 통해 소통·화합 다져"
+      ],
+      "urls": [
+        "https://www.seongjuro.co.kr/news/view.php?idx=60586"
+      ],
+      "press_list": [
+        "seongjuro.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": "고령성주축협이 조합원 간 소통과 화합을 강화하기 위해 선진지 견학을 실시했다. 김영덕 조합장은 소값 하락과 사료값 인상 등 어려운 여건에서도 노력해온 조합원들에게 감사를 전하며, 이번 견학이 조합과 농가의 동반 성장을 위한 내부 결속의 계기가 되길 기대했다.",
+      "summary_skipped_reason": null
+    },
+    {
+      "issue_score": 1.0,
+      "mention_count": 1,
+      "raw_mention_count": 1,
+      "titles": [
+        "[Issue+] ASF 방역 강화 속 돼지 혈장단백질 규제 논란"
+      ],
+      "urls": [
+        "https://www.aflnews.co.kr/news/articleView.html?idxno=325254"
+      ],
+      "press_list": [
+        "aflnews.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": "ASF 방역 강화 조치로 돼지 혈장단백질 사용이 제한되면서 사료 가격 상승과 함께 양돈 현장의 우려가 커지고 있다. 특히 이유(Weaning)기 자돈은 모체 이행 항체 소실로 장관 면역이 급격히 저하되는 시기에 혈장단백질 공급 차질로 인한 피해가 우려된다.",
+      "summary_skipped_reason": null
+    }
+  ],
+  "international": [
+    {
+      "issue_score": 2.0,
+      "mention_count": 2,
+      "raw_mention_count": 2,
+      "titles": [
+        "数润黑土 智兴三江 看黑龙江省智慧农业新实践",
+        "让  数字  说话 用  智能  种养 看我省智慧农业新实践"
+      ],
+      "urls": [
+        "https://www.hljnews.cn/jjny/content/2026-07/26/content_901761.html",
+        "https://www.hljnews.cn/kjjk/content/2026-07/28/content_901955.html"
+      ],
+      "press_list": [
+        "hljnews.cn"
+      ],
+      "cross_axis_partner": null,
+      "summary": "헤이룽장성(Heilongjiang)이 흑토(黑土) 보호와 삼강평원(三江平原) 등지에서 디지털 기술과 지능형 영농·사육(智能种养)을 접목한 스마트 농업(智慧农业) 신규 실천 사례를 추진하고 있다. 데이터 기반 의사결정과 첨단 장비 도입을 통해 농업 생산 효율성과 품질을 높이는 방향의 현장 적용이 확대되는 모습이다.",
+      "summary_skipped_reason": null
+    },
+    {
+      "issue_score": 1.4,
+      "mention_count": 2,
+      "raw_mention_count": 2,
+      "titles": [
+        "连江定海 ： 往昔海防门户 今日海上牧场 _ 福州 _ 新闻频道 _ 福州新闻网",
+        "潮声 | 连江定海 ： 往昔海防门户 今日海上牧场 - 社会"
+      ],
+      "urls": [
+        "https://news.fznews.com.cn/lianjiang/20260724/1QrJ4j9r34.shtml",
+        "http://fjnews.fjsen.com/2026-07/24/content_32224187.htm"
+      ],
+      "press_list": [
+        "fjnews.fjsen.com",
+        "news.fznews.com.cn"
+      ],
+      "cross_axis_partner": null,
+      "summary": "연강(連江) 정해(定海)는 과거 해방(海防)의 요충지였던 곳이 현재 해상 목장(海上牧場)으로 탈바꿈했다. 이 지역은 푸저우(福州) 인근에 위치하며, 역사적 방어 기능에서 현대적 양식·어업 기지로 용도가 전환되었다.",
+      "summary_skipped_reason": null
+    },
+    {
+      "issue_score": 1.0,
+      "mention_count": 1,
+      "raw_mention_count": 1,
+      "titles": [
+        "Kenya wins bid to host World Veterinary Congress , set to boost livestock economy"
+      ],
+      "urls": [
+        "https://www.standardmedia.co.ke/smart-harvest/article/2001553818/kenya-wins-bid-to-host-world-veterinary-congress-set-to-boost-livestock-economy"
+      ],
+      "press_list": [
+        "standardmedia.co.ke"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출"
+    },
+    {
+      "issue_score": 1.0,
+      "mention_count": 1,
+      "raw_mention_count": 1,
+      "titles": [
+        "Stakeholders Push for Implementation of Kenya National Agroecology Strategy to Strengthen Food Security – Capital FM Kenya"
+      ],
+      "urls": [
+        "https://capitalfm.africa/stakeholders-push-for-implementation-of-kenyas-national-agroecology-strategy-to-strengthen-food-security/"
+      ],
+      "press_list": [
+        "capitalfm.africa"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출"
+    },
+    {
+      "issue_score": 0.7,
+      "mention_count": 1,
+      "raw_mention_count": 1,
+      "titles": [
+        "Rumin8: New compound provides more methane reducing options for producers"
+      ],
+      "urls": [
+        "https://www.feedstrategy.com/sustainability-in-feed-production/carbon-emissions-reduction/news/15830838/rumin8-new-compound-provides-more-methane-reducing-options-for-producers"
+      ],
+      "press_list": [
+        "Feed Strategy"
+      ],
+      "cross_axis_partner": null,
+      "summary": "호주 스타트업 Rumin8이 반추동물 섭취 후 체내에서만 활성화되는 ‘프로드러그(prodrug)’ 방식의 신물질을 개발해 소의 메탄 배출 저감 옵션을 확대했다. 이 화합물은 섭취 시 비활성 상태였다가 반추위 환경에서 활성화되어 메탄 생성 억제 효과를 낸다.",
+      "summary_skipped_reason": null
+    }
+  ],
+  "domestic_by_category": {
+    "정부·제도 용어": [
+      {
+        "issue_score": 3.0,
+        "mention_count": 3,
+        "raw_mention_count": 3,
+        "titles": [
+          "경주시, 산지 휴경농지 활용 '알팔파' 재배 확대",
+          "경주시, 산지 휴경지서 고단백 조사료 키운다...알팔파 자급화 본격 시...",
+          "경주시, 산지 휴경농지 활용 알팔파 재배 확대"
+        ],
+        "urls": [
+          "https://www.m-i.kr/news/articleView.html?idxno=1395273",
+          "https://www.hidomin.com/news/articleView.html?idxno=714703",
+          "https://www.kbmaeil.com/article/20260726500106"
+        ],
+        "press_list": [
+          "hidomin.com",
+          "kbmaeil.com",
+          "m-i.kr"
+        ],
+        "cross_axis_partner": null,
+        "category": "정부·제도 용어",
+        "summary": "경주시가 산지 휴경농지를 활용해 다년생 고단백 조사료인 알팔파 재배를 확대하며 축산농가 사료비 절감과 조사료 자급률 제고에 나섰다. 시는 수입 조사료 의존도를 낮춰 생산비 부담을 덜고, 안정적인 조사료 생산 기반을 지속적으로 확충할 계획이다.",
+        "summary_skipped_reason": null
+      }
+    ],
+    "사료업계 특화 용어": [
+      {
+        "issue_score": 12.5,
+        "mention_count": 23,
+        "raw_mention_count": 25,
+        "titles": [
+          "논에서도 잘 자라는 여름 풀사료 '사료피'… 신품종 개발로 자급률 높인...",
+          "'여름철 논에서 잘 자라요'…사료피 주목",
+          "\"폭염과 장마에도 끄떡없다\"…여름철 풀사료 '만온'",
+          "농진청, 여름철 풀사료 '사료피' 논 활용 높이고 자급기반 넓힌다",
+          "장마에 강한 여름철 풀사료 개발",
+          "여름철 풀사료 '사료피' 주목…논 활용 높이고 자급기반 넓힌다",
+          "여름철 풀사료 ‘사료피’ 논 활용도 높이고 자급기반 넓힌다",
+          "더위-습기강한 풀사료 작물 '사료피' 새품종 개발",
+          "농진청, 논 재배용 '사료피' 신품종 개발",
+          "“무더위·장마에도 잘 버텨”…만생종 사료피 ‘만온’ 개발",
+          "경제성·생산성 높인 논 재배용 '사료피' 개발 … 풀사료 자급 확대",
+          "논에서 잘 자라는 '사료피'…풀사료 자급 확대 나선다",
+          "농진청, 논에서 잘 자라는 하계 사료피 개발…\"벼 대신 재배시 농가소득...",
+          "수입 조사료 의존 낮춘다…농진청, 사료피 신품종 개발",
+          "논에서도 잘 자라는 여름철 풀사료 ‘사료피’…“경제성·생산성 효과...",
+          "농진청, 논 풀사료 '사료피' 신품종 개발…자급률 제고",
+          "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
+          "사료풀 '만온' 품종 개발 발표하는 조용민 국립축산과학원장",
+          "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
+          "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
+          "국립축산과학원, 만생종 '만온' 품종 개발 발표",
+          "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
+          "논에 벼 대신 풀 심는다…'사료피'가 전략작물 새 카드로",
+          "[현장인터뷰] 조용민 국립축산과학원장",
+          "논에서도 잘 자라는 ‘사료피’ 나왔다…여름철 풀사료 자급 확대 기대"
+        ],
+        "urls": [
+          "http://www.youngnong.co.kr/news/articleView.html?idxno=61190",
+          "https://www.obsnews.co.kr/news/articleView.html?idxno=1531895",
+          "http://news.lghellovision.net/news/articleView.html?idxno=549270",
+          "https://www.kenews.co.kr/news/article.html?no=89712",
+          "https://www.naeil.com/news/read/596230?ref=naver",
+          "https://www.farmnmarket.com/news/article.html?no=27195",
+          "https://www.newsam.co.kr/news/article.html?no=43554",
+          "http://www.jjn.co.kr/news/articleView.html?idxno=1047249",
+          "https://www.asiatoday.co.kr/kn/view.php?key=20260722010007983",
+          "https://www.nongmin.com/article/20260722500076",
+          "https://biz.newdaily.co.kr/site/data/html/2026/07/22/2026072200209.html",
+          "https://news.tf.co.kr/read/economy/2345859.htm",
+          "https://view.asiae.co.kr/article/2026072214075694660",
+          "https://www.etnews.com/20260722000220",
+          "https://www.mediapen.com/news/view/1111503",
+          "https://www.newsis.com/view/NISX20260722_0003718640",
+          "https://www.news1.kr/photos/8019830",
+          "https://www.news1.kr/photos/8019829",
+          "https://www.news1.kr/photos/8019831",
+          "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
+          "https://www.news1.kr/photos/8019828",
+          "https://www.news1.kr/photos/8019832",
+          "https://www.mt.co.kr/economy/2026/07/23/2026072213341472182",
+          "http://www.amnews.co.kr/news/articleView.html?idxno=73612",
+          "https://biz.heraldcorp.com/article/10815810?ref=naver"
+        ],
+        "press_list": [
+          "amnews.co.kr",
+          "asiatoday.co.kr",
+          "biz.heraldcorp.com",
+          "biz.newdaily.co.kr",
+          "dailian.co.kr",
+          "etnews.com",
+          "farmnmarket.com",
+          "jjn.co.kr",
+          "kenews.co.kr",
+          "mediapen.com",
+          "mt.co.kr",
+          "naeil.com",
+          "news.lghellovision.net",
+          "news.tf.co.kr",
+          "news1.kr",
+          "newsam.co.kr",
+          "newsis.com",
+          "nongmin.com",
+          "obsnews.co.kr",
+          "view.asiae.co.kr",
+          "youngnong.co.kr"
+        ],
+        "cross_axis_partner": null,
+        "category": "사료업계 특화 용어",
+        "summary": "농촌진흥청 국립축산과학원이 논 재배에 적합하고 폭염과 장마에도 잘 견디는 여름철 풀사료 '사료피'의 만생종 신품종 '만온'을 개발했다. 이 품종은 동계 풀사료와 이모작이 가능해 논 활용도를 높이고 국내 풀사료 자급률 향상에 기여할 것으로 기대된다. 농진청은 체계적인 종자 증식과 보급을 통해 농가 현장 안착을 추진할 계획이다.",
+        "summary_skipped_reason": null
+      }
+    ],
+    "질병명": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "[Issue+] ASF 방역 강화 속 돼지 혈장단백질 규제 논란"
+        ],
+        "urls": [
+          "https://www.aflnews.co.kr/news/articleView.html?idxno=325254"
+        ],
+        "press_list": [
+          "aflnews.co.kr"
+        ],
+        "cross_axis_partner": null,
+        "category": "질병명",
+        "summary": "ASF 방역 강화 조치로 돼지 혈장단백질 사용이 제한되면서 사료 가격 상승과 함께 양돈 현장의 우려가 커지고 있다. 특히 이유기 자돈은 모돈 초유 면역 물질 공급 중단으로 스트레스와 장관 면역 저하가 심화되는 시기에 혈장단백질이 필수적인데, 규제로 인해 대체재 확보에 어려움을 겪고 있다.",
+        "summary_skipped_reason": null
+      }
+    ],
+    "축종별 용어": [
+      {
+        "issue_score": 0.7,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "박광욱 조합장 \"사료는 싸게, 돼지는 비싸게… 대한민국 1등 양돈농협 역..."
+        ],
+        "urls": [
+          "https://www.farminsight.net/news/articleView.html?idxno=16686"
+        ],
+        "press_list": [
+          "farminsight.net"
+        ],
+        "cross_axis_partner": null,
+        "category": "축종별 용어",
+        "summary": "박광욱 도드람양돈농협 조합장은 \"사료는 싸게, 돼지는 비싸게\"라는 경영 원칙을 강조하며, 사료 판매량 65만 톤에도 불구하고 당기순이익이 20억 원대에 그친 것은 조합원에게 사료값 인하로 수익을 환원했기 때문이라고 설명했다.",
+        "summary_skipped_reason": null
+      }
+    ],
+    "시장/가격 용어": [
+      {
+        "issue_score": 0.4,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "한우농가 사료값 부담...여름 논에서 키운 '풀'이 해결사"
+        ],
+        "urls": [
+          "http://www.fnnews.com/news/202607221418219043"
+        ],
+        "press_list": [
+          "fnnews.com"
+        ],
+        "cross_axis_partner": null,
+        "category": "시장/가격 용어",
+        "summary": "농촌진흥청이 한우 농가의 사료비 부담을 덜기 위해 수입 건초보다 저렴한 풀사료 작물 '사료피' 신품종을 개발했다. 벼 재배 농가가 여름철 논에서 사료피를 재배할 수 있어 국내 공급 확대를 통한 축산 농가 생산비 절감 효과가 기대된다.",
+        "summary_skipped_reason": null
+      }
+    ],
+    "가금 계열화/수직계열화": [
+      {
+        "issue_score": 0.7,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "원종계부터 유통까지... 체리부로, 완전 수직계열화로 품질 경쟁력 확보"
+        ],
+        "urls": [
+          "http://digitalchosun.dizzo.com/site/data/html_dir/2026/07/23/2026072380189.html"
+        ],
+        "press_list": [
+          "digitalchosun.dizzo.com"
+        ],
+        "cross_axis_partner": null,
+        "category": "가금 계열화/수직계열화",
+        "summary": "체리부로가 원종계 사육부터 사료 제조, 도계·가공, 유통까지 전 과정을 직접 관리하는 완전 수직계열화 체계를 구축해 품질 경쟁력을 확보했다. 회사 측은 이 시스템이 국산 육계 자급률을 높이고 국내 물가 안정에 기여하는 핵심 기반이라고 강조했다.",
+        "summary_skipped_reason": null
+      }
+    ],
+    "무역/관세 이슈": [
+      {
+        "issue_score": 0.7,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "3년째 50% 밑도는 식량자급률… 해외 곡물기지 '필요성' 대두"
+        ],
+        "urls": [
+          "https://www.fetv.co.kr/news/articleView.html?idxno=306958"
+        ],
+        "press_list": [
+          "fetv.co.kr"
+        ],
+        "cross_axis_partner": null,
+        "category": "무역/관세 이슈",
+        "summary": "정부의 2027년 식량자급률 55% 목표 달성이 기후 변화와 경지면적 감소로 어려워지면서 3년째 50%를 밑도는 상황이다. 이에 따라 러시아-우크라이나 전쟁 사례처럼 주요국의 수출 제한 조치에 대비해 해외 곡물기지 확보의 필요성이 대두되고 있다.",
+        "summary_skipped_reason": null
+      }
+    ]
+  },
+  "international_by_category": {
+    "스마트팜/축산 기술": [
+      {
+        "issue_score": 2.0,
+        "mention_count": 2,
+        "raw_mention_count": 2,
+        "titles": [
+          "数润黑土 智兴三江 看黑龙江省智慧农业新实践",
+          "让  数字  说话 用  智能  种养 看我省智慧农业新实践"
+        ],
+        "urls": [
+          "https://www.hljnews.cn/jjny/content/2026-07/26/content_901761.html",
+          "https://www.hljnews.cn/kjjk/content/2026-07/28/content_901955.html"
+        ],
+        "press_list": [
+          "hljnews.cn"
+        ],
+        "cross_axis_partner": null,
+        "category": "스마트팜/축산 기술",
+        "summary": "헤이룽장성(黑龙江省)은 흑토(黑土)와 삼강(三江) 지역을 중심으로 디지털 기술과 스마트 기술을 활용한 스마트 농업(智慧农业) 새로운 실천 사례를 소개하고 있다. 데이터 기반의 정밀 관리와 스마트한 식재·축산 방식을 통해 농업 생산성 향상을 추진하고 있으며, 이를 통해 지역 농업의 혁신과 고도화를 도모하고자 한다.",
+        "summary_skipped_reason": null
+      }
+    ],
+    "사료업계 특화 용어": [
+      {
+        "issue_score": 0.7,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "De Heus expands aquaculture capabilities with marine and cold-water fish feed mill"
+        ],
+        "urls": [
+          "https://www.feedstrategy.com/animal-nutrition/aquaculture/news/15830751/de-heus-expands-aquaculture-capabilities-with-marine-and-coldwater-fish-feed-mill"
+        ],
+        "press_list": [
+          "Feed Strategy"
+        ],
+        "cross_axis_partner": null,
+        "category": "사료업계 특화 용어",
+        "summary": "De Heus Animal Nutrition이 베트남 빈롱성(Vinh Long Province)에 해양 및 냉수어 사료 공장을 공식 개장하며 양식 사료 역량을 확대했다.",
+        "summary_skipped_reason": null
+      }
+    ],
+    "시장/가격 용어": [
+      {
+        "issue_score": 0.4,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "Zimbabwe Emergency Food Production Project Delivers Transformative Results , Boosts Climate - Smart Agriculture and Record Wheat Harvest"
+        ],
+        "urls": [
+          "https://allafrica.com/stories/202607220010.html"
+        ],
+        "press_list": [
+          "allafrica.com"
+        ],
+        "cross_axis_partner": null,
+        "category": "시장/가격 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출"
+      }
+    ],
+    "정부·제도 용어": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "Stakeholders Push for Implementation of Kenya National Agroecology Strategy to Strengthen Food Security – Capital FM Kenya"
+        ],
+        "urls": [
+          "https://capitalfm.africa/stakeholders-push-for-implementation-of-kenyas-national-agroecology-strategy-to-strengthen-food-security/"
+        ],
+        "press_list": [
+          "capitalfm.africa"
+        ],
+        "cross_axis_partner": null,
+        "category": "정부·제도 용어",
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출"
+      }
+    ]
+  },
+  "category_distribution": {
+    "국내": {
+      "정부·제도 용어": 6,
+      "기타": 2,
+      "질병명": 6,
+      "축종별 용어": 2,
+      "시장/가격 용어": 5,
+      "사료업계 특화 용어": 27,
+      "가금 계열화/수직계열화": 1,
+      "무역/관세 이슈": 1
+    },
+    "해외": {
+      "스마트팜/축산 기술": 8,
+      "기타": 2,
+      "사료업계 특화 용어": 3,
+      "시장/가격 용어": 1,
+      "정부·제도 용어": 1
+    }
+  },
+  "gdelt_timeline": {},
+  "failed_sources": []
+}

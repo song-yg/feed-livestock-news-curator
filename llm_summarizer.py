@@ -302,7 +302,15 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict
             titles = item.get("titles", [])
             rep_title = titles[0] if titles else "(제목 없음)"
             prefix = f"[llm_summarizer] {label} " if label else "[llm_summarizer] "
-            print(f"{prefix}({i}/{total}) '{rep_title}' (그룹 {len(titles)}건) - 요약 요청 중...")
+            # "요약 요청 중..." 대신 "처리 중..."으로 표현 (2026-07-28) - 이 시점엔
+            # 아직 LLM을 호출할지, 재료가 얇아 코드가 곧바로 생략 처리할지
+            # 결정되지 않았다(summarize_issue 내부의 (A-1) 재료 부족 체크가
+            # LLM 호출보다 먼저 실행됨). "요약 요청 중"이라고 찍으면 마치
+            # 매번 LLM을 호출하는 것처럼 보여 오해의 소지가 있었음 - 실제로는
+            # 재료 부족/API 키 없음 등으로 LLM을 아예 안 부르고 생략되는
+            # 경우가 흔함(바로 아래 결과 로그에서 "요약 완료"인지
+            # "요약 생략"인지, 그리고 생략이면 왜 생략됐는지 사유가 남는다).
+            print(f"{prefix}({i}/{total}) '{rep_title}' (그룹 {len(titles)}건) - 처리 중...")
 
             result = summarize_issue(item, session)
 

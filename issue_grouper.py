@@ -190,6 +190,21 @@ THRESHOLD = 0.7
 # 없음/호출 실패 등)는 여전히 "안 묶는" 보수적 기본값으로 fallback.
 BORDERLINE_MARGIN = 0.06
 
+# --- 유사도 디버그 CSV 스위치 (2026-07-28, 담당자 요청) ---
+#
+# export_similarity_scores()는 THRESHOLD/BORDERLINE_MARGIN을 사람이 직접
+# 눈으로 보고 튜닝하기 위한 진단용 부산물이다. 튜닝이 끝난 뒤에도 매 실행
+# (주간 자동 실행 포함)마다 무조건 계산·저장되고 있었는데, 더 이상 안 보는
+# 상태라면 매번 파일을 새로 쓰고 git commit 대상에 올리는 것 자체가 불필요한
+# 잡음이다. 완전히 코드를 지우는 대신 환경변수 스위치로 남겨서, 나중에
+# 카테고리/키워드가 늘어나 임계값을 다시 튜닝해야 할 때 코드 수정 없이
+# 바로 다시 켤 수 있게 함.
+#
+# 기본값 OFF(끔) - 필요할 때만 SIMILARITY_DEBUG_CSV=1(또는 true/yes)로 켜서
+# 사용. GitHub Actions Variables에 등록하거나, 로컬 실행 시
+# `SIMILARITY_DEBUG_CSV=1 python -u main.py`처럼 임시로 켤 수 있음.
+SIMILARITY_DEBUG_CSV = (os.environ.get("SIMILARITY_DEBUG_CSV") or "").strip().lower() in ("1", "true", "yes", "on")
+
 
 def _embedding_text(article: dict) -> str:
     """
@@ -315,9 +330,11 @@ def stage2_group(
     vectors = model.encode(texts, normalize_embeddings=True)
     sim_matrix = _cosine_similarity_matrix(vectors)
 
-    # 임계값 튜닝용 디버그 CSV - 그룹핑 로직 자체와는 무관, 실패해도
-    # 안전하게 로그만 남기고 계속 진행함.
-    export_similarity_scores(articles, sim_matrix, threshold, borderline_margin)
+    # 임계값 튜닝용 디버그 CSV - 기본은 꺼져있음(위 SIMILARITY_DEBUG_CSV
+    # 선언부 참고). 켜져 있을 때만 계산·저장하고, 실패해도 안전하게 로그만
+    # 남기고 계속 진행함(그룹핑 로직 자체와는 무관).
+    if SIMILARITY_DEBUG_CSV:
+        export_similarity_scores(articles, sim_matrix, threshold, borderline_margin)
 
     n = len(articles)
     uf = UnionFind(n)
@@ -573,7 +590,8 @@ def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, sessi
     ).strip()
 
 
-def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> str:
+def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session,
+                       validate=None):
     """
     LLM_PROVIDER에 맞는 경로로 실제 텍스트 응답을 받아온다.
 
@@ -593,26 +611,45 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     최종 안전망(openrouter/free)까지 실패하는 건 이 배치가 완전히 실패하는
     거라 🔴 조치필요로, 그 앞 순위들의 실패는 다음 후보로 자동 복구되는
     경로라 🟡 주의로 구분.
+
+    ** validate 콜백(2026-07-28 추가) **: 호출은 성공했는데 응답 형식이
+    이상한 경우(JSON이 아님/리스트가 아님/비어있음 등)도 "이 모델이 이번엔
+    쓸모없는 응답을 줬다"는 점에서 호출 실패와 실질적으로 같은 상황이라,
+    같은 재시도 체인에 태운다. validate(text, is_final)을 넘기면 응답을
+    받을 때마다 바로 호출해서, 여기서 예외가 나면 그 모델의 호출 자체가
+    실패한 것과 동일하게 취급해 다음 순위 모델로 재시도한다(위 IG-08~11과
+    동일한 로그 경로 재사용 - {type(e).__name__}이 ValueError면 형식 문제,
+    requests 관련 예외면 진짜 호출 실패라는 걸 로그만 보고 구분 가능).
+    validate가 검증을 통과하면 그 반환값이 _request_llm_text의 반환값이
+    된다(원본 text를 그대로 돌려주고 싶으면 validate가 text를 그대로
+    반환하면 됨 - 호출부가 파싱까지 한 번에 끝내고 싶을 때 유용).
+    is_final=True는 "최종 안전망(openrouter/free)까지 온 시도"라는 뜻 -
+    validate 쪽에서 "여기서마저 실패하면 정말 끝"이라는 걸 알고 부분
+    복구(예: 일부 항목만 안전한 기본값으로 채워서 그냥 반환)로 관대하게
+    처리할지, 그래도 예외를 던져 완전 실패로 처리할지 스스로 판단할 수
+    있게 하기 위함.
     """
     if LLM_PROVIDER != "openrouter":
-        return _request_anthropic(system_prompt, user_prompt, api_key, session)
+        text = _request_anthropic(system_prompt, user_prompt, api_key, session)
+        return validate(text, True) if validate else text
 
     chain = _LLM_MODEL_CHAIN_OPENROUTER_ROLES
     last_error: Exception | None = None
     for idx, (role, model_name) in enumerate(chain):
+        is_final = idx == len(chain) - 1
         try:
             if idx > 0:
                 print(f"[issue_grouper] 🟡 주의 - 3차 그룹핑 {role} 모델('{model_name}')로 재시도 "
                       f"({idx + 1}/{len(chain)})")
-            return _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
+            text = _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
+            return validate(text, is_final) if validate else text
         except Exception as e:
             last_error = e
             code = _LLM_MODEL_ROLE_ERROR_CODE[role]
-            is_final = idx == len(chain) - 1
             level = "🔴 조치필요" if is_final else "🟡 주의"
             next_note = "더 시도할 모델 없음 - 이 배치 전체 '안 묶음' fallback" if is_final else "다음 후보 모델로 재시도"
-            print(f"[issue_grouper] {level} [{code}] - 3차 그룹핑 {role} 모델('{model_name}') 호출 실패 - "
-                  f"{next_note}: {type(e).__name__} - {e!r}")
+            print(f"[issue_grouper] {level} [{code}] - 3차 그룹핑 {role} 모델('{model_name}') "
+                  f"호출/응답 검증 실패 - {next_note}: {type(e).__name__} - {e!r}")
     raise last_error
 
 
@@ -631,30 +668,39 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
     신뢰할 수 없는 응답이면 None을 반환한다 - 출력 형식을 코드로 자동
     검증해서 어긋나면 fallback하는 원칙을 여기서도 그대로 적용 (fallback은 이
     함수를 부르는 stage3_llm_assist 쪽에서 "안 묶음"으로 처리).
+
+    ** 형식 이상(구 IG-03)도 이제 모델 체인 재시도 대상 (2026-07-28) **:
+    이전엔 JSON 파싱은 됐는데 "리스트가 아니거나 비어있음"이면 그 자리에서
+    바로 포기(IG-03)했다. 근데 이것도 "이 모델이 이번엔 못 쓰는 응답을
+    줬다"는 점에서 호출 자체가 실패한 것과 다를 게 없다고 판단해서,
+    _request_llm_text의 validate 콜백으로 넘겨 실패 시 다음 순위 모델로
+    자동 재시도되게 함(IG-08~11 로그 경로 재사용 - ValueError면 형식 문제,
+    그 외 예외면 진짜 호출 실패라는 걸 {type(e).__name__}으로 구분 가능).
+    반면 id 누락(IG-04)은 "일부만 못 받았지만 나머지는 정상"인 부분 성공
+    케이스라 전체 재시도까지는 안 하고 기존처럼 그 항목만 안전한 기본값
+    처리 - 성격이 다른 두 실패를 같은 수준으로 재시도 범위에 넣진 않음.
     """
     user_prompt = _build_llm_user_prompt(pairs)
-    text = None
 
-    try:
-        text = _request_llm_text(_LLM_SYSTEM_PROMPT, user_prompt, api_key, session)
-
+    def _validate(text: str, is_final: bool) -> list:
         # 코드 펜스(```json ... ```)로 감싸서 올 때가 있어 방어적으로 벗겨낸다
         # (무료 모델은 이런 포맷 이탈이 Haiku보다 잦을 수 있어 특히 중요)
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            text = text[4:] if text.startswith("json") else text
-        parsed = json.loads(text.strip())
-    except Exception as e:
-        snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
-        print(f"[issue_grouper] 🔴 조치필요 [IG-02] - 3차 LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치({len(pairs)}쌍)는 "
-              f"전부 '안 묶음' fallback: {type(e).__name__} - {e!r} | 실제 응답: {snippet}")
-        return None
+        cleaned = text
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("```")[1]
+            cleaned = cleaned[4:] if cleaned.startswith("json") else cleaned
+        parsed = json.loads(cleaned.strip())  # 실패하면 그대로 예외 -> 호출부가 재시도 대상으로 취급
 
-    if not isinstance(parsed, list) or not parsed:
-        actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
-        print(f"[issue_grouper] 🔴 조치필요 [IG-03] - 3차 LLM({LLM_PROVIDER}) 출력 형식 이상(리스트가 아니거나 "
-              f"비어있음, 실제 {actual}) - 이 배치({len(pairs)}쌍) 전부 '안 묶음' fallback "
-              f"| 실제 응답: {_snippet_for_log(text)}")
+        if not isinstance(parsed, list) or not parsed:
+            actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
+            raise ValueError(f"리스트가 아니거나 비어있음(실제 {actual}) | 실제 응답: {_snippet_for_log(text)}")
+        return parsed
+
+    try:
+        parsed = _request_llm_text(_LLM_SYSTEM_PROMPT, user_prompt, api_key, session, validate=_validate)
+    except Exception as e:
+        print(f"[issue_grouper] 🔴 조치필요 [IG-02] - 3차 LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치({len(pairs)}쌍)는 "
+              f"전부 '안 묶음' fallback: {type(e).__name__} - {e!r}")
         return None
 
     # id 기반 부분 복구 - "출력 개수 != 입력 개수"면 배치 전체를 버리는

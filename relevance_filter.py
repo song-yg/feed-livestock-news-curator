@@ -261,7 +261,7 @@ def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, sessi
 
 
 def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session,
-                       label: str) -> str:
+                       label: str, validate=None):
     """
     LLM_PROVIDER에 맞는 경로로 실제 텍스트 응답을 받아온다.
 
@@ -281,26 +281,36 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     grep만으로 특정 순위의 실패 빈도를 바로 알 수 있게 함. 최종 안전망까지
     실패하는 건 완전 실패라 🔴 조치필요, 그 앞 순위 실패는 자동 복구되는
     경로라 🟡 주의.
+
+    ** validate 콜백(2026-07-28 추가, issue_grouper.py와 동일한 방식) **:
+    호출은 성공했는데 응답 형식이 이상한 경우도 호출 실패와 동일하게
+    취급해 같은 재시도 체인에 태운다. validate(text, is_final)에서 예외를
+    던지면 이번 모델 시도가 실패한 것으로 보고 다음 순위 모델로 재시도
+    (위 RF-09~12 로그 경로 재사용). is_final=True는 최종 안전망까지 온
+    시도라는 뜻 - 호출부가 여기서도 실패 시 예외를 던질지, 부분 복구로
+    관대하게 처리할지 판단하는 데 씀.
     """
     if LLM_PROVIDER != "openrouter":
-        return _request_anthropic(system_prompt, user_prompt, api_key, session)
+        text = _request_anthropic(system_prompt, user_prompt, api_key, session)
+        return validate(text, True) if validate else text
 
     chain = _LLM_MODEL_CHAIN_OPENROUTER_ROLES
     last_error: Exception | None = None
     for idx, (role, model_name) in enumerate(chain):
+        is_final = idx == len(chain) - 1
         try:
             if idx > 0:
                 print(f"[relevance_filter] 🟡 주의 - {label} {role} 모델('{model_name}')로 재시도 "
                       f"({idx + 1}/{len(chain)})")
-            return _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
+            text = _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
+            return validate(text, is_final) if validate else text
         except Exception as e:
             last_error = e
             code = _LLM_MODEL_ROLE_ERROR_CODE[role]
-            is_final = idx == len(chain) - 1
             level = "🔴 조치필요" if is_final else "🟡 주의"
             next_note = "더 시도할 모델 없음 - 이 배치 전체 안전 처리" if is_final else "다음 후보 모델로 재시도"
-            print(f"[relevance_filter] {level} [{code}] - {label} {role} 모델('{model_name}') 호출 실패 - "
-                  f"{next_note}: {type(e).__name__} - {e!r}")
+            print(f"[relevance_filter] {level} [{code}] - {label} {role} 모델('{model_name}') "
+                  f"호출/응답 검증 실패 - {next_note}: {type(e).__name__} - {e!r}")
     raise last_error
 
 
@@ -508,58 +518,62 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
     없는 값이 오면(모델이 카테고리명을 살짝 바꿔서 답하는 등) 안전하게
     무시한다(개별 항목만 "안 바뀜=기타 유지"로 처리 - id 자체가 아예
     누락된 경우와 동일하게 다룸).
+
+    ** 형식 이상(구 RF-06)·id 누락(구 RF-07) 둘 다 모델 체인 재시도 대상
+    (2026-07-28) **: 둘 다 "이 모델이 이번엔 못 쓰는 응답을 줬다"는 점에서
+    호출 실패와 다를 게 없다고 보고, _request_llm_text의 validate 콜백으로
+    옮겨 실패 시 다음 순위 모델로 자동 재시도되게 함(RF-09~12 로그 경로
+    재사용). id 누락은 issue_grouper.py의 id 누락(IG-04)과 달리 "완전
+    재시도 대상"으로 넣었는데(사용자 요청), 대신 최종 안전망(openrouter/
+    free)까지 갔는데도 여전히 누락이면 더 물어볼 곳이 없으니 예외를 던지는
+    대신 있는 만큼만 살리고 나머지는 안전한 기본값("기타")으로 채워서
+    반환한다(RF-07으로 로그) - 완전히 포기(RF-05)하는 것보다 부분 성공이
+    낫다는 기존 원칙 유지.
     """
     user_prompt = _build_category_user_prompt(batch)
-    text = None
+    valid_choices = set(category_choices) | {"기타"}
+
+    def _validate(text: str, is_final: bool) -> list[str]:
+        cleaned = text
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("```")[1]
+            cleaned = cleaned[4:] if cleaned.startswith("json") else cleaned
+        parsed = json.loads(cleaned.strip())  # 실패하면 그대로 예외 -> 재시도 대상
+
+        if not isinstance(parsed, list) or not parsed:
+            actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
+            raise ValueError(f"리스트가 아니거나 비어있음(실제 {actual}) | 실제 응답: {_snippet_for_log(text)}")
+
+        by_id: dict[int, str] = {}
+        for item in parsed:
+            try:
+                category = str(item["category"])
+                idx = int(item["id"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if category not in valid_choices:
+                continue  # 목록에 없는 값 - 이 항목만 무시(기타 유지)
+            by_id[idx] = category
+
+        missing = [idx for idx in range(1, len(batch) + 1) if idx not in by_id]
+        if missing and not is_final:
+            # 최종 안전망 전이면 물어볼 모델이 아직 남아있으니, 더 나은
+            # 결과를 기대하고 다음 순위 모델로 재시도
+            raise ValueError(f"id {missing} 누락/형식 이상(기대 {len(batch)}건 중 {len(missing)}건) - 다음 모델로 재시도")
+
+        results = [by_id.get(idx, "기타") for idx in range(1, len(batch) + 1)]
+        if missing:
+            print(f"[relevance_filter] 🟡 주의 [RF-07] - 카테고리 재분류 최종 안전망까지 갔지만 id {missing} "
+                  f"여전히 누락(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 "
+                  f"'기타' 유지, 나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
+        return results
 
     try:
-        text = _request_llm_text(system_prompt, user_prompt, api_key, session, "카테고리 재분류")
-
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            text = text[4:] if text.startswith("json") else text
-        parsed = json.loads(text.strip())
+        return _request_llm_text(system_prompt, user_prompt, api_key, session, "카테고리 재분류", validate=_validate)
     except Exception as e:
-        snippet = _snippet_for_log(text) if text is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
         print(f"[relevance_filter] 🔴 조치필요 [RF-05] - 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
-              f"이 배치({len(batch)}건) 전부 '기타' 유지: {type(e).__name__} - {e!r} "
-              f"| 실제 응답: {snippet}")
+              f"이 배치({len(batch)}건) 전부 '기타' 유지: {type(e).__name__} - {e!r}")
         return None
-
-    if not isinstance(parsed, list) or not parsed:
-        actual = len(parsed) if isinstance(parsed, list) else type(parsed).__name__
-        print(f"[relevance_filter] 🔴 조치필요 [RF-06] - 카테고리 재분류 LLM({LLM_PROVIDER}) 출력 형식 이상"
-              f"(리스트가 아니거나 비어있음, 실제 {actual}) - 이 배치({len(batch)}건) 전부 '기타' 유지 "
-              f"| 실제 응답: {_snippet_for_log(text)}")
-        return None
-
-    valid_choices = set(category_choices) | {"기타"}
-    by_id: dict[int, str] = {}
-    for item in parsed:
-        try:
-            category = str(item["category"])
-            idx = int(item["id"])
-        except (KeyError, TypeError, ValueError):
-            continue
-        if category not in valid_choices:
-            continue  # 목록에 없는 값 - 이 항목만 무시(기타 유지)
-        by_id[idx] = category
-
-    results = []
-    missing = []
-    for idx in range(1, len(batch) + 1):
-        if idx in by_id:
-            results.append(by_id[idx])
-        else:
-            missing.append(idx)
-            results.append("기타")  # 안전한 기본값 - 재분류 안 하고 기타 유지
-
-    if missing:
-        print(f"[relevance_filter] 🟡 주의 [RF-07] - 카테고리 재분류 LLM({LLM_PROVIDER}) 출력에서 id {missing} "
-              f"누락/형식 이상(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 "
-              f"'기타' 유지, 나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
-
-    return results
 
 
 def recategorize_uncategorized(articles: list[dict]) -> list[dict]:
