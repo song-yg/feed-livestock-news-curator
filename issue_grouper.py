@@ -464,10 +464,10 @@ if "openrouter/free" not in [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]:
 # 순위 라벨 -> 실패 시 찍을 오류 코드 (역할 고정 - 체인 길이와 무관하게 항상
 # 동일한 역할은 동일한 코드로 찍힘)
 _LLM_MODEL_ROLE_ERROR_CODE = {
-    "1순위": "IG-08",
-    "2순위": "IG-09",
-    "3순위": "IG-10",
-    "최종 안전망": "IG-11",
+    "1순위": "IG-07",
+    "2순위": "IG-08",
+    "3순위": "IG-09",
+    "최종 안전망": "IG-10",
 }
 
 # 기존 코드(다른 곳에서 로그 표시용으로 참조하는 " -> ".join(...) 등)와의
@@ -605,8 +605,8 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
 
     ** 오류 코드를 역할(순위)별로 고정해서 분리한 이유(2026-07-28) **:
     "지정 모델 호출 실패"라는 로그 한 줄만으로는 1순위/2순위/3순위 중 정확히
-    어느 자리가 실패한 건지 구분이 안 됐음. IG-08(1순위)/IG-09(2순위)/
-    IG-10(3순위)/IG-11(최종 안전망)로 나눠서, 예를 들어 "2순위 모델만 계속
+    어느 자리가 실패한 건지 구분이 안 됐음. IG-07(1순위)/IG-08(2순위)/
+    IG-09(3순위)/IG-10(최종 안전망)로 나눠서, 예를 들어 "2순위 모델만 계속
     빠지는지"처럼 특정 자리의 실패 빈도를 로그 grep만으로 바로 알 수 있게 함.
     최종 안전망(openrouter/free)까지 실패하는 건 이 배치가 완전히 실패하는
     거라 🔴 조치필요로, 그 앞 순위들의 실패는 다음 후보로 자동 복구되는
@@ -617,7 +617,7 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     쓸모없는 응답을 줬다"는 점에서 호출 실패와 실질적으로 같은 상황이라,
     같은 재시도 체인에 태운다. validate(text, is_final)을 넘기면 응답을
     받을 때마다 바로 호출해서, 여기서 예외가 나면 그 모델의 호출 자체가
-    실패한 것과 동일하게 취급해 다음 순위 모델로 재시도한다(위 IG-08~11과
+    실패한 것과 동일하게 취급해 다음 순위 모델로 재시도한다(위 IG-07~10과
     동일한 로그 경로 재사용 - {type(e).__name__}이 ValueError면 형식 문제,
     requests 관련 예외면 진짜 호출 실패라는 걸 로그만 보고 구분 가능).
     validate가 검증을 통과하면 그 반환값이 _request_llm_text의 반환값이
@@ -669,14 +669,18 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
     검증해서 어긋나면 fallback하는 원칙을 여기서도 그대로 적용 (fallback은 이
     함수를 부르는 stage3_llm_assist 쪽에서 "안 묶음"으로 처리).
 
-    ** 형식 이상(구 IG-03)도 이제 모델 체인 재시도 대상 (2026-07-28) **:
+    ** 형식 이상도 이제 모델 체인 재시도 대상 (2026-07-28) **:
     이전엔 JSON 파싱은 됐는데 "리스트가 아니거나 비어있음"이면 그 자리에서
-    바로 포기(IG-03)했다. 근데 이것도 "이 모델이 이번엔 못 쓰는 응답을
-    줬다"는 점에서 호출 자체가 실패한 것과 다를 게 없다고 판단해서,
-    _request_llm_text의 validate 콜백으로 넘겨 실패 시 다음 순위 모델로
-    자동 재시도되게 함(IG-08~11 로그 경로 재사용 - ValueError면 형식 문제,
-    그 외 예외면 진짜 호출 실패라는 걸 {type(e).__name__}으로 구분 가능).
-    반면 id 누락(IG-04)은 "일부만 못 받았지만 나머지는 정상"인 부분 성공
+    바로 포기하고 전용 코드(당시 번호로 IG-03)를 찍었다. 근데 이것도 "이
+    모델이 이번엔 못 쓰는 응답을 줬다"는 점에서 호출 자체가 실패한 것과
+    다를 게 없다고 판단해서, _request_llm_text의 validate 콜백으로 넘겨
+    실패 시 다음 순위 모델로 자동 재시도되게 함(모델 체인 재시도 코드
+    재사용 - ValueError면 형식 문제, 그 외 예외면 진짜 호출 실패라는 걸
+    {type(e).__name__}으로 구분 가능). 이 형식 이상 전용 코드는 완전히
+    은퇴했고, 뒤이어 같은 날 코드 번호를 한 칸씩 당겨서 빈 번호 없이
+    재배정했다(그래서 지금 IG-03은 이 형식 이상 코드가 아니라 바로 아래
+    id 누락 코드를 가리킨다 - 오류코드_전체목록.txt 참고).
+    반면 id 누락(IG-03)은 "일부만 못 받았지만 나머지는 정상"인 부분 성공
     케이스라 전체 재시도까지는 안 하고 기존처럼 그 항목만 안전한 기본값
     처리 - 성격이 다른 두 실패를 같은 수준으로 재시도 범위에 넣진 않음.
     """
@@ -726,7 +730,7 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
             results.append(False)  # 안전한 기본값 - 안 묶음
 
     if missing:
-        print(f"[issue_grouper] 🟡 주의 [IG-04] - 3차 LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
+        print(f"[issue_grouper] 🟡 주의 [IG-03] - 3차 LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
               f"(기대 {len(pairs)}쌍 중 {len(missing)}쌍) - 그 쌍들만 '안 묶음' 기본값 처리, "
               f"나머지 {len(pairs) - len(missing)}쌍은 정상 판정 사용")
 
@@ -754,7 +758,7 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]]) -> list[
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[issue_grouper] 🟡 주의 [IG-05] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - 3차 LLM 보조 생략, "
+        print(f"[issue_grouper] 🟡 주의 [IG-04] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - 3차 LLM 보조 생략, "
               f"애매 구간 {len(borderline_pairs)}쌍 전부 '안 묶음' 기본값 유지")
         return []
 
@@ -819,7 +823,7 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
         # 1차 결과 + 나머지를 단독 그룹으로 반환 - to_singleton_groups와
         # 동일한 안전한 fallback (2차가 없으면 3차의 재료인 borderline_pairs
         # 자체가 안 생기므로 3차도 자연히 생략됨)
-        print("[issue_grouper] 🟡 주의 [IG-06] - 임베딩 모델이 없어 2차(임베딩) 매칭 생략 - 1차 결과만 사용")
+        print("[issue_grouper] 🟡 주의 [IG-05] - 임베딩 모델이 없어 2차(임베딩) 매칭 생략 - 1차 결과만 사용")
         singleton = [[a] for a in stage1_unmatched]
         return stage1_grouped + singleton
 
@@ -962,7 +966,7 @@ def _merge_confirmed_components(components: list[list[dict]],
         else:
             recheck_note = ("빠진 쌍을 추가로 재확인했지만 여전히 일부는 직접 확인 안 됨"
                              if extra_confirm is not None else "일부 쌍은 LLM에 직접 확인된 적 없음")
-            print(f"[issue_grouper] 🟡 주의 [IG-07] - 3차 확정 쌍이 사슬로만 연결됨(컴포넌트 "
+            print(f"[issue_grouper] 🟡 주의 [IG-06] - 3차 확정 쌍이 사슬로만 연결됨(컴포넌트 "
                   f"{len(indices)}개 - {recheck_note}) - 연쇄 병합 방지로 안 묶고 개별 유지")
             for idx in indices:
                 merged_components.append(components[idx])

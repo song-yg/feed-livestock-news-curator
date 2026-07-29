@@ -71,10 +71,10 @@ if "openrouter/free" not in [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]:
 
 # 순위 라벨 -> 실패 시 찍을 오류 코드 (역할 고정)
 _LLM_MODEL_ROLE_ERROR_CODE = {
-    "1순위": "RF-09",
-    "2순위": "RF-10",
-    "3순위": "RF-11",
-    "최종 안전망": "RF-12",
+    "1순위": "RF-08",
+    "2순위": "RF-09",
+    "3순위": "RF-10",
+    "최종 안전망": "RF-11",
 }
 
 # 하위호환용 - 모델명만 뽑은 리스트(다른 곳에서 " -> ".join(...) 등으로 사용)
@@ -277,7 +277,7 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     ** 오류 코드를 역할(순위)별로 고정해서 분리한 이유(2026-07-28) **:
     issue_grouper.py와 동일 - "지정 모델 호출 실패"라는 로그 한 줄만으로는
     1순위/2순위/3순위 중 어느 자리가 실패한 건지 구분이 안 됐음.
-    RF-09(1순위)/RF-10(2순위)/RF-11(3순위)/RF-12(최종 안전망)로 분리해서
+    RF-08(1순위)/RF-09(2순위)/RF-10(3순위)/RF-11(최종 안전망)로 분리해서
     grep만으로 특정 순위의 실패 빈도를 바로 알 수 있게 함. 최종 안전망까지
     실패하는 건 완전 실패라 🔴 조치필요, 그 앞 순위 실패는 자동 복구되는
     경로라 🟡 주의.
@@ -286,7 +286,7 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
     호출은 성공했는데 응답 형식이 이상한 경우도 호출 실패와 동일하게
     취급해 같은 재시도 체인에 태운다. validate(text, is_final)에서 예외를
     던지면 이번 모델 시도가 실패한 것으로 보고 다음 순위 모델로 재시도
-    (위 RF-09~12 로그 경로 재사용). is_final=True는 최종 안전망까지 온
+    (위 RF-08~11 로그 경로 재사용). is_final=True는 최종 안전망까지 온
     시도라는 뜻 - 호출부가 여기서도 실패 시 예외를 던질지, 부분 복구로
     관대하게 처리할지 판단하는 데 씀.
     """
@@ -519,16 +519,20 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
     무시한다(개별 항목만 "안 바뀜=기타 유지"로 처리 - id 자체가 아예
     누락된 경우와 동일하게 다룸).
 
-    ** 형식 이상(구 RF-06)·id 누락(구 RF-07) 둘 다 모델 체인 재시도 대상
-    (2026-07-28) **: 둘 다 "이 모델이 이번엔 못 쓰는 응답을 줬다"는 점에서
-    호출 실패와 다를 게 없다고 보고, _request_llm_text의 validate 콜백으로
-    옮겨 실패 시 다음 순위 모델로 자동 재시도되게 함(RF-09~12 로그 경로
-    재사용). id 누락은 issue_grouper.py의 id 누락(IG-04)과 달리 "완전
-    재시도 대상"으로 넣었는데(사용자 요청), 대신 최종 안전망(openrouter/
-    free)까지 갔는데도 여전히 누락이면 더 물어볼 곳이 없으니 예외를 던지는
-    대신 있는 만큼만 살리고 나머지는 안전한 기본값("기타")으로 채워서
-    반환한다(RF-07으로 로그) - 완전히 포기(RF-05)하는 것보다 부분 성공이
-    낫다는 기존 원칙 유지.
+    ** 형식 이상·id 누락 둘 다 모델 체인 재시도 대상 (2026-07-28) **:
+    둘 다 "이 모델이 이번엔 못 쓰는 응답을 줬다"는 점에서 호출 실패와 다를
+    게 없다고 보고, _request_llm_text의 validate 콜백으로 옮겨 실패 시
+    다음 순위 모델로 자동 재시도되게 함(RF-08~11 로그 경로 재사용). 형식
+    이상 전용 코드(당시 번호로 RF-06)는 이걸로 완전히 은퇴했고, 뒤이어
+    같은 날 코드 번호를 한 칸씩 당겨서 빈 번호 없이 재배정했다(그래서
+    지금 RF-06은 이 형식 이상 코드가 아니라 바로 아래 "최종 안전망까지
+    갔는데도 id 누락"을 가리킨다 - 오류코드_전체목록.txt 참고). id 누락은
+    issue_grouper.py의 id 누락(IG-03)과 달리 "완전 재시도 대상"으로
+    넣었는데(사용자 요청), 대신 최종 안전망(openrouter/free)까지 갔는데도
+    여전히 누락이면 더 물어볼 곳이 없으니 예외를 던지는 대신 있는 만큼만
+    살리고 나머지는 안전한 기본값("기타")으로 채워서 반환한다(RF-06으로
+    로그) - 완전히 포기(RF-05)하는 것보다 부분 성공이 낫다는 기존 원칙
+    유지.
     """
     user_prompt = _build_category_user_prompt(batch)
     valid_choices = set(category_choices) | {"기타"}
@@ -563,7 +567,7 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
 
         results = [by_id.get(idx, "기타") for idx in range(1, len(batch) + 1)]
         if missing:
-            print(f"[relevance_filter] 🟡 주의 [RF-07] - 카테고리 재분류 최종 안전망까지 갔지만 id {missing} "
+            print(f"[relevance_filter] 🟡 주의 [RF-06] - 카테고리 재분류 최종 안전망까지 갔지만 id {missing} "
                   f"여전히 누락(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 "
                   f"'기타' 유지, 나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
         return results
@@ -590,7 +594,7 @@ def recategorize_uncategorized(articles: list[dict]) -> list[dict]:
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-08] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+        print(f"[relevance_filter] 🔴 조치필요 [RF-07] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"카테고리 재분류 생략, {len(targets)}건 '기타' 그대로 유지")
         return articles
 
