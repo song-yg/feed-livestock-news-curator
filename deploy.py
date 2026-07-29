@@ -46,11 +46,19 @@ def _escape(value) -> str:
     return html.escape(str(value))
 
 
-def _format_issue_html(item: dict) -> str:
-    """이슈 하나 분량의 HTML 블록. summary.md의 _format_issue_section과 같은 정보를 담는다."""
+def _format_issue_html(item: dict, rank: int | None = None) -> str:
+    """
+    이슈 하나 분량의 HTML 블록. summary.md의 _format_issue_section과 같은 정보를 담는다.
+
+    rank: 이 이슈가 속한 목록(전체 Top N 또는 카테고리별 Top N) 안에서 몇 번째인지.
+    None이면(순위 개념이 없는 호출부) 번호를 안 붙인다 - 호출부(_format_section_html/
+    _format_category_html)가 enumerate로 1부터 매겨서 넘겨준다. 지금까지 이메일에
+    순위 숫자가 아예 안 붙어있었던 걸 담당자가 지적해서 추가함(2026-07-28).
+    """
     titles = item.get("titles", [])
     rep_title = titles[0] if titles else "(제목 없음)"
     extra = f" (그룹 내 추가 {len(titles) - 1}건 생략)" if len(titles) > 1 else ""
+    rank_html = f'<span style="color:#1a73e8;">{rank}.</span> ' if rank is not None else ""
 
     cross_html = ""
     if item.get("cross_axis_partner"):
@@ -74,7 +82,7 @@ def _format_issue_html(item: dict) -> str:
 
     return f"""
     <div style="margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #eee;">
-      <p style="margin:0; font-weight:bold; font-size:14px; color:#111;">{_escape(rep_title)}</p>
+      <p style="margin:0; font-weight:bold; font-size:14px; color:#111;">{rank_html}{_escape(rep_title)}</p>
       <p style="margin:2px 0 4px 0; font-size:12px; color:#aaa;">점수 {item.get('issue_score', 0):.2f} / 언급 {item.get('mention_count', 0)}건{extra}</p>
       {cross_html}
       {body_html}
@@ -86,7 +94,9 @@ def _format_issue_html(item: dict) -> str:
 def _format_section_html(title: str, items: list[dict]) -> str:
     if not items:
         return f'<h3 style="font-size:16px; color:#222; margin:20px 0 8px 0;">{_escape(title)}</h3><p style="color:#999; font-size:13px;">(이번 주 이슈 없음)</p>'
-    body = "".join(_format_issue_html(item) for item in items)
+    # items는 scorer.score_and_rank()가 이미 점수순으로 정렬해둔 상태 - 그 순서
+    # 그대로 1부터 번호만 매기면 됨(2026-07-28, 순위 번호 표시 추가).
+    body = "".join(_format_issue_html(item, rank=i) for i, item in enumerate(items, start=1))
     return f'<h3 style="font-size:16px; color:#222; margin:20px 0 8px 0;">{_escape(title)}</h3>{body}'
 
 
@@ -96,7 +106,9 @@ def _format_category_html(label: str, by_category: dict[str, list[dict]]) -> str
     blocks = []
     for category, items in by_category.items():
         blocks.append(f'<h4 style="font-size:13px; color:#555; margin:14px 0 6px 0;">[{_escape(category)}]</h4>')
-        blocks.append("".join(_format_issue_html(item) for item in items))
+        # 카테고리별로 별도의 Top N이므로, 전체 순위가 아니라 그 카테고리 안에서
+        # 1부터 다시 매김(2026-07-28, 순위 번호 표시 추가).
+        blocks.append("".join(_format_issue_html(item, rank=i) for i, item in enumerate(items, start=1)))
     return f'<h3 style="font-size:16px; color:#222; margin:24px 0 8px 0;">{_escape(label)} - 카테고리별 Top N</h3>{"".join(blocks)}'
 
 
