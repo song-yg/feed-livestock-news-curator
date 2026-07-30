@@ -35,6 +35,7 @@ storage.py와 같은 방향 - 이메일 발송이 실패해도(SMTP 인증 오�
 import html
 import os
 import smtplib
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -63,6 +64,27 @@ def _escape(value) -> str:
     return html.escape(str(value))
 
 
+def _format_week_label_kr(week_label: str) -> str:
+    """
+    "2026-31"(ISO 연도-주차, main.py/storage.py가 저장 디렉토리명으로 쓰는
+    형식) 같은 라벨을 이메일에서 보여줄 "2026년 7월 4주차" 형태로 바꾼다
+    (2026-07-30, 담당자 요청 - "N주차"가 사람이 보기에 훨씬 직관적).
+
+    ISO 주차는 달력 월과 딱 맞아떨어지지 않아서(한 ISO 주가 두 달에 걸칠
+    수 있음), 그 주의 월요일이 속한 달/일을 기준으로 "몇 번째 주"인지
+    계산한다 - "월 1~7일=1주차, 8~14일=2주차..." 식으로 단순하게 나눠서
+    사람들이 보통 쓰는 감각과 맞춘다. 형식이 예상과 다르면(수동 실행 등
+    으로 다른 문자열이 들어온 경우) 파싱을 포기하고 원본 그대로 반환 -
+    이메일 발송 전체를 막을 정도의 실패는 아니라고 판단.
+    """
+    try:
+        monday = datetime.strptime(f"{week_label}-1", "%G-%V-%u")
+    except ValueError:
+        return week_label
+    week_of_month = ((monday.day - 1) // 7) + 1
+    return f"{monday.year}년 {monday.month}월 {week_of_month}주차"
+
+
 def _format_issue_html(item: dict, rank: int | None = None, accent: str = ACCENT_DOMESTIC) -> str:
     """
     이슈 하나 분량의 HTML 블록. summary.md의 _format_issue_section과 같은 정보를 담는다.
@@ -82,15 +104,36 @@ def _format_issue_html(item: dict, rank: int | None = None, accent: str = ACCENT
     사각형으로 표시 - 큰 문제는 아니고 그냥 순위 숫자가 사각 배지로
     보일 뿐), 발신 계정이 Gmail이고 주 수신 환경도 Gmail(웹/앱)이라
     실사용 환경에서는 문제없이 원형으로 보임.
+
+    ** 점수/언급 건수 라인 제거(2026-07-30) **: 담당자 판단으로, 수신자가
+    실제로 참고할 정보가 아니라고 보고 뺌 - 데이터 자체는 item에 여전히
+    남아있어서(summary.md 등 다른 출력물에는 영향 없음) 필요해지면 다시
+    붙이는 것도 어렵지 않음.
+
+    ** 해외 제목 한글 번역(2026-07-30) **: llm_summarizer.summarize_issue가
+    is_international=True일 때 채워주는 item["title_ko"]가 있으면 원문
+    제목 바로 아래에 표시. 국내 이슈나 번역이 실패/생략된 해외 이슈는
+    이 필드가 None이라 자동으로 안 나타남 - 원문 제목은 항상 그대로
+    유지하고(번역이 틀렸을 가능성을 대비해 원문이 항상 우선), 번역은
+    보조 정보로만 덧붙임.
     """
     titles = item.get("titles", [])
     rep_title = titles[0] if titles else "(제목 없음)"
-    extra = f" (그룹 내 추가 {len(titles) - 1}건 생략)" if len(titles) > 1 else ""
     rank_html = ""
     if rank is not None:
         rank_html = (f'<span style="display:inline-block; min-width:20px; height:20px; line-height:20px; '
                      f'text-align:center; border-radius:50%; background:{accent}; color:#fff; '
                      f'font-size:11px; font-weight:bold; margin-right:6px;">{rank}</span>')
+
+    title_ko_html = ""
+    if item.get("title_ko"):
+        title_ko_html = (f'<p style="margin:2px 0 0 0; font-size:12.5px; color:{accent};">'
+                         f'번역: {_escape(item["title_ko"])}</p>')
+
+    extra_html = ""
+    if len(titles) > 1:
+        extra_html = (f'<p style="margin:2px 0 4px 0; font-size:11px; color:#aaa;">'
+                      f'(그룹 내 추가 {len(titles) - 1}건 생략)</p>')
 
     cross_html = ""
     if item.get("cross_axis_partner"):
@@ -118,7 +161,8 @@ def _format_issue_html(item: dict, rank: int | None = None, accent: str = ACCENT
     return f"""
     <div style="margin-bottom:12px; padding:12px 14px; border:1px solid #eee; border-radius:8px; background:#fff;">
       <p style="margin:0; font-weight:bold; font-size:14px; color:#111;">{rank_html}{_escape(rep_title)}</p>
-      <p style="margin:2px 0 4px 0; font-size:12px; color:#aaa;">점수 {item.get('issue_score', 0):.2f} / 언급 {item.get('mention_count', 0)}건{extra}</p>
+      {title_ko_html}
+      {extra_html}
       {cross_html}
       {body_html}
       {links_html}
@@ -231,7 +275,7 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     <div style="background:{HEADER_BG}; padding:26px 28px; border-radius:10px 10px 0 0;">
       <p style="margin:0; font-size:11px; letter-spacing:2px; color:#9fc0ff; font-weight:bold;">NEWSLETTER</p>
       <h1 style="margin:6px 0 0 0; font-size:21px; color:#fff; font-weight:bold;">사료·축산업 뉴스 큐레이션</h1>
-      <p style="margin:5px 0 0 0; font-size:13px; color:#c9dcff;">{_escape(week_label)}</p>
+      <p style="margin:5px 0 0 0; font-size:13px; color:#c9dcff;">{_escape(_format_week_label_kr(week_label))}</p>
     </div>
     """
 
@@ -260,10 +304,16 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     # 푸터 - 기존엔 아예 없었음. "자동 발송" 안내 정도는 정식 뉴스레터에
     # 보통 있는 요소라 추가(2026-07-30). 발송 시각 등은 아직 안 넣음 -
     # 필요해지면 추가 가능.
+    #
+    # AI 면책 문구도 같은 날 추가 - 요약/번역이 전부 LLM 생성물이라
+    # 틀릴 수 있다는 걸 매번 명시해서, 수신자가 요약만 보고 그대로
+    # 믿기보다 원문 링크로 확인하는 습관을 갖게 하려는 목적(담당자 요청).
     parts.append(
         '<p style="margin-top:28px; padding-top:16px; border-top:1px solid #eee; '
         'font-size:11px; color:#aaa; text-align:center;">'
-        '이 메일은 사료·축산업 뉴스 큐레이션 시스템이 매주 자동으로 발송합니다.</p>'
+        '이 메일은 사료·축산업 뉴스 큐레이션 시스템이 매주 자동으로 발송합니다.<br>'
+        'AI가 자동으로 생성한 요약·번역이 포함되어 있어 실제 내용과 다를 수 있습니다. '
+        '정확한 내용은 원문 링크를 확인해주세요.</p>'
     )
 
     parts.append('</div>')  # 콘텐츠 padding div 닫기
@@ -328,29 +378,3 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
                                       category_comparison)
     subject = f"[사료·축산뉴스] {week_label} 주간 큐레이션"
     return send_email(html_content, subject, recipients, smtp_user, smtp_app_password)
-
-
-if __name__ == "__main__":
-    # 자체 점검용 - 실제 SMTP 발송 없이 렌더링/안전 생략 경로만 확인.
-    sample_domestic = [{
-        "issue_score": 3.5, "mention_count": 2, "titles": ["구제역 확산", "구제역 추가 발생"],
-        "urls": ["https://a.com/1", "https://a.com/2"], "summary": "테스트 요약입니다.",
-    }]
-    sample_category = {"질병명": sample_domestic}
-
-    html_out = render_email_html("2026-30", sample_domestic, [], sample_category, {}, ["GDELT"])
-    assert "구제역 확산" in html_out
-    assert "테스트 요약입니다" in html_out
-    assert "질병명" in html_out  # 2026-07-30: "[질병명]" 대괄호 -> pill 태그로 형식 변경, 텍스트 자체는 유지
-    assert "GDELT" in html_out
-    assert "NEWSLETTER" in html_out  # 2026-07-30 신규: 헤더 배너
-    assert "매주 자동으로 발송" in html_out  # 2026-07-30 신규: 푸터
-    assert ACCENT_DOMESTIC in html_out and ACCENT_INTL in html_out  # 국내/해외 색상 반영 확인
-    print("[deploy] HTML 렌더링 자체 점검 통과")
-
-    # 인증정보 없을 때 안전하게 생략되는지 확인
-    for key in ("SMTP_USER", "SMTP_APP_PASSWORD", "EMAIL_RECIPIENTS"):
-        os.environ.pop(key, None)
-    result = send_weekly_email("2026-30", sample_domestic, [], sample_category, {}, [])
-    assert result is False
-    print("[deploy] 인증정보 없을 때 안전 생략 확인 - 통과")

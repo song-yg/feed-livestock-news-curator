@@ -20,6 +20,7 @@ API 키가 없거나 LLM 호출/응답이 실패해도 요약을 생략하고 �
 """
 
 import os
+import re
 
 import requests
 import trafilatura
@@ -39,6 +40,38 @@ _SYSTEM_PROMPT = (
     "있으면 괄호로 병기한다. 다른 설명 없이 요약 "
     "문장만 출력한다."
 )
+
+# 해외(is_international) 이슈에서만 이 지시문을 _SYSTEM_PROMPT에 덧붙여서
+# 대표 제목의 한글 번역도 같이 받는다(2026-07-30, 담당자 요청). 별도
+# 번역 전용 LLM 호출을 새로 만들지 않고 기존 요약 호출 하나에 얹은 이유:
+# 지금도 429(무료 티어 한도)로 호출이 자주 막히는 상황이라, 호출 수를
+# 늘리면 그만큼 더 자주 막힘 - 번역 실패가 요약 실패까지 끌고 가지 않게
+# _split_title_translation()이 관대하게 파싱한다(아래 참고).
+_TITLE_TRANSLATION_INSTRUCTION = (
+    " 그리고 이 이슈는 해외 기사이므로, 맨 첫 줄에 'TITLE_KO: '로 시작해서 "
+    "대표 기사 제목(가장 먼저 주어진 제목 하나)을 자연스러운 한국어로 "
+    "번역해 적고, 그 다음 줄부터 위 요약 문장을 이어서 작성하라. 제목"
+    "번역도 임의로 내용을 지어내지 말고 원문 의미 그대로 옮긴다."
+)
+
+_TITLE_KO_PATTERN = re.compile(r"\s*TITLE_KO:\s*(.+?)\s*\n(.*)", re.DOTALL)
+
+
+def _split_title_translation(text: str) -> tuple[str | None, str]:
+    """
+    해외 이슈 응답에서 첫 줄의 'TITLE_KO: ...'를 분리해 (번역, 나머지
+    요약 텍스트) 형태로 돌려준다. 형식을 안 지켰으면(모델이 지시를 무시한
+    경우 등) (None, 원본 텍스트 그대로)를 돌려줘서 번역만 실패해도 요약
+    까지 잃지 않게 한다 - JSON처럼 엄격하게 형식을 강제하지 않는 관대한
+    파싱. 번역은 부가 기능이라 요약의 성공 여부에 영향을 주면 안 된다는
+    판단(issue_grouper.py/relevance_filter.py의 validate 콜백과는 다르게,
+    여기서는 실패해도 재시도하지 않고 그냥 번역 없이 넘어감 - 번역 실패로
+    모델 체인을 한 번 더 태우는 건 429 상황에서 배보다 배꼽이 큼).
+    """
+    m = _TITLE_KO_PATTERN.match(text)
+    if not m:
+        return None, text.strip()
+    return m.group(1).strip(), m.group(2).strip()
 
 # 그룹 하나에 기사가 아주 많을 때(예: 50건 이상) 제목을 전부 프롬프트에
 # 넣으면 비용/속도 낭비가 크므로 상한을 둔다 - 나머지는 "외 N건 생략"으로 표시.
@@ -269,7 +302,7 @@ def _fetch_body_via_trafilatura(url: str) -> str | None:
     return extracted or None
 
 
-def summarize_issue(item: dict, session: requests.Session | None = None) -> dict:
+def summarize_issue(item: dict, session: requests.Session | None = None, is_international: bool = False) -> dict:
     """
     이슈 하나(scorer.score_group() 결과 dict)에 (A)/(A-1) 로직을 적용해
     요약을 붙인다. 원본 item은 변경하지 않고 얕은 복사본을 반환한다
@@ -282,8 +315,11 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     반환값에 추가되는 필드:
       summary: LLM이 생성한 2~3문장 요약, 또는 None(요약 생략된 경우)
       summary_skipped_reason: 요약을 생략한 이유. 정상 요약됐으면 None.
+      title_ko: is_international=True이고 요약이 성공했을 때만 채워지는
+        대표 제목의 한글 번역. 그 외(국내 이슈, 요약 실패/생략)에는 None.
     """
     result = dict(item)
+    result["title_ko"] = None  # 아래에서 해외 이슈 요약 성공 시에만 채워짐
     titles = item.get("titles", [])
     articles = item.get("articles", [])
     item_for_prompt = item  # 기본은 원본 그대로 - 본문 추가 수집 성공 시에만 아래서 교체
@@ -303,10 +339,23 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     # 보강 시도는 그룹 크기와 무관하게 항상 하되, "재료 부족하면 아예
     # 스킵"하는 건 여전히 단독 기사(titles==1)에서만 적용한다 - 그룹은
     # 원래도 재료가 얇아도 스킵 안 하던 동작이라 그 부분은 안 건드림.
-    has_substantial_material = any(
-        len(a.get("body") or "") >= 200 or len(a.get("description") or "") >= 50
-        for a in articles
-    )
+    # ** 네이버는 description 기준을 적용하지 않음 (2026-07-30) **
+    # 원래는 body 200자 또는 description 50자 중 하나만 넘으면 "재료
+    # 충분"으로 봤는데, 네이버 "주요 문장"은 한 문장만 잘라줘도 50자는
+    # 웬만하면 넘겨서(문장 하나 = 60~100자가 흔함), 실제로는 요약할 재료가
+    # 부족한데도 기준을 통과해 trafilatura 보강 시도 자체가 걸리지 않는
+    # 경우가 있었다(담당자 확인). 그래서 네이버 소스는 body만 인정하고
+    # description 길이는 무시 - body가 없으면(네이버는 원래 body를 안 줌)
+    # 무조건 재료 부족으로 보고 아래에서 보강을 시도한다. WATT/GDELT 등
+    # 다른 소스는 기존 기준(body 200자 또는 description 50자) 그대로 유지.
+    def _article_has_substantial_material(article: dict) -> bool:
+        if len(article.get("body") or "") >= _BODY_FETCH_MIN_LENGTH:
+            return True
+        if article.get("source") == "네이버":
+            return False
+        return len(article.get("description") or "") >= 50
+
+    has_substantial_material = any(_article_has_substantial_material(a) for a in articles)
 
     if not has_substantial_material:
         # 대표 기사(첫 번째) 하나만 보강 시도 - 그룹 안 기사를 전부 긁으면
@@ -351,17 +400,22 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
         )
         return result
 
+    system_prompt = _SYSTEM_PROMPT + (_TITLE_TRANSLATION_INSTRUCTION if is_international else "")
     user_prompt = _build_user_prompt(item_for_prompt)
     if session is not None:
-        summary_text = _call_llm(_SYSTEM_PROMPT, user_prompt, api_key, session)
+        summary_text = _call_llm(system_prompt, user_prompt, api_key, session)
     else:
         with requests.Session() as temp_session:
-            summary_text = _call_llm(_SYSTEM_PROMPT, user_prompt, api_key, temp_session)
+            summary_text = _call_llm(system_prompt, user_prompt, api_key, temp_session)
 
     if not summary_text:
         result["summary"] = None
         result["summary_skipped_reason"] = "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
         return result
+
+    title_ko = None
+    if is_international:
+        title_ko, summary_text = _split_title_translation(summary_text)
 
     if _is_suspicious_summary(summary_text):
         result["summary"] = None
@@ -373,6 +427,7 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
 
     result["summary"] = summary_text
     result["summary_skipped_reason"] = None
+    result["title_ko"] = title_ko
     return result
 
 
@@ -385,7 +440,14 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict
     느리거나 대기열이 걸릴 수 있음), 전체가 끝난 뒤 한꺼번에 출력하지 않고
     GDELT/WATT collector처럼 항목 하나 처리할 때마다 바로바로 로그를
     찍는다 - 실행 상태를 실시간으로 볼 수 있게 함.
+
+    label이 "해외"로 시작하면(예: "해외", "해외-카테고리") is_international=True로
+    간주해 summarize_issue에 전달한다(2026-07-30) - main.py의 모든 호출부가
+    "국내"/"해외" 접두사를 일관되게 쓰고 있어서 이 라벨 하나로 국내/해외
+    축을 구분할 수 있다. 새 파라미터를 main.py 호출부까지 안 늘려도 되게
+    기존 label 인자를 재사용.
     """
+    is_international = label.startswith("해외")
     results = []
     total = len(ranked_items)
     with requests.Session() as session:
@@ -403,7 +465,7 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict
             # "요약 생략"인지, 그리고 생략이면 왜 생략됐는지 사유가 남는다).
             print(f"{prefix}({i}/{total}) '{rep_title}' (그룹 {len(titles)}건) - 처리 중...")
 
-            result = summarize_issue(item, session)
+            result = summarize_issue(item, session, is_international=is_international)
 
             if result.get("summary"):
                 print(f"{prefix}({i}/{total}) 요약 완료")
