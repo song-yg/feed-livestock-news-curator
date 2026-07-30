@@ -51,7 +51,7 @@
     "title": "Novus brings global feed ingredient references together in new digital tool",
     "url": "https://www.feedstrategy.com/animal-feed-additives-ingredients/feed-ingredients/news/15830758/novus-brings-global-feed-ingredient-references-together-in-new-digital-tool",
     "published_at": "2026-07-23T05:00:00+00:00",
-    "category": "사료업계 특화 용어",
+    "category": "스마트팜/축산 기술",
     "site_category": "Feed Ingredients",
     "matched_keywords": []
   },
@@ -75,6 +75,18 @@
     "description": "그러나 축산업 전반을 AI 기반으로 전환하기 위해서는 개별 장비나 서비스만으로는 충분하지 않다. 농장에서 발생하는 데이터를 표준화하고 장비 간 상호 호환성을 확보해 종합적인 데이터를 수집할 수 있는 환경을... ",
     "press": "aflnews.co.kr",
     "matched_keywords": []
+  },
+  {
+    "source": "네이버",
+    "title": "경산시, 양돈농장 드론 소독…ASF 유입 막는다",
+    "url": "https://daily.hankooki.com/news/articleView.html?idxno=1390951",
+    "published_at": "2026-07-30T09:44:00+09:00",
+    "category": "질병명",
+    "description": "사진=경산시 제공  경북 경산시가 아프리카돼지열병(ASF) 유입을 막기 위해 드론 방역에 나섰다. 30일 시에 따르면 시는 전날 압량읍 양돈농장 9곳을 대상으로 드론 방역을 진행했다. 이번 방역에는 가축방역지원본부... ",
+    "press": "daily.hankooki.com",
+    "matched_keywords": [
+      "ASF"
+    ]
   },
   {
     "source": "네이버",
@@ -106,7 +118,7 @@
     "title": "국내산 삼겹살 값 뛰자 대박 났다… 미국산 밀어내고 1위 차지한 '뜻밖...",
     "url": "https://www.wikitree.co.kr/articles/1149214",
     "published_at": "2026-07-29T16:08:00+09:00",
-    "category": "무역/관세 이슈",
+    "category": "시장/가격 용어",
     "description": "아프리카돼지열병(ASF)으로 독일산 수입이 막히며 스페인산이 일시적으로 늘었던 2022년을 제외하면, 스페인산이 미국산을 제친 건 이번이 처음이다. 두 나라의 수입 비중 그래프를 그려보면 추세가 뚜렷하다. 돼지고기... ",
     "press": "wikitree.co.kr",
     "matched_keywords": []
@@ -162,22 +174,10 @@
     "title": "도드람, 신용·경제사업 압도적 성장 이끌어!...\"협동조합 큰 귀감\"",
     "url": "https://www.kenews.co.kr/news/article.html?no=89720",
     "published_at": "2026-07-27T08:16:00+09:00",
-    "category": "질병명",
+    "category": "축종별 용어",
     "description": "◈ ASF 위기 속 빛난 선제적 방역...원스톱 방역 서비스 체계 구축 - 아프리카돼지열병(ASF) 등 가축 전염병 위기 상황에서 도드람의 대응 방식이 주목받고 있습니다? ▶박광욱 조합장= 맞습니다. 가축 질병은 양돈... ",
     "press": "kenews.co.kr",
     "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "[Issue+] ASF 방역 강화 속 돼지 혈장단백질 규제 논란",
-    "url": "https://www.aflnews.co.kr/news/articleView.html?idxno=325254",
-    "published_at": "2026-07-27T07:00:00+09:00",
-    "category": "질병명",
-    "description": "올해 초 아프리카돼지열병(ASF)이 전국적 확산세를 보인 후 잠잠한 가운데 지난 4월 국회에서 발의된 사료관리법 개정안의 '동종 성분 사료 원료 제한'을 둘러싸고 업계에서는 논란이 일었다. 국내 축산 현장과 사료... ",
-    "press": "aflnews.co.kr",
-    "matched_keywords": [
-      "ASF"
-    ]
   },
   {
     "source": "네이버",
@@ -189,6 +189,18 @@
     "press": "aflnews.co.kr",
     "matched_keywords": [
       "방역"
+    ]
+  },
+  {
+    "source": "네이버",
+    "title": "[Issue+] ASF 방역 강화 속 돼지 혈장단백질 규제 논란",
+    "url": "https://www.aflnews.co.kr/news/articleView.html?idxno=325254",
+    "published_at": "2026-07-27T07:00:00+09:00",
+    "category": "질병명",
+    "description": "올해 초 아프리카돼지열병(ASF)이 전국적 확산세를 보인 후 잠잠한 가운데 지난 4월 국회에서 발의된 사료관리법 개정안의 '동종 성분 사료 원료 제한'을 둘러싸고 업계에서는 논란이 일었다. 국내 축산 현장과 사료... ",
+    "press": "aflnews.co.kr",
+    "matched_keywords": [
+      "ASF"
     ]
   },
   {
@@ -297,7 +309,7 @@
     "title": "도드람, 조합원 중심 경영으로 '10%대 점유율' 도전",
     "url": "http://www.ikpnews.net/news/articleView.html?idxno=71016",
     "published_at": "2026-07-24T09:14:00+09:00",
-    "category": "축종별 용어",
+    "category": "시장/가격 용어",
     "description": "도드람은 올해 초 아프리카돼지열병(ASF) 대응 상황실을 운영하며 농가를 지원했다. 특히 당시 상황과 방역 방안을 담은 백서를 발간해 향후 재발 방지에 힘쓰고 있다. 판로 확대·프리미엄 브랜드로 성장 판로 확대의 대표... ",
     "press": "ikpnews.net",
     "matched_keywords": []
@@ -425,52 +437,6 @@
   },
   {
     "source": "네이버",
-    "title": "[당진소식] 농업용 저수지 31곳 안전 현수막 설치 외",
-    "url": "https://daily.hankooki.com/news/articleView.html?idxno=1388406",
-    "published_at": "2026-07-23T09:48:00+09:00",
-    "category": "정부·제도 용어",
-    "description": "장마철 아프리카돼지열병(ASF) 방역가이드 홍보물. 사진=당진시 제공 ◇ 장마철 ASF 차단방역 강화 당진시가 장마철 아프리카돼지열병(ASF) 유입 위험에 대비해 차단방역을 강화한다. 23일 시에 따르면 집중호우와 태풍으로... ",
-    "press": "daily.hankooki.com",
-    "matched_keywords": []
-  },
-  {
-    "source": "네이버",
-    "title": "김성남 경기도의원, 축산 방역은 축산업의 기본…방역 예산 반드시 지켜...",
-    "url": "https://www.seoul.co.kr/news/publicnews/local_govern/kyungki_do/2026/07/23/20260723500036?wlog_tag3=naver",
-    "published_at": "2026-07-23T09:47:00+09:00",
-    "category": "정부·제도 용어",
-    "description": "경기도의회 농정해양위원회 김성남 의원(국민의힘, 포천 2)은 제392회 임시회 농정해양위원회 제2차 회의에서 진행된 축산동물복지국 업무보고에서 아프리카돼지열병(ASF) 방역에 매진해 온 관계자들의 노고를 치하하는... ",
-    "press": "seoul.co.kr",
-    "matched_keywords": [
-      "방역"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "장마철 ASF 위험 커져…당진시 차단방역 나서",
-    "url": "http://www.djtimes.co.kr/news/articleView.html?idxno=112787",
-    "published_at": "2026-07-23T09:28:00+09:00",
-    "category": "질병명",
-    "description": "당진시가 장마철 집중호우와 태풍으로 아프리카돼지열병(ASF) 유입 위험이 커지자 지역 양돈농가를 대상으로 차단방역 강화에 나섰다. 아프리카돼지열병은 야생 멧돼지의 폐사체와 분변, 오염된 토양·빗물, 사람과 차량... ",
-    "press": "djtimes.co.kr",
-    "matched_keywords": [
-      "ASF"
-    ]
-  },
-  {
-    "source": "네이버",
-    "title": "장마철 빗물·토양 타고 ASF 유입 위험..당진시, 양돈농가 차단방역 총력",
-    "url": "https://www.idjnews.kr/news/articleView.html?idxno=301769",
-    "published_at": "2026-07-23T09:22:00+09:00",
-    "category": "질병명",
-    "description": "당진신문 | 집중호우·하천 범람 때 오염원 농장 유입 경고..폐사체 발견 즉시 1588-4060 신고 당진시(시장 김기재)는 최근 장마철 집중호우와 태풍으로 인한 아프리카돼지열병(ASF) 유입 위험이 커짐에 따라 당진 지역... ",
-    "press": "idjnews.kr",
-    "matched_keywords": [
-      "ASF"
-    ]
-  },
-  {
-    "source": "네이버",
     "title": "폭염과의 사투…고령 양돈농가, 얼음까지 동원해 돼지 지킨다",
     "url": "https://www.kyongbuk.co.kr/news/articleView.html?idxno=4079683",
     "published_at": "2026-07-29T17:00:00+09:00",
@@ -480,16 +446,6 @@
     "matched_keywords": [
       "양돈"
     ]
-  },
-  {
-    "source": "네이버",
-    "title": "고령성주축협, 선진지 견학 통해 소통·화합 다져",
-    "url": "https://www.seongjuro.co.kr/news/view.php?idx=60586",
-    "published_at": "2026-07-27T13:46:00+09:00",
-    "category": "축종별 용어",
-    "description": "고령성주축협 김영덕 조합장은 “그동안 소값 하락, 사료값 인상 등 어려운 여건에도 인내하며 노력한 조합원들의 노고에 감사드린다”며 “이번 견학을 통해 내부 결속과 소통을 다지고 조합과 농가가 성장·발전하는... ",
-    "press": "seongjuro.co.kr",
-    "matched_keywords": []
   },
   {
     "source": "네이버",
@@ -686,7 +642,7 @@
     "title": "Business : Chinese investors to invest $300m into Uganda ag",
     "url": "https://www.newvision.co.ug/category/business/chinese-investors-to-invest-300m-into-ugandas-NV_237580_072026",
     "published_at": "2026-07-23T21:00:00+00:00",
-    "category": "무역/관세 이슈",
+    "category": "기타",
     "press": "newvision.co.ug",
     "language": "English",
     "sourcecountry": "Uganda",
@@ -962,7 +918,7 @@
     "title": "Vacunación antiaftosa 2026 en Entre Ríos : alerta por terneras sin protección",
     "url": "https://www.eldiario.com.ar/2026/07/24/vacunacion-antiaftosa-2026-en-entre-rios-alerta-por-terneras-sin-proteccion/",
     "published_at": "2026-07-24T16:30:00+00:00",
-    "category": "정부·제도 용어",
+    "category": "질병명",
     "press": "eldiario.com.ar",
     "language": "Spanish",
     "sourcecountry": "Argentina",
@@ -1077,6 +1033,17 @@
   },
   {
     "source": "GDELT",
+    "title": "Niemal 3 mln ton w pół roku . Ten kraj bije rekordy w eksporcie drobiu",
+    "url": "https://www.portalspozywczy.pl/mieso/wiadomosci/niemal-3-mln-ton-w-pol-roku-ten-kraj-bije-rekordy-w-eksporcie-drobiu,291279.html",
+    "published_at": "2026-07-27T16:30:00+00:00",
+    "category": "무역/관세 이슈",
+    "press": "portalspozywczy.pl",
+    "language": "Polish",
+    "sourcecountry": "Poland",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
     "title": "HEALTHY HERDS , STRONGER TIES : KDF EXTENDS FREE VETERINARY CARE TO KAJIADO – Ministry of Defence – Kenya",
     "url": "https://www.mod.go.ke/news/healthy-herds-stronger-ties-kdf-extends-free-veterinary-care-to-kajiado/",
     "published_at": "2026-07-23T09:45:00+00:00",
@@ -1095,17 +1062,6 @@
     "press": "nortedigital.mx",
     "language": "Spanish",
     "sourcecountry": "Mexico",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
-    "title": "Niemal 3 mln ton w pół roku . Ten kraj bije rekordy w eksporcie drobiu",
-    "url": "https://www.portalspozywczy.pl/mieso/wiadomosci/niemal-3-mln-ton-w-pol-roku-ten-kraj-bije-rekordy-w-eksporcie-drobiu,291279.html",
-    "published_at": "2026-07-27T16:30:00+00:00",
-    "category": "무역/관세 이슈",
-    "press": "portalspozywczy.pl",
-    "language": "Polish",
-    "sourcecountry": "Poland",
     "matched_keywords": []
   },
   {
@@ -1155,17 +1111,6 @@
     "matched_keywords": [
       "bird flu"
     ]
-  },
-  {
-    "source": "GDELT",
-    "title": "Bahillo se metió en la polémica visita de Milei a Brasil",
-    "url": "https://diarioelargentino.com/politica/bahillo-se-metio-en-la-polemica-visita-de-milei-a-brasil-y-lo-critico-con-dureza.htm",
-    "published_at": "2026-07-27T16:15:00+00:00",
-    "category": "정부·제도 용어",
-    "press": "diarioelargentino.com",
-    "language": "Spanish",
-    "sourcecountry": "",
-    "matched_keywords": []
   },
   {
     "source": "GDELT",
@@ -1378,17 +1323,6 @@
   },
   {
     "source": "GDELT",
-    "title": "Bahillo cargó contra Milei por la escalada con Brasil :  Es una enorme irresponsabilidad  ",
-    "url": "https://www.apfdigital.com.ar/noticias/2026/07/27/464599-bahillo-cargo-contra-milei-por-la-escalada-con-brasil-es-una-enorme-irresponsabilidad",
-    "published_at": "2026-07-27T18:30:00+00:00",
-    "category": "정부·제도 용어",
-    "press": "apfdigital.com.ar",
-    "language": "Spanish",
-    "sourcecountry": "Argentina",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "Renuevan recomendaciones ante posibles traslados de animales desde islas a tierra firme",
     "url": "http://www.lavoz901.com/noticias/renuevan-recomendaciones-ante-posibles-traslados-de-animales-desde-islas-a-tierra-firme.htm",
     "published_at": "2026-07-28T19:30:00+00:00",
@@ -1433,17 +1367,6 @@
   },
   {
     "source": "GDELT",
-    "title": "Milei evitó anuncios , pero aseguró que  la minería y la energía financiarán el fin de las retenciones  ",
-    "url": "http://www.eldia.com/politica-y-economia/milei-evito-anuncios-pero-aseguro-que-la-mineria-y-la-energia-financiaran-el-fin-de-las-retenciones-politica-y-economia_1785083220",
-    "published_at": "2026-07-26T18:00:00+00:00",
-    "category": "정부·제도 용어",
-    "press": "eldia.com",
-    "language": "Spanish",
-    "sourcecountry": "Argentina",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "Reanudará EU importación de ganado",
     "url": "https://laverdad.com.mx/2026/07/reanudara-eu-importacion-de-ganado/",
     "published_at": "2026-07-27T07:00:00+00:00",
@@ -1468,24 +1391,24 @@
   },
   {
     "source": "GDELT",
-    "title": "Grano , cinghiali e sicurezza : Coldiretti incontra gli agricoltori del territorio",
-    "url": "https://termolionline.it/2026/07/lavoro-ed-economia/grano-cinghiali-e-sicurezza-coldiretti-incontra-gli-agricoltori-del-territorio/",
-    "published_at": "2026-07-23T12:15:00+00:00",
-    "category": "기타",
-    "press": "termolionline.it",
-    "language": "Italian",
-    "sourcecountry": "Italy",
+    "title": "El verdadero costo de llegar tarde a la prevención",
+    "url": "https://www.totalmedios.com/nota/64590/el-verdadero-costo-de-llegar-tarde-a-la-prevencion",
+    "published_at": "2026-07-25T02:30:00+00:00",
+    "category": "시장/가격 용어",
+    "press": "totalmedios.com",
+    "language": "Spanish",
+    "sourcecountry": "Argentina",
     "matched_keywords": []
   },
   {
     "source": "GDELT",
-    "title": "Η Ρωσία εξετάζει τον εξοπλισμό πλοίων μεταφοράς σιτηρών με πολυβόλα στην Αζοφική Θάλασσα",
-    "url": "https://www.newsbomb.gr/kosmos/story/1752899/i-rosia-eksetazei-ton-eksoplismo-ploion-metaforas-sitiron-me-polyvola-stin-azofiki-thalassa",
-    "published_at": "2026-07-28T14:00:00+00:00",
-    "category": "무역/관세 이슈",
-    "press": "newsbomb.gr",
-    "language": "Greek",
-    "sourcecountry": "Greece",
+    "title": "Grano , cinghiali e sicurezza : Coldiretti incontra gli agricoltori del territorio",
+    "url": "https://termolionline.it/2026/07/lavoro-ed-economia/grano-cinghiali-e-sicurezza-coldiretti-incontra-gli-agricoltori-del-territorio/",
+    "published_at": "2026-07-23T12:15:00+00:00",
+    "category": "정부·제도 용어",
+    "press": "termolionline.it",
+    "language": "Italian",
+    "sourcecountry": "Italy",
     "matched_keywords": []
   },
   {
@@ -1514,17 +1437,6 @@
   },
   {
     "source": "GDELT",
-    "title": "Cumhuriyet tarihinin en yüksek hububat rekoltesi bekleniyor : Buğdayda 24 milyon ton hedefi",
-    "url": "https://www.haberler.com/guncel/hububatta-cumhuriyet-tarihinin-en-yuksek-rekolte-20082988-haberi/",
-    "published_at": "2026-07-24T07:30:00+00:00",
-    "category": "시장/가격 용어",
-    "press": "haberler.com",
-    "language": "Turkish",
-    "sourcecountry": "Turkey",
-    "matched_keywords": []
-  },
-  {
-    "source": "GDELT",
     "title": "Crisi del grano | Un ettaro su 5 resta incolto",
     "url": "https://www.zazoom.it/2026-07-23/crisi-del-grano-un-ettaro-su-5-resta-incolto/19491690/",
     "published_at": "2026-07-23T05:00:00+00:00",
@@ -1532,6 +1444,17 @@
     "press": "zazoom.it",
     "language": "Italian",
     "sourcecountry": "Italy",
+    "matched_keywords": []
+  },
+  {
+    "source": "GDELT",
+    "title": "Rice Crop Nears Historic Low As Losses Persist",
+    "url": "https://www.rfdtv.com/rice-crop-nears-historic-low-as-losses-persist",
+    "published_at": "2026-07-27T16:15:00+00:00",
+    "category": "시장/가격 용어",
+    "press": "rfdtv.com",
+    "language": "English",
+    "sourcecountry": "United States",
     "matched_keywords": []
   },
   {

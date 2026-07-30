@@ -37,48 +37,81 @@ _SYSTEM_PROMPT = (
     "임의로 만들어내지 말고, 주어진 제목/참고 정보에 있는 내용만 사용한다. "
     "확실하지 않으면 요약 대신 애매함을 그대로 표현하라. 전문용어·질병명·"
     "정부기관명·제도명 등 고유명사는 임의로 한글화하지 말고 영문 원어가 "
-    "있으면 괄호로 병기한다. 다른 설명 없이 요약 "
-    "문장만 출력한다."
+    "있으면 괄호로 병기한다. "
+    "그리고 맨 첫 줄에 'TITLE: '로 시작해서, 주어진 기사 제목을 그대로 "
+    "베끼지 말고 이슈 내용을 종합한 새 한국어 헤드라인을 직접 작성해 "
+    "적어라(원문 기사 제목이 외국어라도 한국어로 작성한다) - 뉴스 헤드라인 "
+    "답게 간결하고 전문적인 문체로 쓴다. 그 다음 줄부터 요약 문장을 이어서 "
+    "작성한다. 이 형식 외에 다른 설명은 출력하지 않는다."
 )
 
-# 해외(is_international) 이슈에서만 이 지시문을 _SYSTEM_PROMPT에 덧붙여서
-# 대표 제목의 한글 번역도 같이 받는다(2026-07-30, 담당자 요청). 별도
-# 번역 전용 LLM 호출을 새로 만들지 않고 기존 요약 호출 하나에 얹은 이유:
-# 지금도 429(무료 티어 한도)로 호출이 자주 막히는 상황이라, 호출 수를
-# 늘리면 그만큼 더 자주 막힘 - 번역 실패가 요약 실패까지 끌고 가지 않게
-# _split_title_translation()이 관대하게 파싱한다(아래 참고).
-_TITLE_TRANSLATION_INSTRUCTION = (
-    " 그리고 이 이슈는 해외 기사이므로, 맨 첫 줄에 'TITLE_KO: '로 시작해서 "
-    "대표 기사 제목(가장 먼저 주어진 제목 하나)을 자연스러운 한국어로 "
-    "번역해 적고, 그 다음 줄부터 위 요약 문장을 이어서 작성하라. 제목"
-    "번역도 임의로 내용을 지어내지 말고 원문 의미 그대로 옮긴다."
-)
+# --- 대표 제목을 LLM이 새로 쓰게 함 (2026-07-30, 담당자 요청) ---
+#
+# 기존엔 그룹의 titles[0](수집 순서상 그냥 첫 번째 기사 제목)을 그대로
+# 대표 제목으로 썼는데, 29건이 묶인 그룹이어도 그중 어느 게 헤드라인으로
+# 제일 적절한지는 전혀 안 보고 그냥 맨 처음 걸 썼다 - "제목이 전문성
+# 떨어져 보인다"는 지적의 원인. 그래서 요약과 같은 LLM 호출 안에서
+# "TITLE: " 접두사로 새 헤드라인도 같이 받는다(_split_generated_title로
+# 분리). 별도 호출을 안 만든 이유는 llm_summarizer 전체가 이미 429(무료
+# 티어 한도) 대응에 민감해서 - 다만 이제는 유료 결제로 해결됐다고 담당자가
+# 확인함.
+#
+# 예전엔 해외(is_international) 이슈에서만 "번역" 지시문을 조건부로
+# 붙였는데, 이번엔 "해외 기사 제목은 원문 그대로 안 남긴다"는 결정과
+# 맞물려서 국내/해외 구분 없이 항상 새 헤드라인을 쓰게 함 - 해외 이슈는
+# 자연스럽게 "번역 + 헤드라인화"가 한 번에 되고, 원문 영어 제목은 이제
+# 아예 화면에 노출되지 않는다(deploy.py 참고).
+_TITLE_PATTERN = re.compile(r"\s*TITLE:\s*(.+?)\s*\n(.*)", re.DOTALL)
 
-_TITLE_KO_PATTERN = re.compile(r"\s*TITLE_KO:\s*(.+?)\s*\n(.*)", re.DOTALL)
 
-
-def _split_title_translation(text: str) -> tuple[str | None, str]:
+def _split_generated_title(text: str) -> tuple[str | None, str]:
     """
-    해외 이슈 응답에서 첫 줄의 'TITLE_KO: ...'를 분리해 (번역, 나머지
-    요약 텍스트) 형태로 돌려준다. 형식을 안 지켰으면(모델이 지시를 무시한
-    경우 등) (None, 원본 텍스트 그대로)를 돌려줘서 번역만 실패해도 요약
-    까지 잃지 않게 한다 - JSON처럼 엄격하게 형식을 강제하지 않는 관대한
-    파싱. 번역은 부가 기능이라 요약의 성공 여부에 영향을 주면 안 된다는
-    판단(issue_grouper.py/relevance_filter.py의 validate 콜백과는 다르게,
-    여기서는 실패해도 재시도하지 않고 그냥 번역 없이 넘어감 - 번역 실패로
-    모델 체인을 한 번 더 태우는 건 429 상황에서 배보다 배꼽이 큼).
+    LLM 응답에서 첫 줄의 'TITLE: ...'를 분리해 (새 헤드라인, 나머지 요약
+    텍스트) 형태로 돌려준다. 형식을 안 지켰으면(모델이 지시를 무시한 경우
+    등) (None, 원본 텍스트 그대로)를 돌려줘서 헤드라인 생성만 실패해도
+    요약까지 잃지 않게 한다 - JSON처럼 엄격하게 형식을 강제하지 않는
+    관대한 파싱. 호출부는 헤드라인이 None이면 기존 titles[0]로 fallback
+    한다(deploy.py 참고) - 아주 드물게라도 화면에 뭔가는 떠야 하므로.
     """
-    m = _TITLE_KO_PATTERN.match(text)
+    m = _TITLE_PATTERN.match(text)
     if not m:
         return None, text.strip()
     return m.group(1).strip(), m.group(2).strip()
 
+
+# --- 대용량 그룹 2단계(배치) 요약 (2026-07-30, 담당자 요청) ---
+#
+# "그룹 내 모든 기사를 다 LLM에 보내고 싶다"는 요청 + 기사 개수 제한을
+# 없애면서, 개수가 아주 많은 그룹(예: 29건)은 한 번의 프롬프트에 다
+# 욱여넣으면 무료 모델들의 컨텍스트 윈도우 제한에 걸리거나 처리 시간이
+# 급격히 늘어날 위험이 있다. 그래서 _LARGE_GROUP_THRESHOLD를 넘는
+# 그룹만 예외적으로 "배치별 사실 추출 -> 그 추출 결과들을 모아 최종
+# 요약+헤드라인 합성"의 2단계로 처리한다(그 이하는 기존처럼 1회 호출).
+#
+# 임계값을 15로 잡은 이유: 담당자 요청으로 이 함수가 다루는 범위(1~15건)
+# 안에서는 기사 개수 제한 없이 다 넣어도 프롬프트가 감당 가능한 수준이라
+# 굳이 배치로 쪼갤 필요가 없고, 그 이상(예: 29건)만 배치 경로로 빠지게
+# 해서 "웬만한 그룹은 호출 1번, 정말 큰 그룹만 호출 여러 번"이 되게 함 -
+# 무조건 배치로 가면 이제 막 해결한 429(무료 티어 한도) 문제를 다시
+# 키울 수 있어서, 정말 필요한 경우로 좁힘.
+_LARGE_GROUP_THRESHOLD = 15
+_BATCH_SIZE = 6  # 배치 하나당 기사 수 - 29건이면 배치 5개
+
+_BATCH_EXTRACT_SYSTEM_PROMPT = (
+    "너는 뉴스 기사 여러 건에서 핵심 사실만 추출하는 역할이다. 주어진 기사 "
+    "제목/참고 정보들을 보고, 겹치지 않는 핵심 사실만 불릿 3~5개로 뽑아라. "
+    "해석이나 의견, 요약 문장을 쓰지 말고 사실 나열만 하고, 확실하지 않은 "
+    "내용은 만들어내지 말라. 각 불릿은 한 줄로, 다른 설명 없이 불릿만 "
+    "출력한다."
+)
+
 # 그룹 하나에 기사가 아주 많을 때(예: 50건 이상) 제목을 전부 프롬프트에
 # 넣으면 비용/속도 낭비가 크므로 상한을 둔다 - 나머지는 "외 N건 생략"으로 표시.
-_MAX_TITLES_IN_PROMPT = 10
-# 참고 컨텍스트(본문 발췌/description)도 기사 몇 건까지만 볼지 상한
-_MAX_CONTEXT_ARTICLES = 5
-_MAX_BODY_EXCERPT_CHARS = 300
+# 참고 컨텍스트(본문 발췌) 길이 상한. 기사 개수 자체는 더 이상 안 자르지만
+# (2026-07-30, 아래 _build_user_prompt 참고), 기사 1건당 발췌 길이는
+# 여전히 잘라야 프롬프트가 무한정 커지는 걸 막을 수 있어 유지 - 300자 ->
+# 600자로 상향(본문 있는 기사는 맥락을 조금 더 살리되, 무제한은 아님).
+_BODY_EXCERPT_CHARS = 600
 
 # --- 재료 부족 기사 본문 추가 수집 (2026-07-28, 담당자 요청 + 같은 날 확장) ---
 #
@@ -125,20 +158,26 @@ def _build_user_prompt(item: dict) -> str:
     제목 + (본문 확보된 경우) 본문에서
     뽑은 핵심 문장 + (네이버 소스인 경우) description을 참고 컨텍스트로
     추가한다(그대로 인용하지 않고 참고용으로만 사용).
+
+    ** 기사 개수 상한 제거 (2026-07-30) **: 이 함수는 그룹 크기가
+    _LARGE_GROUP_THRESHOLD(15) 이하일 때만 호출된다(그 이상은
+    summarize_issue가 _summarize_large_group의 배치 경로로 보냄) - 이
+    범위 안에서는 "그룹 내 모든 기사를 다 LLM에 보내고 싶다"는 요청대로
+    제목/기사 모두 자르지 않고 전부 포함한다. 기사 1건당 발췌 길이만
+    _BODY_EXCERPT_CHARS로 제한(무제한으로 이어붙이면 프롬프트가
+    쓸데없이 커짐).
     """
     titles = item.get("titles", [])
     lines = ["다음은 같은 이슈를 다룬 기사 제목들이다:"]
-    for title in titles[:_MAX_TITLES_IN_PROMPT]:
+    for title in titles:
         lines.append(f"- {title}")
-    if len(titles) > _MAX_TITLES_IN_PROMPT:
-        lines.append(f"(외 {len(titles) - _MAX_TITLES_IN_PROMPT}건 제목 생략)")
 
     context_lines = []
-    for article in item.get("articles", [])[:_MAX_CONTEXT_ARTICLES]:
+    for article in item.get("articles", []):
         source = article.get("source", "?")
         body = article.get("body")
         if body:
-            context_lines.append(f"[{source}] 본문 일부: {body[:_MAX_BODY_EXCERPT_CHARS]}")
+            context_lines.append(f"[{source}] 본문 일부: {body[:_BODY_EXCERPT_CHARS]}")
         description = article.get("description")
         if description:
             context_lines.append(f"[{source}] 설명: {description}")
@@ -266,6 +305,88 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: reque
         return None
 
 
+def _build_batch_extract_prompt(batch_articles: list[dict]) -> str:
+    """
+    대용량 그룹의 배치 하나(_BATCH_SIZE건)를 사실 추출용 프롬프트로 만든다.
+    _build_user_prompt와 달리 요약 대신 "사실만 나열"을 요청하는 용도라
+    별도 함수로 둠(_summarize_large_group 1단계에서 사용).
+    """
+    lines = ["다음은 하나의 이슈를 다룬 기사들 중 일부(배치)이다:"]
+    for article in batch_articles:
+        title = article.get("title") or "(제목 없음)"
+        source = article.get("source", "?")
+        lines.append(f"- [{source}] {title}")
+        body = article.get("body")
+        if body:
+            lines.append(f"  본문 일부: {body[:_BODY_EXCERPT_CHARS]}")
+        description = article.get("description")
+        if description:
+            lines.append(f"  설명: {description}")
+    lines.append("\n위 기사들에서 겹치지 않는 핵심 사실만 불릿 3~5개로 뽑아라.")
+    return "\n".join(lines)
+
+
+def _build_final_synthesis_prompt(item: dict, batch_facts: list[str]) -> str:
+    """
+    _summarize_large_group 1단계(배치별 사실 추출)의 결과들을 모아 최종
+    요약+헤드라인 생성용 프롬프트로 만든다. 대표 제목 몇 개만 참고용으로
+    곁들이고(전체 제목 나열은 이미 배치 단계에서 다 반영됨), 핵심은 배치
+    사실 목록.
+    """
+    titles = item.get("titles", [])
+    rep_titles = titles[:5]
+    lines = ["다음은 같은 이슈를 다룬 기사 제목 일부(참고용):"]
+    for t in rep_titles:
+        lines.append(f"- {t}")
+    if len(titles) > len(rep_titles):
+        lines.append(f"(총 {len(titles)}건 중 일부만 표시, 전체 내용은 아래 사실 요약에 반영됨)")
+
+    lines.append(f"\n아래는 전체 기사(총 {len(item.get('articles', []))}건)를 배치로 나눠 뽑은 핵심 사실 목록이다:")
+    for i, facts in enumerate(batch_facts, start=1):
+        lines.append(f"[배치 {i}]\n{facts}")
+
+    lines.append("\n위 내용을 종합해서 한국어 2~3문장 자체 요약을 작성하라.")
+    return "\n".join(lines)
+
+
+def _summarize_large_group(item_for_prompt: dict, api_key: str, session: requests.Session) -> str | None:
+    """
+    그룹 크기가 _LARGE_GROUP_THRESHOLD를 넘을 때만 쓰이는 2단계 요약
+    (2026-07-30, 담당자 요청 - "요약을 두 번 하자: 배치로 나눠서 요약하고,
+    그 요약들을 모아 최종본을 만들자"). 기사를 _BATCH_SIZE개씩 나눠
+    배치별로 핵심 사실만 뽑고(_build_batch_extract_prompt), 그 결과들을
+    모아 최종 요약+헤드라인을 한 번 더 생성한다(_build_final_synthesis_prompt).
+
+    배치 하나가 실패해도(호출 실패 등) 나머지 배치 결과만으로 최종 합성을
+    진행한다(LS-07 로그) - "부분 정보로라도 만드는 게 완전 포기보다 낫다"는
+    이 프로젝트 전반의 원칙과 같은 방향. 배치가 전부 실패하면 None을
+    반환해(LS-08) 호출부가 기존처럼 "요약 생략"으로 처리하게 한다.
+
+    담당자가 429(무료 티어 한도)를 유료 결제로 해결했다고 확인해서, 배치
+    호출이 여러 번 늘어나는 것 자체에 대한 우려는 지금은 크지 않음 - 그래도
+    혹시 모를 상황을 대비해 부분 실패 허용 원칙은 유지.
+    """
+    articles = item_for_prompt.get("articles", [])
+    batches = [articles[i:i + _BATCH_SIZE] for i in range(0, len(articles), _BATCH_SIZE)]
+
+    batch_facts = []
+    for batch_idx, batch in enumerate(batches, start=1):
+        prompt = _build_batch_extract_prompt(batch)
+        text = _call_llm(_BATCH_EXTRACT_SYSTEM_PROMPT, prompt, api_key, session)
+        if text:
+            batch_facts.append(text)
+        else:
+            print(f"[llm_summarizer] 🟡 주의 [LS-07] - 대용량 그룹({len(articles)}건) 배치 {batch_idx}/{len(batches)} "
+                  f"사실 추출 실패 - 이 배치는 제외하고 나머지로 계속 진행")
+
+    if not batch_facts:
+        print(f"[llm_summarizer] 🔴 조치필요 [LS-08] - 대용량 그룹({len(articles)}건) 배치 전부 실패 - 요약 생략")
+        return None
+
+    final_prompt = _build_final_synthesis_prompt(item_for_prompt, batch_facts)
+    return _call_llm(_SYSTEM_PROMPT, final_prompt, api_key, session)
+
+
 def _is_suspicious_summary(text: str) -> bool:
     """
     오픈라우터 무료 라우터(openrouter/free)로 요약을 생성하면, 정상 요약
@@ -302,7 +423,7 @@ def _fetch_body_via_trafilatura(url: str) -> str | None:
     return extracted or None
 
 
-def summarize_issue(item: dict, session: requests.Session | None = None, is_international: bool = False) -> dict:
+def summarize_issue(item: dict, session: requests.Session | None = None) -> dict:
     """
     이슈 하나(scorer.score_group() 결과 dict)에 (A)/(A-1) 로직을 적용해
     요약을 붙인다. 원본 item은 변경하지 않고 얕은 복사본을 반환한다
@@ -315,11 +436,14 @@ def summarize_issue(item: dict, session: requests.Session | None = None, is_inte
     반환값에 추가되는 필드:
       summary: LLM이 생성한 2~3문장 요약, 또는 None(요약 생략된 경우)
       summary_skipped_reason: 요약을 생략한 이유. 정상 요약됐으면 None.
-      title_ko: is_international=True이고 요약이 성공했을 때만 채워지는
-        대표 제목의 한글 번역. 그 외(국내 이슈, 요약 실패/생략)에는 None.
+      generated_title: 요약이 성공했을 때 LLM이 같이 지어준 새 헤드라인
+        (2026-07-30, titles[0]을 그냥 쓰는 대신 그룹 전체 내용을 종합해서
+        새로 씀 - 국내/해외 구분 없이 항상 시도). 요약 실패/생략이거나
+        모델이 형식을 안 지켰으면 None - 호출부(deploy.py)가 이 경우
+        titles[0]로 fallback한다.
     """
     result = dict(item)
-    result["title_ko"] = None  # 아래에서 해외 이슈 요약 성공 시에만 채워짐
+    result["generated_title"] = None  # 아래에서 요약 성공 + 헤드라인 파싱 성공 시에만 채워짐
     titles = item.get("titles", [])
     articles = item.get("articles", [])
     item_for_prompt = item  # 기본은 원본 그대로 - 본문 추가 수집 성공 시에만 아래서 교체
@@ -400,22 +524,32 @@ def summarize_issue(item: dict, session: requests.Session | None = None, is_inte
         )
         return result
 
-    system_prompt = _SYSTEM_PROMPT + (_TITLE_TRANSLATION_INSTRUCTION if is_international else "")
-    user_prompt = _build_user_prompt(item_for_prompt)
-    if session is not None:
-        summary_text = _call_llm(system_prompt, user_prompt, api_key, session)
+    # ** 대용량 그룹은 배치 2단계로 (2026-07-30) **: _LARGE_GROUP_THRESHOLD를
+    # 넘으면 _summarize_large_group(위 함수 선언부 참고)으로 보내고, 그
+    # 이하는 기존처럼 _build_user_prompt로 만든 프롬프트 1번 호출로 끝낸다.
+    total_articles = len(item_for_prompt.get("articles", []))
+    if total_articles > _LARGE_GROUP_THRESHOLD:
+        print(f"[llm_summarizer] 대용량 그룹({total_articles}건, 임계값 {_LARGE_GROUP_THRESHOLD} 초과) "
+              f"- 배치로 나눠 2단계 요약 진행")
+        if session is not None:
+            summary_text = _summarize_large_group(item_for_prompt, api_key, session)
+        else:
+            with requests.Session() as temp_session:
+                summary_text = _summarize_large_group(item_for_prompt, api_key, temp_session)
     else:
-        with requests.Session() as temp_session:
-            summary_text = _call_llm(system_prompt, user_prompt, api_key, temp_session)
+        user_prompt = _build_user_prompt(item_for_prompt)
+        if session is not None:
+            summary_text = _call_llm(_SYSTEM_PROMPT, user_prompt, api_key, session)
+        else:
+            with requests.Session() as temp_session:
+                summary_text = _call_llm(_SYSTEM_PROMPT, user_prompt, api_key, temp_session)
 
     if not summary_text:
         result["summary"] = None
         result["summary_skipped_reason"] = "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
         return result
 
-    title_ko = None
-    if is_international:
-        title_ko, summary_text = _split_title_translation(summary_text)
+    generated_title, summary_text = _split_generated_title(summary_text)
 
     if _is_suspicious_summary(summary_text):
         result["summary"] = None
@@ -427,7 +561,7 @@ def summarize_issue(item: dict, session: requests.Session | None = None, is_inte
 
     result["summary"] = summary_text
     result["summary_skipped_reason"] = None
-    result["title_ko"] = title_ko
+    result["generated_title"] = generated_title
     return result
 
 
@@ -440,14 +574,7 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict
     느리거나 대기열이 걸릴 수 있음), 전체가 끝난 뒤 한꺼번에 출력하지 않고
     GDELT/WATT collector처럼 항목 하나 처리할 때마다 바로바로 로그를
     찍는다 - 실행 상태를 실시간으로 볼 수 있게 함.
-
-    label이 "해외"로 시작하면(예: "해외", "해외-카테고리") is_international=True로
-    간주해 summarize_issue에 전달한다(2026-07-30) - main.py의 모든 호출부가
-    "국내"/"해외" 접두사를 일관되게 쓰고 있어서 이 라벨 하나로 국내/해외
-    축을 구분할 수 있다. 새 파라미터를 main.py 호출부까지 안 늘려도 되게
-    기존 label 인자를 재사용.
     """
-    is_international = label.startswith("해외")
     results = []
     total = len(ranked_items)
     with requests.Session() as session:
@@ -465,7 +592,7 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict
             # "요약 생략"인지, 그리고 생략이면 왜 생략됐는지 사유가 남는다).
             print(f"{prefix}({i}/{total}) '{rep_title}' (그룹 {len(titles)}건) - 처리 중...")
 
-            result = summarize_issue(item, session, is_international=is_international)
+            result = summarize_issue(item, session)
 
             if result.get("summary"):
                 print(f"{prefix}({i}/{total}) 요약 완료")
@@ -496,72 +623,3 @@ def print_summaries(label: str, summarized: list[dict]) -> None:
         shown_urls = ", ".join(urls[:3])
         more_note = f" 외 {len(urls) - 3}건" if len(urls) > 3 else ""
         print(f"   원문 링크: {shown_urls}{more_note}")
-
-
-if __name__ == "__main__":
-    # 자체 점검용 - API 키 없이도 (A-1) fallback 경로와 다건 그룹의 fallback
-    # 경로(키 없음)가 정상 동작하는지 확인. 실제 LLM 호출 성공 경로는 진짜
-    # 키가 있어야 확인 가능하므로 여기선 검증 안 함(수동으로 키 넣고 확인할 것).
-    single_article_issue = {
-        "issue_score": 1.0,
-        "mention_count": 1,
-        "raw_mention_count": 1,
-        "titles": ["단독 보도 - 테스트용 제목"],
-        "urls": ["https://example.com/1"],
-        "press_list": ["testpress.com"],
-        "articles": [{"source": "네이버", "title": "단독 보도 - 테스트용 제목",
-                      "url": "https://example.com/1", "description": "테스트 설명"}],
-    }
-    multi_article_issue = {
-        "issue_score": 3.0,
-        "mention_count": 3,
-        "raw_mention_count": 3,
-        "titles": ["기사 A", "기사 B", "기사 C"],
-        "urls": ["https://example.com/a", "https://example.com/b", "https://example.com/c"],
-        "press_list": ["press1.com", "press2.com", "press3.com"],
-        "articles": [
-            {"source": "네이버", "title": "기사 A", "url": "https://example.com/a", "description": "설명 A"},
-            {"source": "네이버", "title": "기사 B", "url": "https://example.com/b", "description": "설명 B"},
-            {"source": "WATTAgNet", "title": "기사 C", "url": "https://example.com/c", "body": "본문 발췌 C" * 50},
-        ],
-    }
-
-    result1 = summarize_issue(single_article_issue)
-    print("[검증1] 단독 기사(A-1, 네이버 짧은 설명만) - summary:", result1["summary"],
-          "/ reason:", result1["summary_skipped_reason"])
-    assert result1["summary"] is None
-    assert "재료가 얇아" in result1["summary_skipped_reason"]
-
-    # 단독 기사여도 WATT처럼 본문이 충분히 길면 A-1로 생략되지 않고
-    # 정상 요약 시도 경로(이 테스트 환경에선 API 키 없음 fallback)로
-    # 가야 한다 - "단독 기사라서" 무조건 생략하던 예전 동작과의 차이 확인.
-    single_watt_issue = {
-        "issue_score": 1.0,
-        "mention_count": 1,
-        "raw_mention_count": 1,
-        "titles": ["WATT 단독 보도 - 테스트용 제목"],
-        "urls": ["https://example.com/watt1"],
-        "press_list": ["feedstrategy.com"],
-        "articles": [{"source": "Feed Strategy", "title": "WATT 단독 보도 - 테스트용 제목",
-                      "url": "https://example.com/watt1", "body": "충분히 긴 본문 발췌입니다. " * 20}],
-    }
-    os.environ.pop("ANTHROPIC_API_KEY", None)
-    os.environ.pop("OPENROUTER_API_KEY", None)
-    result1b = summarize_issue(single_watt_issue)
-    print("[검증1b] 단독 기사(본문 충분, WATT) - summary:", result1b["summary"],
-          "/ reason:", result1b["summary_skipped_reason"])
-    assert result1b["summary"] is None  # 이 테스트 환경엔 API 키가 없어 결국 요약은 안 나옴
-    assert "재료가 얇아" not in result1b["summary_skipped_reason"], "본문이 충분하면 A-1(재료 부족)로 생략되면 안 됨"
-    assert "없음" in result1b["summary_skipped_reason"]  # API 키 없음 fallback으로 넘어갔어야 함
-
-    # API 키를 일부러 지운 상태에서 다건 그룹을 넣어 "키 없음" fallback 확인
-    os.environ.pop("ANTHROPIC_API_KEY", None)
-    os.environ.pop("OPENROUTER_API_KEY", None)
-    result2 = summarize_issue(multi_article_issue)
-    print("[검증2] 다건 그룹, API 키 없음 - summary:", result2["summary"],
-          "/ reason:", result2["summary_skipped_reason"])
-    assert result2["summary"] is None
-    assert "없음" in result2["summary_skipped_reason"]
-
-    print_summaries("테스트", [result1, result2])
-    print("\n[llm_summarizer] 자체 점검 통과 (A-1 fallback + 키 없음 fallback)")

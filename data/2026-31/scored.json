@@ -1,10 +1,34 @@
 {
-  "generated_at": "2026-07-30T00:38:47.613400+00:00",
+  "generated_at": "2026-07-30T01:38:09.010190+00:00",
   "domestic": [
     {
-      "issue_score": 3.6,
-      "mention_count": 9,
-      "raw_mention_count": 9,
+      "issue_score": 3.0,
+      "mention_count": 3,
+      "raw_mention_count": 3,
+      "titles": [
+        "경산시, 양돈농장 드론 소독…ASF 유입 막는다",
+        "'ASF 선제 대응'···경산시, 드론 활용 공중방역 확대",
+        "경산시, 드론 방역으로 아프리카돼지열병(ASF) 차단"
+      ],
+      "urls": [
+        "https://daily.hankooki.com/news/articleView.html?idxno=1390951",
+        "http://www.newsprime.co.kr/news/article.html?no=742013",
+        "https://www.gukjenews.com/news/articleView.html?idxno=3650376"
+      ],
+      "press_list": [
+        "daily.hankooki.com",
+        "gukjenews.com",
+        "newsprime.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "title_ko": null,
+      "summary": "경북 경산시가 가축위생방역지원본부와 협력해 압량읍 양돈농장 9곳을 대상으로 드론을 활용한 아프리카돼지열병(ASF) 방역을 실시했다. 소독 차량 진입이 어려운 농장 진입로와 울타리, 외곽 지역을 집중 소독했으며, 지난해부터 이어온 협력을 올해 분기별 상시 방역 체계로 확대할 계획이다.",
+      "summary_skipped_reason": null
+    },
+    {
+      "issue_score": 2.8,
+      "mention_count": 7,
+      "raw_mention_count": 7,
       "titles": [
         "당진시 “빗물 타고 유입될라”, 장마철 아프리카돼지열병 차단 총력",
         "당진시, 장마철 ASF 방역 수칙 홍보 강화",
@@ -12,9 +36,7 @@
         "당진시, 장마철 ASF 위험주의보 발령",
         "당진시, 장마철 ASF 차단방역 강화…양돈농가 예찰·점검 확대",
         "당진시, 폭우·태풍에 ASF 비상... '양돈농가 방역' 총력 대응",
-        "당진시, 장마철 ASF 위험주의보 발령 ··· 양돈농가 차단방역 총력",
-        "장마철 ASF 위험 커져…당진시 차단방역 나서",
-        "장마철 빗물·토양 타고 ASF 유입 위험..당진시, 양돈농가 차단방역 총력"
+        "당진시, 장마철 ASF 위험주의보 발령 ··· 양돈농가 차단방역 총력"
       ],
       "urls": [
         "http://www.breaknews.com/1224047",
@@ -23,43 +45,20 @@
         "https://www.dynews.co.kr/news/articleView.html?idxno=858985",
         "https://www.m-i.kr/news/articleView.html?idxno=1394512",
         "http://www.newsworker.co.kr/news/articleView.html?idxno=437859",
-        "https://www.ggilbo.com/news/articleView.html?idxno=1170916",
-        "http://www.djtimes.co.kr/news/articleView.html?idxno=112787",
-        "https://www.idjnews.kr/news/articleView.html?idxno=301769"
+        "https://www.ggilbo.com/news/articleView.html?idxno=1170916"
       ],
       "press_list": [
         "breaknews.com",
         "ccdn.co.kr",
-        "djtimes.co.kr",
         "dynews.co.kr",
         "ggilbo.com",
-        "idjnews.kr",
         "m-i.kr",
         "newstnt.com",
         "newsworker.co.kr"
       ],
       "cross_axis_partner": null,
-      "summary": "충남 당진시가 장마철 집중호우와 태풍으로 빗물·토양을 통한 아프리카돼지열병(ASF) 유입 위험이 커지자 관내 양돈농가를 대상으로 차단방역을 대폭 강화하고 위험주의보를 발령했다. 시는 하천 범람과 오염된 빗물 등을 매개로 한 바이러스 전파를 막기 위해 농가 예찰·점검을 확대하고 고강도 방역망을 가동 중이다.",
-      "summary_skipped_reason": null
-    },
-    {
-      "issue_score": 2.0,
-      "mention_count": 2,
-      "raw_mention_count": 2,
-      "titles": [
-        "'ASF 선제 대응'···경산시, 드론 활용 공중방역 확대",
-        "경산시, 드론 방역으로 아프리카돼지열병(ASF) 차단"
-      ],
-      "urls": [
-        "http://www.newsprime.co.kr/news/article.html?no=742013",
-        "https://www.gukjenews.com/news/articleView.html?idxno=3650376"
-      ],
-      "press_list": [
-        "gukjenews.com",
-        "newsprime.co.kr"
-      ],
-      "cross_axis_partner": null,
-      "summary": "경산시가 아프리카돼지열병(ASF) 선제 대응을 위해 가축위생방역지원본부 경북중부사무소와 협력해 드론 활용 공중 방역을 확대하고 있다. 지난 29일 압량읍 소재 양돈농가 9곳을 대상으로 드론 방역을 실시하며 지역 양돈산업 보호에 나섰다.",
+      "title_ko": null,
+      "summary": "충남 당진시가 장마철 집중호우와 태풍으로 빗물·하천 범람을 통한 아프리카돼지열병(ASF) 유입 위험이 커지자 관내 양돈농가를 대상으로 차단방역을 대폭 강화하고 위험주의보를 발령했다. 시는 농가 예찰·점검 확대와 방역 수칙 홍보 등 고강도 방역망을 가동 중이다.",
       "summary_skipped_reason": null
     },
     {
@@ -79,7 +78,8 @@
         "newsgn.com"
       ],
       "cross_axis_partner": null,
-      "summary": "경남도는 최근 집중호우와 폭염 등 이상기후가 반복되면서 아프리카돼지열병(ASF)과 구제역 등 가축전염병 발생 위험이 커지자 도내 차단방역을 강화한다고 밝혔다. 농림축산검역본부는 기상 변화에 따른 방역 취약 요인을 고려해 선제적 대응이 필요하다고 강조했다.",
+      "title_ko": null,
+      "summary": "경남도는 최근 집중호우와 폭염 등 이상기후로 아프리카돼지열병(ASF)·구제역 등 가축전염병 발생 위험이 커짐에 따라 28일 도내 차단 방역을 강화한다고 밝혔다. 농림축산검역본부는 지난 7월 1일 기상 변화에 따른 오염원 유입 위험을 고려해 전국 양돈농장 대상 ASF 위험주의보를 발령했다. 경남도는 하천 범람과 토사 유실 시 야생멧돼지 분변·사체 등이 빗물과 함께 농장으로 유입될 수 있다며 양돈농가의 각별한 주의를 당부했다.",
       "summary_skipped_reason": null
     }
   ],
@@ -137,13 +137,14 @@
         "yasstribune.com.au"
       ],
       "cross_axis_partner": null,
-      "summary": "조류인플루엔자(AI) 확산 저지가 어려운 상황에서 추가 감염 사례 발생이 예상된다. 남아프리카공화국 남동부에서 큰볏바다제비(greater crested tern) 7마리가 폐사하며 야생 조류를 통한 지역 내 전파 우려가 커지고 있다. 이에 따라 가금 산업계가 긴장하며 방역 태세를 강화하고 있다.",
+      "title_ko": "확산을 멈출 수 없다: 조류 인플루엔자 추가 발생 가능성",
+      "summary": "호주 남동부 사우스오스트레일리아에서 토종 종인 큰부리도요(greater crested tern) 7마리가 병든 채 발견되어 현지 전파에 대한 우려가 커지고 있다. 치명적인 조류 인플루엔자 발병이 중요한 전환점을 맞이했을 가능성이 제기되며, 가금류 업계가 경계 상태에 놓여 있다. 추가 감염 사례가 더 발생할 것으로 예상되고 있다",
       "summary_skipped_reason": null
     },
     {
-      "issue_score": 9.4,
-      "mention_count": 10,
-      "raw_mention_count": 10,
+      "issue_score": 9.5,
+      "mention_count": 11,
+      "raw_mention_count": 11,
       "titles": [
         "H5N1 spreading locally in Australian native birds",
         "South Australia : Seven H5 bird flu cases confirmed in seabirds | The Land",
@@ -154,7 +155,8 @@
         "Australia confirms local transmission of H5 bird flu",
         "South Australia : Seven H5 bird flu cases confirmed in seabirds | Farm Weekly",
         "South Australia : Seven H5 bird flu cases confirmed in seabirds | Stock & Land",
-        "First suspected H5 bird flu case recorded in Queensland | North Queensland Register"
+        "First suspected H5 bird flu case recorded in Queensland | North Queensland Register",
+        "Wildlife hospital on alert as H5 bird flu arrives"
       ],
       "urls": [
         "https://www.thepoultrysite.com/news/2026/07/h5n1-spreading-locally-in-australian-native-birds",
@@ -166,7 +168,8 @@
         "https://www.ecr.co.za/news/news/australia-confirms-local-transmission-of-h5-bird-flu/",
         "https://www.farmweekly.com.au/story/9319416/south-australia-seven-h5-bird-flu-cases-confirmed-in-seabirds/",
         "https://www.stockandland.com.au/story/9319416/south-australia-seven-h5-bird-flu-cases-confirmed-in-seabirds/",
-        "https://www.northqueenslandregister.com.au/story/9316738/first-suspected-h5-bird-flu-case-recorded-in-queensland/"
+        "https://www.northqueenslandregister.com.au/story/9316738/first-suspected-h5-bird-flu-case-recorded-in-queensland/",
+        "https://www.odt.co.nz/news/dunedin/wildlife-hospital-on-alert-as-h5-bird-flu-arrives-iy7asjr2"
       ],
       "press_list": [
         "abc.net.au",
@@ -174,12 +177,14 @@
         "ecr.co.za",
         "farmweekly.com.au",
         "northqueenslandregister.com.au",
+        "odt.co.nz",
         "stockandland.com.au",
         "theland.com.au",
         "thepoultrysite.com"
       ],
       "cross_axis_partner": null,
-      "summary": "호주에서 고병원성 조류인플루엔자 H5N1이 야생 조류 사이에서 지역 전파되고 있으며, 남호주 해조류 7건과 퀸즐랜드주 첫 의심 사례 등 4개 주에서 감염이 확인됐다. 현재까지 가금류 감염 사례는 보고되지 않았으나, 당국은 추가 확산 가능성에 대비하고 있다.",
+      "title_ko": "호주 토착 조류에서 H5N1 지역 내 전파 발생",
+      "summary": "호주 당국이 H5N1 고병원성 조류인플루엔자가 토착 조류 집단에서 지역 내 전파되고 있음을 확인했으며, 남호주에서 바다새 7건, 퀸즐랜드에서 첫 의심 사례 등 4개 주에서 검출이 보고됐다. 현재까지 가금농장 감염은 확인되지 않았으나, 당국은 질병이 더 광범위하게 확산될 가능성을 우려하고 있다.",
       "summary_skipped_reason": null
     },
     {
@@ -220,16 +225,42 @@
         "southcoastregister.com.au"
       ],
       "cross_axis_partner": null,
-      "summary": "호주에서 야생 해조류 7건의 조류인플루엔자(H5) 확진 사례가 확인되었으며, 당국은 이들이 현지에서 전파되었는지 추가 분석 중이다. 호주 수석 수의관 베스 쿡슨(Beth Cookson)은 CSIRO 호주질병대비센터(Australian Centre for Disease Preparedness)에서 H5형 바이러스가 확인됐다고 밝혔다. 이로 인해 야생동물에 대한 우려가 커지고 있다.",
+      "title_ko": "새로 확인된 조류 인플루엔자 사례들, 야생동물에 대한 우려 고조",
+      "summary": "호주 당국이 야생 해조류에서 7건의 H5형 조류 인플루엔자 확진 사례를 발표했으며, CSIRO의 Australian Centre for Disease Preparedness(호주 질병 대비 센터)에서 검사가 확인되었다. 추가 분석을 통해 해당 사례들이 현지 전파인지 여부를 파악할 예정이다. 이번 확진으로 야생동물 집단에 대한 감염 확산 우려가 커지고 있다.",
       "summary_skipped_reason": null
     }
   ],
   "domestic_by_category": {
     "질병명": [
       {
-        "issue_score": 3.6,
-        "mention_count": 9,
-        "raw_mention_count": 9,
+        "issue_score": 3.0,
+        "mention_count": 3,
+        "raw_mention_count": 3,
+        "titles": [
+          "경산시, 양돈농장 드론 소독…ASF 유입 막는다",
+          "'ASF 선제 대응'···경산시, 드론 활용 공중방역 확대",
+          "경산시, 드론 방역으로 아프리카돼지열병(ASF) 차단"
+        ],
+        "urls": [
+          "https://daily.hankooki.com/news/articleView.html?idxno=1390951",
+          "http://www.newsprime.co.kr/news/article.html?no=742013",
+          "https://www.gukjenews.com/news/articleView.html?idxno=3650376"
+        ],
+        "press_list": [
+          "daily.hankooki.com",
+          "gukjenews.com",
+          "newsprime.co.kr"
+        ],
+        "cross_axis_partner": null,
+        "category": "질병명",
+        "title_ko": null,
+        "summary": "경북 경산시가 아프리카돼지열병(ASF) 유입 차단을 위해 가축위생방역지원본부와 협력해 압량읍 양돈농장 9곳을 대상으로 드론 방역을 실시했다. 소독 차량 진입이 어려운 농장 진입로와 울타리, 외곽 지역을 중심으로 공중 소독을 진행했으며, 시는 지난해부터 이어온 협력 체계를 올해 분기별 상시 방역으로 확대 운영할 계획이다.",
+        "summary_skipped_reason": null
+      },
+      {
+        "issue_score": 2.8,
+        "mention_count": 7,
+        "raw_mention_count": 7,
         "titles": [
           "당진시 “빗물 타고 유입될라”, 장마철 아프리카돼지열병 차단 총력",
           "당진시, 장마철 ASF 방역 수칙 홍보 강화",
@@ -237,9 +268,7 @@
           "당진시, 장마철 ASF 위험주의보 발령",
           "당진시, 장마철 ASF 차단방역 강화…양돈농가 예찰·점검 확대",
           "당진시, 폭우·태풍에 ASF 비상... '양돈농가 방역' 총력 대응",
-          "당진시, 장마철 ASF 위험주의보 발령 ··· 양돈농가 차단방역 총력",
-          "장마철 ASF 위험 커져…당진시 차단방역 나서",
-          "장마철 빗물·토양 타고 ASF 유입 위험..당진시, 양돈농가 차단방역 총력"
+          "당진시, 장마철 ASF 위험주의보 발령 ··· 양돈농가 차단방역 총력"
         ],
         "urls": [
           "http://www.breaknews.com/1224047",
@@ -248,45 +277,21 @@
           "https://www.dynews.co.kr/news/articleView.html?idxno=858985",
           "https://www.m-i.kr/news/articleView.html?idxno=1394512",
           "http://www.newsworker.co.kr/news/articleView.html?idxno=437859",
-          "https://www.ggilbo.com/news/articleView.html?idxno=1170916",
-          "http://www.djtimes.co.kr/news/articleView.html?idxno=112787",
-          "https://www.idjnews.kr/news/articleView.html?idxno=301769"
+          "https://www.ggilbo.com/news/articleView.html?idxno=1170916"
         ],
         "press_list": [
           "breaknews.com",
           "ccdn.co.kr",
-          "djtimes.co.kr",
           "dynews.co.kr",
           "ggilbo.com",
-          "idjnews.kr",
           "m-i.kr",
           "newstnt.com",
           "newsworker.co.kr"
         ],
         "cross_axis_partner": null,
         "category": "질병명",
-        "summary": "충남 당진시가 장마철 집중호우와 태풍으로 빗물·토양·하천 범람을 통한 아프리카돼지열병(ASF) 유입 위험이 커지자 관내 양돈농가를 대상으로 ASF 위험주의보를 발령하고 차단방역을 대폭 강화했다. 시는 농가 예찰·점검을 확대하고 방역 수칙 홍보를 강화하는 등 고강도 차단방역망을 가동 중이다.",
-        "summary_skipped_reason": null
-      },
-      {
-        "issue_score": 2.0,
-        "mention_count": 2,
-        "raw_mention_count": 2,
-        "titles": [
-          "'ASF 선제 대응'···경산시, 드론 활용 공중방역 확대",
-          "경산시, 드론 방역으로 아프리카돼지열병(ASF) 차단"
-        ],
-        "urls": [
-          "http://www.newsprime.co.kr/news/article.html?no=742013",
-          "https://www.gukjenews.com/news/articleView.html?idxno=3650376"
-        ],
-        "press_list": [
-          "gukjenews.com",
-          "newsprime.co.kr"
-        ],
-        "cross_axis_partner": null,
-        "category": "질병명",
-        "summary": "경산시가 아프리카돼지열병(ASF) 선제 대응을 위해 가축위생방역지원본부 경북중부사무소와 협력해 드론을 활용한 공중 방역을 확대하고 있다. 지난 29일 압량읍 소재 양돈농가 9곳을 대상으로 합동 방역을 실시하며 지역 양돈산업 보호에 나섰다.",
+        "title_ko": null,
+        "summary": "충남 당진시는 장마철 집중호우와 태풍으로 아프리카돼지열병(ASF) 바이러스가 빗물이나 하천 범람 등을 통해 유입될 위험이 커짐에 따라 관내 양돈농가를 대상으로 고강도 차단방역에 나섰다. 당진시는 위험주의보를 발령하고 양돈농가의 예찰·점검을 확대하는 동시에 방역 수칙 홍보를 강화해 ASF 유입 차단에 총력을 기울이고 있다.",
         "summary_skipped_reason": null
       }
     ],
@@ -309,7 +314,8 @@
         ],
         "cross_axis_partner": null,
         "category": "정부·제도 용어",
-        "summary": "경남도(도지사 박완수)는 최근 집중호우와 폭염 등 이상기후로 아프리카돼지열병(ASF)과 구제역 등 가축전염병 발생 위험이 커짐에 따라 28일 도내 차단방역을 강화한다고 밝혔다. 농림축산검역본부 역시 기상 상황 변화에 따른 방역 관리의 필요성을 강조했다.",
+        "title_ko": null,
+        "summary": "경남도는 최근 집중호우와 폭염 등 이상기후로 아프리카돼지열병(ASF)·구제역 등 가축전염병 발생 위험이 커짐에 따라 28일 도내 차단 방역을 강화한다고 밝혔다. 농림축산검역본부는 지난 7월 1일 기상 변화에 따른 오염원 유입 위험을 고려해 전국 양돈농장 대상 ASF 위험주의보를 발령했다. 경남도는 하천 범람과 토사 유실 시 야생멧돼지 분변·사체 등 오염원이 빗물과 함께 농장으로 유입될 수 있다며 양돈농가의 각별한 주의를 당부했다.",
         "summary_skipped_reason": null
       },
       {
@@ -327,7 +333,8 @@
         ],
         "cross_axis_partner": null,
         "category": "정부·제도 용어",
-        "summary": "박완수 경남도지사가 폭염과 가뭄 피해 예방을 위한 비상대책회의를 주재하며 인명 피해 방지를 최우선으로 강조했다. 축산 분야에서는 폭염과 집중호우로 인한 가축 면역력 저하에 대비해 아프리카돼지열병(ASF)과 구제역(FMD) 등 가축전염병 차단 방역을 강화하고 있다. 구체적으로 축사 환기·차광막 점검, 농장 출입 통제, 소독, 백신 접종 등 방역 수칙 이행에 만전을 기하고 있다.",
+        "title_ko": null,
+        "summary": "박완수 경남도지사가 폭염·가뭄 비상대책회의를 주재하며 인명피해 제로화를 최우선 목표로 고령층·야외근로자 보호와 농업용수 확보 등 현장 대응 강화를 지시했다. 도는 32억 7천만 원을 긴급 투입하고, 축산 분야에서는 가축 면역력 저하에 대비해 아프리카돼지열병(ASF)·구제역(FMD) 등 가축전염병 차단 방역을 강화하고 있다. 현재까지 온열질환자 122명과 사망자 3명이 발생한 가운데, 고수온 대응과 농장 출입 통제·소독·백신 접종 등 방역 수칙 이행도 강조됐다.",
         "summary_skipped_reason": null
       }
     ],
@@ -350,7 +357,8 @@
         ],
         "cross_axis_partner": null,
         "category": "축종별 용어",
-        "summary": "박광욱 도드람양돈농협 조합장이 7월 21일 기자간담회에서 아프리카돼지열병(ASF)과 돼지유행성설사병(PED) 등 가축질병으로 인한 양돈농가 피해가 심각하다고 강조했다. 이에 따라 조합원 재산 보호를 위해 도축장 출하차량 소독 등 차량 중심의 방역체계를 대폭 강화하겠다고 밝혔다.",
+        "title_ko": null,
+        "summary": "박광욱 도드람양돈농협 조합장이 7월 21일 기자간담회에서 올해 아프리카돼지열병(ASF)과 돼지유행성설사병(PED) 등으로 한돈 농가 피해가 컸다고 밝히며, 조합원 재산 보호를 위해 도축장 출하차량 소독 시설을 확충하고 방역 체계를 강화하겠다고 발표했다.",
         "summary_skipped_reason": null
       },
       {
@@ -368,7 +376,8 @@
         ],
         "cross_axis_partner": null,
         "category": "축종별 용어",
-        "summary": "연일 이어지는 폭염과 열대야로 축사 내부 온도가 40℃에 육박하면서 고령 양돈농가들이 대형 환기팬, 쿨링패드, 제빙기 등을 24시간 풀가동하며 돼지 폐사 방지에 총력을 기울이고 있다. 냉방 설비 가동으로 전기요금이 급증한 데다 사료값 상승까지 겹쳐 농가들의 생산비 부담이 가중되고 있다.",
+        "title_ko": null,
+        "summary": "연일 37~38℃의 기록적인 폭염과 열대야로 경북 고령군 양돈농가의 축사 내부 온도가 40℃에 육박하면서 돼지 폐사 우려가 커지고 있다. 농가들은 대형 환기팬, 쿨링패드, 제빙기 가동과 얼음 투입 등 24시간 비상 대응에 나서고 있으나, 전기요금 폭증과 사료값 상승으로 경영 부담이 가중되고 있다. 폭염중대경보 발령 속에 생산성 저하가 현실화함에 따라 실질적인 폭염 피해 지원 대책이 절실한 상황이다.",
         "summary_skipped_reason": null
       }
     ],
@@ -388,7 +397,8 @@
         ],
         "cross_axis_partner": null,
         "category": "스마트팜/축산 기술",
-        "summary": "AI 기반 스마트축산으로의 전환을 위해서는 개별 장비나 서비스 도입을 넘어 농장 데이터의 표준화와 장비 간 상호 호환성을 확보하는 것이 필수적이다. 이를 통해 종합적인 데이터 수집 및 활용이 가능한 협업 생태계를 구축해야만 스마트축산의 실질적인 성공을 담보할 수 있다.",
+        "title_ko": null,
+        "summary": "AI 시대 스마트축산의 성공을 위해서는 개별 장비·서비스 도입을 넘어 농장 데이터 표준화와 장비 간 호환성을 확보하는 협업 생태계 구축이 필수적이다. 체계적인 데이터 수집·관리 기반과 실증 인프라가 갖춰져야 AI 기술이 현장에 실질적으로 적용되어 산업 경쟁력을 높일 수 있다.",
         "summary_skipped_reason": null
       },
       {
@@ -406,11 +416,12 @@
         ],
         "cross_axis_partner": null,
         "category": "스마트팜/축산 기술",
-        "summary": "프리시젼바이오가 동물용 진단 부문에서 매출 100억 원을 돌파하며 블루오션으로 떠오른 동물 의료기기 시장에서 두각을 나타내고 있다. 아프리카돼지열병(ASF), 조류인플루엔자(AI), 구제역(FMD) 등 반복되는 가축 전염병과 예방적 살처분 증가에 따라 신속한 진단을 통한 피해 최소화 수요가 커진 것이 배경으로 작용했다.",
+        "title_ko": null,
+        "summary": "프리시젼바이오가 인체용 시분해형광(TRF) 면역진단 플랫폼을 동물용으로 확장한 'Exdia PT10V'를 앞세워 동물용 진단 매출 100억 원 달성을 눈앞에 두고 있다. 아프리카돼지열병(ASF), 조류인플루엔자(AI), 구제역(FMD) 등 재난형 가축전염병 대응을 위한 신속 현장 진단 수요가 커지는 가운데, 국내를 넘어 일본·유럽·중동 등으로 판로를 확대하며 매출 성장에 속도를 내고 있다.",
         "summary_skipped_reason": null
       }
     ],
-    "무역/관세 이슈": [
+    "시장/가격 용어": [
       {
         "issue_score": 1.0,
         "mention_count": 1,
@@ -425,12 +436,11 @@
           "wikitree.co.kr"
         ],
         "cross_axis_partner": null,
-        "category": "무역/관세 이슈",
-        "summary": "국내산 삼겹살 가격 상승으로 수입 돼지고기 수요가 늘어난 가운데, 아프리카돼지열병(ASF) 여파로 독일산 수입이 중단됐던 2022년을 제외하면 사상 처음으로 스페인산이 미국산을 제치고 수입 비중 1위에 올랐다.",
+        "category": "시장/가격 용어",
+        "title_ko": null,
+        "summary": "스페인산 돼지고기가 지난 6월 국내 수입시장에서 물량(1만8175t, 35.8%)과 금액 모두 미국산을 제치고 사상 처음 1위에 올랐다. 아프리카돼지열병(ASF)으로 독일산이 막혔던 2022년을 제외하면 미국산이 밀려난 첫 사례다. 국내산 삼겹살 가격 급등으로 상대적으로 저렴한 스페인산 삼겹살 수요가 몰린 것이 주원인으로 분석된다.",
         "summary_skipped_reason": null
-      }
-    ],
-    "시장/가격 용어": [
+      },
       {
         "issue_score": 0.7,
         "mention_count": 1,
@@ -446,7 +456,8 @@
         ],
         "cross_axis_partner": null,
         "category": "시장/가격 용어",
-        "summary": "당진시 합덕읍 석우리에서 멧돼지 떼가 출몰해 고구마와 옥수수밭에 큰 피해를 입혔다. 충남 당진·서산·천안·아산 등은 유해야생동물 피해방지단을 상시 운영하며 개체 수 조절과 아프리카돼지열병(ASF) 차단에 나서고 있다.",
+        "title_ko": null,
+        "summary": "당진시 합덕읍 석우리 일대에서 7월 초순부터 열흘간 어미 멧돼지와 새끼 5~6마리가 출몰해 수확 직전의 고구마·옥수수밭 3여 가구에 큰 피해를 입혔다. 민간 포수가 야간 포획을 시도했으나 우천 등으로 어려움을 겪고 있으며, 충남 지자체들은 유해야생동물 피해방지단을 운영해 개체 수 조절과 아프리카돼지열병(ASF) 차단에 나서고 있다.",
         "summary_skipped_reason": null
       }
     ],
@@ -466,7 +477,8 @@
         ],
         "cross_axis_partner": null,
         "category": "사료업계 특화 용어",
-        "summary": "경남도가 축산농가의 사료구매자금 지원 한도를 일반 농가 최대 6억 원, 아프리카돼지열병(ASF) 방역조치 이행 및 모돈이력제 참여 농가 최대 9억 원으로 확대 추진한다. 지원 대상에는 소·돼지·양계·오리 외에 염소·사슴·꿀벌 등 기타 축종도 포함된다.",
+        "title_ko": null,
+        "summary": "경상남도가 사료값과 환율 상승으로 경영난을 겪는 축산농가를 지원하기 위해 28일까지 2026년 하반기 사료구매자금 수요조사를 실시한다. 연 1.8% 저금리 정책자금을 공급하며, 일반 농가는 최대 6억 원, 아프리카돼지열병(ASF) 방역조치 이행 및 모돈이력제 참여 농가는 최대 9억 원까지 지원 한도를 확대한다. 도는 조사 결과를 반영해 최종 지원 대상자와 규모를 확정할 계획이다.",
         "summary_skipped_reason": null
       }
     ]
@@ -497,7 +509,8 @@
         ],
         "cross_axis_partner": null,
         "category": "정부·제도 용어",
-        "summary": "관계 당국이 섬에서 본토로 동물 이송 가능성이 제기됨에 따라 기존 권고안을 갱신했다. 동시에 해당 이송에 대한 경보를 발령했다.",
+        "title_ko": "섬에서 육지로의 동물 이동 가능성에 대비해 권고 사항 갱신",
+        "summary": "당국이 섬에서 육지로 동물이 이동될 가능성에 대비해 관련 권고 사항을 갱신했다. 이에 따라 동물 이동 시 주의해야 할 방역 조치와 관리 지침이 다시 강조되었다.",
         "summary_skipped_reason": null
       },
       {
@@ -521,7 +534,8 @@
         ],
         "cross_axis_partner": null,
         "category": "정부·제도 용어",
-        "summary": "아르헨티나 농식품위생품질청(Senasa)이 2026년 7월 29일 관보에 게재한 결의안 679/2026을 통해 전국 농축산물 생산자 위생 등록부(RENSPA)의 데이터 갱신을 의무화했다. 이에 따라 모든 농축산 생산자는 RENSPA에 등록된 정보를 최신 상태로 업데이트해야 한다.",
+        "title_ko": "정부의 새로운 조치: 농축산 생산자들은 RENSPA의 데이터를 업데이트해야 합니다",
+        "summary": "아르헨티나 국립농식품위생품질청(Senasa)이 결의안 679/2026호를 통해 국립농축산생산자위생등록부(RENSPA)에 등록된 생산자 정보의 갱신을 의무화했습니다. 이번 조치는 공식 관보 게재일인 7월 29일부터 적용되며, 생산자들은 정해진 기한 내에 보유 데이터를 최신 상태로 수정해야 합니다.",
         "summary_skipped_reason": null
       }
     ],
@@ -580,13 +594,14 @@
         ],
         "cross_axis_partner": null,
         "category": "질병명",
-        "summary": "치명적인 조류인플루엔자(AI) 발생이 호주 남동부에서 야생 조류인 뿔제비갈매기(greater crested terns) 의심 사례 7건이 발견되면서 새로운 국면을 맞이했다. 당국은 지역 내 전파 가능성을 우려하며 가금 산업에 경보를 발령하고 추가 확산 가능성을 예의주시하고 있다.",
+        "title_ko": "\"확산을 막을 수 없다: 추가 조류 인플루엔자 발생 가능성 높음\"",
+        "summary": "남호주 남동부에서 큰바다제비(greater crested tern) 7마리가 폐사한 채 발견되면서 치명적인 조류 인플루엔자 발병이 중요한 전환점을 맞이했을 수 있다는 우려가 제기되고 있다. 당국은 토착 조류 종에서 의심 사례가 잇따라 확인됨에 따라 지역 내 전파 가능성을 경계하며 가금 산업에 경보를 발령했다.",
         "summary_skipped_reason": null
       },
       {
-        "issue_score": 9.4,
-        "mention_count": 10,
-        "raw_mention_count": 10,
+        "issue_score": 9.5,
+        "mention_count": 11,
+        "raw_mention_count": 11,
         "titles": [
           "H5N1 spreading locally in Australian native birds",
           "South Australia : Seven H5 bird flu cases confirmed in seabirds | The Land",
@@ -597,7 +612,8 @@
           "Australia confirms local transmission of H5 bird flu",
           "South Australia : Seven H5 bird flu cases confirmed in seabirds | Farm Weekly",
           "South Australia : Seven H5 bird flu cases confirmed in seabirds | Stock & Land",
-          "First suspected H5 bird flu case recorded in Queensland | North Queensland Register"
+          "First suspected H5 bird flu case recorded in Queensland | North Queensland Register",
+          "Wildlife hospital on alert as H5 bird flu arrives"
         ],
         "urls": [
           "https://www.thepoultrysite.com/news/2026/07/h5n1-spreading-locally-in-australian-native-birds",
@@ -609,7 +625,8 @@
           "https://www.ecr.co.za/news/news/australia-confirms-local-transmission-of-h5-bird-flu/",
           "https://www.farmweekly.com.au/story/9319416/south-australia-seven-h5-bird-flu-cases-confirmed-in-seabirds/",
           "https://www.stockandland.com.au/story/9319416/south-australia-seven-h5-bird-flu-cases-confirmed-in-seabirds/",
-          "https://www.northqueenslandregister.com.au/story/9316738/first-suspected-h5-bird-flu-case-recorded-in-queensland/"
+          "https://www.northqueenslandregister.com.au/story/9316738/first-suspected-h5-bird-flu-case-recorded-in-queensland/",
+          "https://www.odt.co.nz/news/dunedin/wildlife-hospital-on-alert-as-h5-bird-flu-arrives-iy7asjr2"
         ],
         "press_list": [
           "abc.net.au",
@@ -617,13 +634,15 @@
           "ecr.co.za",
           "farmweekly.com.au",
           "northqueenslandregister.com.au",
+          "odt.co.nz",
           "stockandland.com.au",
           "theland.com.au",
           "thepoultrysite.com"
         ],
         "cross_axis_partner": null,
         "category": "질병명",
-        "summary": "호주에서 H5N1 고병원성 조류인플루엔자가 토착 조류와 바닷새 사이에서 지역 전파되고 있으며, 남호주에서 바닷새 7건이 확진되고 퀸즐랜드에서도 의심·확진 사례가 보고됐다. 현재까지 가금 농장 감염은 확인되지 않았으나, 여러 주에서 검출이 이어지자 축산 농가들은 추가 확산에 대비하고 있다.",
+        "title_ko": "호주 토착 조류에서 H5N1 지역 전파 발생",
+        "summary": "호주 당국은 네 개 주에서 토착 조류 사이에서 H5N1 고병원성 조류인플루엔자가 지역적으로 전파되고 있음을 확인했으며, 현재까지 가금류 감염 사례는 보고되지 않았습니다. 당국은 이 바이러스가 더 광범위하게 확산될 가능성을 우려하고 있습니다.",
         "summary_skipped_reason": null
       }
     ],
@@ -646,7 +665,8 @@
         ],
         "cross_axis_partner": null,
         "category": "무역/관세 이슈",
-        "summary": "미국 농무부(USDA) 브룩 롤린스(Brooke Rollins) 장관이 클라우디아 셰인바움(Claudia Sheinbaum) 멕시코 대통령에게 멕시코산 생우 수입 재개를 통보했다. 이에 아메리코 비야레알 아나야(Américo Villarreal Anaya) 타마울리파스 주지사는 관련 절차를 서두를 필요가 있다.",
+        "title_ko": "EU, 멕시코산 소 수입 재개",
+        "summary": "미국 농무부(USDA) 장관 브룩 롤린스(Brooke Rollins)가 멕시코 대통령 클라우디아 셰인바움 파르도(Claudia Sheinbaum Pardo)에게 멕시코산 소의 미국 수입이 다시 허용될 것임을 통보했으며, 이에 따라 아메리코 비야레알 아나야(Américo Villarreal Anaya) 주지사 정부는 관련 절차를 신속히 추진해야 할 것으로 보인다.",
         "summary_skipped_reason": null
       },
       {
@@ -664,47 +684,7 @@
         ],
         "cross_axis_partner": null,
         "category": "무역/관세 이슈",
-        "summary": null,
-        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출 (범용 본문 추가 수집도 실패/미시도)"
-      }
-    ],
-    "시장/가격 용어": [
-      {
-        "issue_score": 1.4,
-        "mention_count": 2,
-        "raw_mention_count": 2,
-        "titles": [
-          "Cumhuriyet tarihinin en yüksek hububat rekoltesi bekleniyor : Buğdayda 24 milyon ton hedefi",
-          "Hububatta , Cumhuriyet tarihinin en yüksek rekolte beklentisi"
-        ],
-        "urls": [
-          "https://www.haberler.com/guncel/hububatta-cumhuriyet-tarihinin-en-yuksek-rekolte-20082988-haberi/",
-          "https://www.wanhaber.com/hububatta-cumhuriyet-tarihinin-en-yuksek-rekolte-beklentisi"
-        ],
-        "press_list": [
-          "haberler.com",
-          "wanhaber.com"
-        ],
-        "cross_axis_partner": null,
-        "category": "시장/가격 용어",
-        "summary": "튀르키예(TÜRKİYE) 농업 지역에 내린 집중 호우로 곡물(hububat) 수확량이 공화국 역사상 최고치를 기록할 것으로 전망된다. 특히 밀(buğday) 생산량 목표가 2,400만 톤으로 설정되는 등 재배 작황에 대한 기대감이 크게 높아진 상황이다.",
-        "summary_skipped_reason": null
-      },
-      {
-        "issue_score": 1.0,
-        "mention_count": 1,
-        "raw_mention_count": 1,
-        "titles": [
-          "Producers  struggle to sell  as storage limits , imports bite"
-        ],
-        "urls": [
-          "https://barbadostoday.bb/2026/07/27/producers-struggle-to-sell-as-storage-limits-imports-bite/"
-        ],
-        "press_list": [
-          "barbadostoday.bb"
-        ],
-        "cross_axis_partner": null,
-        "category": "시장/가격 용어",
+        "title_ko": null,
         "summary": null,
         "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출 (범용 본문 추가 수집도 실패/미시도)"
       }
@@ -725,7 +705,8 @@
         ],
         "cross_axis_partner": null,
         "category": "사료업계 특화 용어",
-        "summary": "영국 대표 단위동물 사료 기업인 ABN이 가금류 및 돼지 사료 생산 분야에서 철수한다고 발표했다. ABN은 영국 내 주요 모노가스트릭(monogastric) 사료 기업 중 하나로, 해당 분야에서 완전히 퇴출할 예정이다.",
+        "title_ko": "ABN, 가금류·돼지 사료 생산에서 철수한다",
+        "summary": "영국의 주요 단위위 사료 기업인 ABN이 가금류와 돼지 사료 생산 부문에서 철수한다고 발표했다. ABN은 영국 내 단위위 사료 분야에서 선도적인 기업 중 하나이다.",
         "summary_skipped_reason": null
       },
       {
@@ -743,7 +724,8 @@
         ],
         "cross_axis_partner": null,
         "category": "사료업계 특화 용어",
-        "summary": "방글라데시 중부에서 무허가 사료 제조업체인 사르카르 아그로(Sarkar Agro)가 사료를 부정 생산·판매한 혐의로 청문회 후 거액의 벌금 처분을 받았다.",
+        "title_ko": "방글라데시, 사료 사기 업체 처벌",
+        "summary": "방글라데시 중부에서 무허가 사료 제조업체인 사르카르 아그로(Sarkar Agro)가 사료를 부정하게 생산·판매한 혐의로 청문회 후 상당한 벌금을 부과받았다. 당국은 해당 업체의 불법 행위를 적발해 처벌을 내렸다.",
         "summary_skipped_reason": null
       }
     ],
@@ -763,7 +745,8 @@
         ],
         "cross_axis_partner": null,
         "category": "가금 계열화/수직계열화",
-        "summary": "크랜윅 그룹(Cranswick Group)이 2024/25 회계연도 1분기 가금육·돈육·식품·펫푸드 등 수직계열화 전 부문에서 전년 동기 대비 매출 증가를 기록하며 순조로운 출발을 알렸다. 전체 매출이 증가세를 보였으나 구체적인 수치나 성장률은 공개되지 않았다.",
+        "title_ko": "크랜윅, 회계연도 긍정적 출발",
+        "summary": "크랜윅 그룹은 회계연도 1분기 가금류, 돼지고기, 식품, 펫푸드 등 수직통합 전 부문에서 전년 동기 대비 매출이 증가했다고 밝혔다. 전체 매출 증가 여부 등 세부 수치는 아직 공개되지 않았다.",
         "summary_skipped_reason": null
       }
     ],
@@ -783,7 +766,8 @@
         ],
         "cross_axis_partner": null,
         "category": "사료첨가제/항생제 규제",
-        "summary": "Rumin8이 반추동물 섭취 후 활성화되는 '프로드러그(prodrug)' 방식의 신물질을 개발해 소의 메탄 배출 저감 옵션을 확대했다. 이 화합물은 섭취 시 비활성 상태였다가 반추위 내에서 활성화되어 메탄 생성을 억제한다.",
+        "title_ko": "Rumin8: 새로운 화합물이 생산자들에게 더 많은 메탄 저감 옵션을 제공한다",
+        "summary": "Rumin8이 반추동물 체내에서만 활성화되는 '프로드러그(prodrug)' 방식의 신규 화합물을 개발해 소의 메탄 배출 저감 선택지를 확대했다. 이 화합물은 섭취 시에는 비활성 상태이나 반추동물 소화 과정에서 활성화되어 메탄 생성을 억제하는 방식으로 작동한다.",
         "summary_skipped_reason": null
       },
       {
@@ -801,8 +785,30 @@
         ],
         "cross_axis_partner": null,
         "category": "사료첨가제/항생제 규제",
+        "title_ko": null,
         "summary": null,
         "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출 (범용 본문 추가 수집도 실패/미시도)"
+      }
+    ],
+    "스마트팜/축산 기술": [
+      {
+        "issue_score": 0.4,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "Novus brings global feed ingredient references together in new digital tool"
+        ],
+        "urls": [
+          "https://www.feedstrategy.com/animal-feed-additives-ingredients/feed-ingredients/news/15830758/novus-brings-global-feed-ingredient-references-together-in-new-digital-tool"
+        ],
+        "press_list": [
+          "Feed Strategy"
+        ],
+        "cross_axis_partner": null,
+        "category": "스마트팜/축산 기술",
+        "title_ko": "노부스, 글로벌 사료 원료 참고자료를 새로운 디지털 도구로 통합 제공",
+        "summary": "노부스(Novus)가 '노부스 원료 종합자료(Novus Raw Material Compendium)'라는 디지털 플랫폼을 출시해 전 세계 사료 원료 데이터를 한데 모았다. 이 도구는 데이터 기반의 보다 정교한 사료 배합 전략 수립을 지원하기 위해 설계되었다.",
+        "summary_skipped_reason": null
       }
     ],
     "축종별 용어": [
@@ -821,7 +827,8 @@
         ],
         "cross_axis_partner": null,
         "category": "축종별 용어",
-        "summary": "보츠와나 가금 산업이 닭고기와 계란 부문에서 자급자족을 달성했으며, 수출 시장 진출을 준비 중이다. 에드윈 디콜로티(Edwin Dikoloti) 농업부 장관이 의회 답변을 통해 이 같은 성과를 공식 확인했다.",
+        "title_ko": "보츠와나: 가금 산업 자급자족 달성",
+        "summary": "보츠와나 의회 보고에 따르면 가금 산업이 닭고기와 계란 부문에서 자급자족을 달성했으며 수출 시장 진출을 준비하고 있다. 에드윈 디콜로티(Edwin Dikoloti) 농업부 장관이 의회 답변을 통해 이 같은 사실을 확인했다.",
         "summary_skipped_reason": null
       },
       {
@@ -839,7 +846,48 @@
         ],
         "cross_axis_partner": null,
         "category": "축종별 용어",
-        "summary": "영국 농가가 지속된 건조한 날씨와 폭염으로 육계 사육에 큰 어려움을 겪었으나, 미스팅 시스템(안개 분무 장치)을 가동해 육계사의 온도 상승을 억제하고 대규모 폐사를 막았다. 농장주는 비가 오기를 고대하며 기상 여건이 모든 영농 부문에 악영향을 미쳤지만 특히 육계 관리가 가장 시급했다고 밝혔다.",
+        "title_ko": "파머 포커스: 미스팅 시스템이 육계사 재난을 막다",
+        "summary": "한파와 건조한 날씨가 지속되면서 농장 전체에 어려움이 있었으나, 특히 육계가 가장 큰 영향을 받았습니다. 미스팅 시스템을 가동해 고온 스트레스를 완화함으로써 육계사의 대규모 피해를 예방할 수 있었습니다.",
+        "summary_skipped_reason": null
+      }
+    ],
+    "시장/가격 용어": [
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "Producers  struggle to sell  as storage limits , imports bite"
+        ],
+        "urls": [
+          "https://barbadostoday.bb/2026/07/27/producers-struggle-to-sell-as-storage-limits-imports-bite/"
+        ],
+        "press_list": [
+          "barbadostoday.bb"
+        ],
+        "cross_axis_partner": null,
+        "category": "시장/가격 용어",
+        "title_ko": null,
+        "summary": null,
+        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출 (범용 본문 추가 수집도 실패/미시도)"
+      },
+      {
+        "issue_score": 1.0,
+        "mention_count": 1,
+        "raw_mention_count": 1,
+        "titles": [
+          "Rice Crop Nears Historic Low As Losses Persist"
+        ],
+        "urls": [
+          "https://www.rfdtv.com/rice-crop-nears-historic-low-as-losses-persist"
+        ],
+        "press_list": [
+          "rfdtv.com"
+        ],
+        "cross_axis_partner": null,
+        "category": "시장/가격 용어",
+        "title_ko": "쌀 생산량, 손실 지속되며 역대 최저치 근접",
+        "summary": "미국 쌀 생산량이 40년 만에 최저 수준으로 예상되어 공급이 타이트해지고 가격이 상승하고 있다. 그러나 미시시피 주립대 경제학자 윌 메이플스(Will Maples)에 따르면 높은 생산 비용이 지속되어 시장 가격 상승에도 불구하고 많은 재배농가의 수익성 회복에는 미치지 못하고 있다.",
         "summary_skipped_reason": null
       }
     ]
@@ -847,23 +895,23 @@
   "category_distribution": {
     "국내": {
       "스마트팜/축산 기술": 2,
-      "질병명": 17,
-      "무역/관세 이슈": 1,
-      "정부·제도 용어": 12,
-      "시장/가격 용어": 1,
-      "축종별 용어": 5,
+      "질병명": 15,
+      "시장/가격 용어": 3,
+      "정부·제도 용어": 10,
+      "축종별 용어": 4,
       "사료업계 특화 용어": 1
     },
     "해외": {
-      "사료업계 특화 용어": 5,
+      "사료업계 특화 용어": 4,
       "가금 계열화/수직계열화": 1,
       "사료첨가제/항생제 규제": 2,
+      "스마트팜/축산 기술": 1,
       "축종별 용어": 3,
-      "정부·제도 용어": 20,
-      "시장/가격 용어": 8,
-      "질병명": 46,
-      "무역/관세 이슈": 11,
-      "기타": 1
+      "정부·제도 용어": 17,
+      "시장/가격 용어": 9,
+      "질병명": 47,
+      "기타": 1,
+      "무역/관세 이슈": 9
     }
   },
   "gdelt_timeline": {},
