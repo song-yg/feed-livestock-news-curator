@@ -41,28 +41,60 @@ from email.mime.text import MIMEText
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 587
 
+# --- 이메일 디자인 토큰 (2026-07-30, 담당자 요청으로 시각적 개편) ---
+#
+# 참고용으로 받은 업계 뉴스레터 시안(GBT_DOC)을 보고, "본문을 그대로
+# 재현하는 건 저작권 문제로 안 되지만, 레이아웃/색상/타이포그래피 같은
+# 포맷은 참고해도 된다"는 원칙으로 반영함. 로고 이미지는 없어서(요청도
+# 없었음) 색상 배너 + 타이틀 텍스트로 "정식 발행물" 느낌만 냄.
+#
+# 국내/해외를 색으로 구분 - 파랑/보라 조합. 초록은 아래 증감 표에서 이미
+# "증가"를 뜻하는 색으로 쓰고 있어서 축 구분색으로 재사용하면 헷갈릴 수
+# 있어 피함.
+ACCENT_DOMESTIC = "#1a73e8"   # 국내 - 파랑
+ACCENT_DOMESTIC_TINT = "#e8f0fe"  # 파랑의 옅은 배경톤 (태그/배지 배경용)
+ACCENT_INTL = "#7c3aed"       # 해외 - 보라
+ACCENT_INTL_TINT = "#f3ebfd"  # 보라의 옅은 배경톤
+
+HEADER_BG = "#0f2f5c"  # 헤더 배너 배경(짙은 남색) - 본문 색상들과 안 부딪히게 별도 계열
+
 
 def _escape(value) -> str:
     return html.escape(str(value))
 
 
-def _format_issue_html(item: dict, rank: int | None = None) -> str:
+def _format_issue_html(item: dict, rank: int | None = None, accent: str = ACCENT_DOMESTIC) -> str:
     """
     이슈 하나 분량의 HTML 블록. summary.md의 _format_issue_section과 같은 정보를 담는다.
 
     rank: 이 이슈가 속한 목록(전체 Top N 또는 카테고리별 Top N) 안에서 몇 번째인지.
-    None이면(순위 개념이 없는 호출부) 번호를 안 붙인다 - 호출부(_format_section_html/
+    None이면(순위 개념이 없는 호출부) 배지를 안 붙인다 - 호출부(_format_section_html/
     _format_category_html)가 enumerate로 1부터 매겨서 넘겨준다. 지금까지 이메일에
     순위 숫자가 아예 안 붙어있었던 걸 담당자가 지적해서 추가함(2026-07-28).
+
+    accent: 국내/해외 축 색상(ACCENT_DOMESTIC/ACCENT_INTL) - 순위 배지, 반대 축
+    링크, 원문 링크 색에 일괄 적용해서 "지금 국내를 보는 중인지 해외를 보는
+    중인지"가 스크롤하다가도 색만으로 구분되게 함(2026-07-30).
+
+    ** 순위 배지를 원형 배지로 바꾼 이유(2026-07-30) **: 기존엔 그냥
+    "1." 파란 텍스트라 눈에 잘 안 띄었음. border-radius:50%는 이메일
+    클라이언트마다 지원이 갈리는데(구형 Outlook 데스크톱은 무시하고
+    사각형으로 표시 - 큰 문제는 아니고 그냥 순위 숫자가 사각 배지로
+    보일 뿐), 발신 계정이 Gmail이고 주 수신 환경도 Gmail(웹/앱)이라
+    실사용 환경에서는 문제없이 원형으로 보임.
     """
     titles = item.get("titles", [])
     rep_title = titles[0] if titles else "(제목 없음)"
     extra = f" (그룹 내 추가 {len(titles) - 1}건 생략)" if len(titles) > 1 else ""
-    rank_html = f'<span style="color:#1a73e8;">{rank}.</span> ' if rank is not None else ""
+    rank_html = ""
+    if rank is not None:
+        rank_html = (f'<span style="display:inline-block; min-width:20px; height:20px; line-height:20px; '
+                     f'text-align:center; border-radius:50%; background:{accent}; color:#fff; '
+                     f'font-size:11px; font-weight:bold; margin-right:6px;">{rank}</span>')
 
     cross_html = ""
     if item.get("cross_axis_partner"):
-        cross_html = (f'<p style="margin:2px 0 4px 0; font-size:12px; color:#1a73e8;">'
+        cross_html = (f'<p style="margin:2px 0 4px 0; font-size:12px; color:{accent};">'
                       f'🔗 반대 축에서도 다뤄짐: {_escape(item["cross_axis_partner"])}</p>')
 
     if item.get("summary"):
@@ -77,11 +109,14 @@ def _format_issue_html(item: dict, rank: int | None = None) -> str:
     more = f" 외 {len(urls) - 3}건" if len(urls) > 3 else ""
     links_html = ""
     if shown:
-        link_tags = ", ".join(f'<a href="{_escape(u)}" style="color:#1a73e8; text-decoration:none;">원문</a>' for u in shown)
+        link_tags = ", ".join(f'<a href="{_escape(u)}" style="color:{accent}; text-decoration:none;">원문</a>' for u in shown)
         links_html = f'<p style="margin:0; font-size:12px; color:#888;">원문 링크: {link_tags}{more}</p>'
 
+    # 카드형 박스 - 기존엔 밑줄(border-bottom)만 있었는데, 옅은 테두리 +
+    # 둥근 모서리로 바꿔서 기사 하나하나가 독립된 카드처럼 보이게 함
+    # (참고한 뉴스레터 시안의 "여백/구획이 확실한" 느낌을 레이아웃만 차용).
     return f"""
-    <div style="margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #eee;">
+    <div style="margin-bottom:12px; padding:12px 14px; border:1px solid #eee; border-radius:8px; background:#fff;">
       <p style="margin:0; font-weight:bold; font-size:14px; color:#111;">{rank_html}{_escape(rep_title)}</p>
       <p style="margin:2px 0 4px 0; font-size:12px; color:#aaa;">점수 {item.get('issue_score', 0):.2f} / 언급 {item.get('mention_count', 0)}건{extra}</p>
       {cross_html}
@@ -91,25 +126,37 @@ def _format_issue_html(item: dict, rank: int | None = None) -> str:
     """
 
 
-def _format_section_html(title: str, items: list[dict]) -> str:
+def _format_section_html(title: str, items: list[dict], accent: str = ACCENT_DOMESTIC) -> str:
+    # 섹션 제목 왼쪽에 축 색상 컬러바를 둬서(border-left) 국내/해외를 스크롤
+    # 중에도 색으로 바로 구분할 수 있게 함(2026-07-30).
+    title_html = (f'<h3 style="font-size:16px; color:#222; margin:20px 0 10px 0; '
+                  f'padding-left:10px; border-left:4px solid {accent};">{_escape(title)}</h3>')
     if not items:
-        return f'<h3 style="font-size:16px; color:#222; margin:20px 0 8px 0;">{_escape(title)}</h3><p style="color:#999; font-size:13px;">(이번 주 이슈 없음)</p>'
+        return f'{title_html}<p style="color:#999; font-size:13px;">(이번 주 이슈 없음)</p>'
     # items는 scorer.score_and_rank()가 이미 점수순으로 정렬해둔 상태 - 그 순서
     # 그대로 1부터 번호만 매기면 됨(2026-07-28, 순위 번호 표시 추가).
-    body = "".join(_format_issue_html(item, rank=i) for i, item in enumerate(items, start=1))
-    return f'<h3 style="font-size:16px; color:#222; margin:20px 0 8px 0;">{_escape(title)}</h3>{body}'
+    body = "".join(_format_issue_html(item, rank=i, accent=accent) for i, item in enumerate(items, start=1))
+    return f'{title_html}{body}'
 
 
-def _format_category_html(label: str, by_category: dict[str, list[dict]]) -> str:
+def _format_category_html(label: str, by_category: dict[str, list[dict]],
+                           accent: str = ACCENT_DOMESTIC, accent_tint: str = ACCENT_DOMESTIC_TINT) -> str:
     if not by_category:
         return ""
     blocks = []
     for category, items in by_category.items():
-        blocks.append(f'<h4 style="font-size:13px; color:#555; margin:14px 0 6px 0;">[{_escape(category)}]</h4>')
+        # 대괄호 텍스트("[질병명]") 대신 알약(pill) 모양 태그로 - 참고한
+        # 뉴스레터 시안의 태그 느낌을 레이아웃만 차용(2026-07-30).
+        tag_html = (f'<span style="display:inline-block; padding:3px 12px; border-radius:12px; '
+                    f'background:{accent_tint}; color:{accent}; font-size:12px; font-weight:bold; '
+                    f'margin:14px 0 8px 0;">{_escape(category)}</span>')
+        blocks.append(f'<div>{tag_html}</div>')
         # 카테고리별로 별도의 Top N이므로, 전체 순위가 아니라 그 카테고리 안에서
         # 1부터 다시 매김(2026-07-28, 순위 번호 표시 추가).
-        blocks.append("".join(_format_issue_html(item, rank=i) for i, item in enumerate(items, start=1)))
-    return f'<h3 style="font-size:16px; color:#222; margin:24px 0 8px 0;">{_escape(label)} - 카테고리별 Top N</h3>{"".join(blocks)}'
+        blocks.append("".join(_format_issue_html(item, rank=i, accent=accent) for i, item in enumerate(items, start=1)))
+    title_html = (f'<h3 style="font-size:16px; color:#222; margin:24px 0 8px 0; '
+                  f'padding-left:10px; border-left:4px solid {accent};">{_escape(label)} - 카테고리별 Top N</h3>')
+    return f'{title_html}{"".join(blocks)}'
 
 
 def _format_category_comparison_html(category_comparison: dict[str, dict[str, dict]] | None) -> str:
@@ -117,25 +164,46 @@ def _format_category_comparison_html(category_comparison: dict[str, dict[str, di
     category_aggregator.compare_with_last_week()의 결과를 이메일 상단에
     넣을 HTML로 만든다. storage._format_category_comparison_section
     (summary.md용)과 같은 정보, 렌더링 형식만 HTML.
+
+    ** 표(table)로 전환한 이유(2026-07-30) **: 기존엔 불릿 리스트라
+    "카테고리: N건 (지난주 M건, +/-D)" 문장을 매번 다 읽어야 증감을
+    파악할 수 있었음. 참고한 뉴스레터 시안의 가격 동향 표처럼 열을
+    맞춰서 숫자만 보고도 한눈에 비교되게 함 - 내용(수치)은 그대로,
+    표현 방식만 표로 바꾼 것.
     """
     if not category_comparison:
         return ""
-    blocks = ['<h3 style="font-size:16px; color:#222; margin:20px 0 8px 0;">카테고리별 지난주 대비 증감</h3>']
+    axis_accent = {"국내": ACCENT_DOMESTIC, "해외": ACCENT_INTL}
+    blocks = ['<h3 style="font-size:16px; color:#222; margin:20px 0 10px 0;">카테고리별 지난주 대비 증감</h3>']
     for axis in ("국내", "해외"):
         axis_data = category_comparison.get(axis, {})
         if not axis_data:
             continue
+        accent = axis_accent[axis]
         rows = []
         for category, values in axis_data.items():
             delta = values["delta"]
             sign = "+" if delta >= 0 else ""
             color = "#1a7f37" if delta > 0 else ("#c0392b" if delta < 0 else "#888")
             rows.append(
-                f'<li style="margin:2px 0;">{_escape(category)}: {values["this_week"]}건 '
-                f'(지난주 {values["last_week"]}건, <span style="color:{color};">{sign}{delta}</span>)</li>'
+                f'<tr>'
+                f'<td style="padding:6px 8px; border-bottom:1px solid #f0f0f0; font-size:13px;">{_escape(category)}</td>'
+                f'<td style="padding:6px 8px; border-bottom:1px solid #f0f0f0; font-size:13px; text-align:right;">{values["this_week"]}건</td>'
+                f'<td style="padding:6px 8px; border-bottom:1px solid #f0f0f0; font-size:13px; text-align:right; color:#999;">{values["last_week"]}건</td>'
+                f'<td style="padding:6px 8px; border-bottom:1px solid #f0f0f0; font-size:13px; text-align:right; '
+                f'color:{color}; font-weight:bold;">{sign}{delta}</td>'
+                f'</tr>'
             )
-        blocks.append(f'<p style="margin:8px 0 2px 0; font-weight:bold; font-size:13px;">{axis}</p>')
-        blocks.append(f'<ul style="margin:0 0 8px 0; padding-left:18px; font-size:13px;">{"".join(rows)}</ul>')
+        blocks.append(
+            f'<p style="margin:10px 0 4px 0; font-weight:bold; font-size:13px; color:{accent};">{axis}</p>'
+            f'<table style="width:100%; border-collapse:collapse; margin-bottom:8px;">'
+            f'<tr style="background:#fafafa;">'
+            f'<th style="text-align:left; padding:6px 8px; font-size:11px; color:#888;">카테고리</th>'
+            f'<th style="text-align:right; padding:6px 8px; font-size:11px; color:#888;">이번 주</th>'
+            f'<th style="text-align:right; padding:6px 8px; font-size:11px; color:#888;">지난주</th>'
+            f'<th style="text-align:right; padding:6px 8px; font-size:11px; color:#888;">증감</th>'
+            f'</tr>{"".join(rows)}</table>'
+        )
     return "".join(blocks)
 
 
@@ -151,18 +219,37 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     category_comparison(지난주 대비 증감)이 있으면 제목 바로 아래에 추가 -
     "이번 주 큰 흐름"을 이슈 목록보다 먼저 보여주는 구성(summary.md와
     동일한 배치 원칙).
+
+    ** 전체 레이아웃 개편(2026-07-30) **: 담당자가 참고용으로 공유한 업계
+    뉴스레터 시안(GBT_DOC)을 보고 "본문 재현은 저작권 때문에 안 되지만,
+    레이아웃/색상 같은 포맷은 참고해도 된다"는 원칙으로 반영. 로고 없이
+    색상 배너 + 타이틀 텍스트로 "정식 발행물" 느낌만 내고, 바깥은 옅은
+    회색 배경 위에 흰색 콘텐츠 카드를 얹는 구조로 바꿈(이메일 자체가
+    하나의 카드처럼 보이게). 콘텐츠는 100% 그대로, 표현 방식만 바뀜.
     """
+    header_html = f"""
+    <div style="background:{HEADER_BG}; padding:26px 28px; border-radius:10px 10px 0 0;">
+      <p style="margin:0; font-size:11px; letter-spacing:2px; color:#9fc0ff; font-weight:bold;">NEWSLETTER</p>
+      <h1 style="margin:6px 0 0 0; font-size:21px; color:#fff; font-weight:bold;">사료·축산업 뉴스 큐레이션</h1>
+      <p style="margin:5px 0 0 0; font-size:13px; color:#c9dcff;">{_escape(week_label)}</p>
+    </div>
+    """
+
     parts = [
+        # 바깥 배경(옅은 회색) - 흰색 콘텐츠 카드가 그 위에 얹힌 것처럼 보이게 함
         '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Arial, sans-serif; '
-        'max-width:640px; margin:0 auto; padding:20px; color:#333;">',
-        f'<h2 style="font-size:20px; margin:0 0 4px 0;">사료·축산업 뉴스 큐레이션 - {_escape(week_label)}</h2>',
+        'background:#f2f4f7; padding:24px 0;">',
+        '<div style="max-width:640px; margin:0 auto; background:#fff; border-radius:10px; '
+        'overflow:hidden; border:1px solid #e5e5e5;">',
+        header_html,
+        '<div style="padding:24px 28px; color:#333;">',
         _format_category_comparison_html(category_comparison),
     ]
 
-    parts.append(_format_section_html("국내", domestic_summarized))
-    parts.append(_format_category_html("국내", domestic_by_category))
-    parts.append(_format_section_html("해외", international_summarized))
-    parts.append(_format_category_html("해외", international_by_category))
+    parts.append(_format_section_html("국내", domestic_summarized, accent=ACCENT_DOMESTIC))
+    parts.append(_format_category_html("국내", domestic_by_category, accent=ACCENT_DOMESTIC, accent_tint=ACCENT_DOMESTIC_TINT))
+    parts.append(_format_section_html("해외", international_summarized, accent=ACCENT_INTL))
+    parts.append(_format_category_html("해외", international_by_category, accent=ACCENT_INTL, accent_tint=ACCENT_INTL_TINT))
 
     if failed_sources:
         parts.append(
@@ -170,7 +257,18 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
             f'참고 - 이번 실행에서 실패한 소스: {_escape(", ".join(failed_sources))}</p>'
         )
 
-    parts.append("</div>")
+    # 푸터 - 기존엔 아예 없었음. "자동 발송" 안내 정도는 정식 뉴스레터에
+    # 보통 있는 요소라 추가(2026-07-30). 발송 시각 등은 아직 안 넣음 -
+    # 필요해지면 추가 가능.
+    parts.append(
+        '<p style="margin-top:28px; padding-top:16px; border-top:1px solid #eee; '
+        'font-size:11px; color:#aaa; text-align:center;">'
+        '이 메일은 사료·축산업 뉴스 큐레이션 시스템이 매주 자동으로 발송합니다.</p>'
+    )
+
+    parts.append('</div>')  # 콘텐츠 padding div 닫기
+    parts.append('</div>')  # 흰색 카드 div 닫기
+    parts.append('</div>')  # 바깥 배경 div 닫기
     return "".join(parts)
 
 
@@ -243,8 +341,11 @@ if __name__ == "__main__":
     html_out = render_email_html("2026-30", sample_domestic, [], sample_category, {}, ["GDELT"])
     assert "구제역 확산" in html_out
     assert "테스트 요약입니다" in html_out
-    assert "[질병명]" in html_out
+    assert "질병명" in html_out  # 2026-07-30: "[질병명]" 대괄호 -> pill 태그로 형식 변경, 텍스트 자체는 유지
     assert "GDELT" in html_out
+    assert "NEWSLETTER" in html_out  # 2026-07-30 신규: 헤더 배너
+    assert "매주 자동으로 발송" in html_out  # 2026-07-30 신규: 푸터
+    assert ACCENT_DOMESTIC in html_out and ACCENT_INTL in html_out  # 국내/해외 색상 반영 확인
     print("[deploy] HTML 렌더링 자체 점검 통과")
 
     # 인증정보 없을 때 안전하게 생략되는지 확인
