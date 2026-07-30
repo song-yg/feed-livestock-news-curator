@@ -22,6 +22,8 @@ API 키가 없거나 LLM 호출/응답이 실패해도 요약을 생략하고 �
 import os
 
 import requests
+import trafilatura
+from trafilatura.settings import use_config as _trafilatura_use_config
 
 import issue_grouper as _ig  # LLM_PROVIDER, 모델명, API URL, X-Title 상수 재사용 (위 docstring 참고)
 
@@ -44,6 +46,42 @@ _MAX_TITLES_IN_PROMPT = 10
 # 참고 컨텍스트(본문 발췌/description)도 기사 몇 건까지만 볼지 상한
 _MAX_CONTEXT_ARTICLES = 5
 _MAX_BODY_EXCERPT_CHARS = 300
+
+# --- 재료 부족 기사 본문 추가 수집 (2026-07-28, 담당자 요청 + 같은 날 확장) ---
+#
+# 네이버/GDELT는 본문을 아예 못 가져와서(주요 문장/메타데이터만) "재료
+# 부족"인 경우가 대부분이었다. 처음엔 단독 기사(그룹 크기 1)에서만
+# 시도했는데, 네이버는 "주요 문장"만 주는 짧은 스니펫이라 같은 이슈를
+# 네이버 기사 여러 건이 다뤄서 그룹이 됐어도(예: 3건) 그룹 전체를
+# 통틀어 재료가 다 얇은 경우가 실제로 있어서(담당자 확인), 그룹 크기와
+# 무관하게 재료 부족이면 시도하도록 확장함. WATT처럼 사이트 구조를
+# 하드코딩한 전용 스크레이퍼를 만들 수도 있지만, 네이버/GDELT는 매번 다른
+# 언론사 사이트로 연결되기 때문에(WATT는 사이트 하나 고정) 사이트마다
+# 전용 스크레이퍼를 만드는 건 현실적이지 않다고 판단.
+#
+# 대신 trafilatura(범용 본문 추출 라이브러리)로 "일단 시도라도" 해본다.
+# 사이트별 맞춤 셀렉터 없이 페이지에서 본문으로 보이는 영역을 추측해서
+# 뽑아주는 방식이라 성공률은 사이트마다 들쭉날쭉하다(광고/관련기사를
+# 본문으로 착각하거나, JS로 내용을 그리는 사이트는 애초에 못 뽑음 -
+# trafilatura는 순수 HTTP 요청 방식이라 WATT가 403 먹혀서 Playwright로
+# 바꿨던 것과 같은 부류의 사이트는 여기서도 막힐 수 있음). 실패해도
+# 기존처럼 "재료 부족 -> 요약 생략(단독 기사) 또는 있는 재료로 진행(그룹)"
+# 으로 안전하게 fallback하니 지금보다 나빠지는 경우는 없음 - 담당자도 이
+# 트레이드오프를 감수하기로 결정함(전용 스크레이퍼 vs 범용 추출 중 범용
+# 선택).
+#
+# 비용/부담 통제를 위해 "재료 부족 판정이 실제로 난 시점"에만, 그것도
+# 이미 순위(Top N)로 추려진 기사에 대해서만, 그룹이어도 대표 기사 1건만
+# 시도한다(summarize_top_issues 호출 시점엔 이미 main.py의 TOP_N으로
+# 걸러진 상태 - 전체 수집분 수백 건에 대해 매번 시도하는 게 아님).
+_BODY_FETCH_TIMEOUT_SECONDS = 10
+_BODY_FETCH_MIN_LENGTH = 200  # has_substantial_material의 본문 기준과 동일
+
+# trafilatura 기본 타임아웃(30초)은 Top N 몇 건에 대해서만 시도한다 해도
+# 사이트가 응답 없이 매달리면 그만큼 전체 실행이 늘어질 수 있어, 위
+# 상수값으로 짧게 맞춰둔다.
+_TRAFILATURA_CONFIG = _trafilatura_use_config()
+_TRAFILATURA_CONFIG.set("DEFAULT", "DOWNLOAD_TIMEOUT", str(_BODY_FETCH_TIMEOUT_SECONDS))
 
 
 def _build_user_prompt(item: dict) -> str:
@@ -210,6 +248,27 @@ def _is_suspicious_summary(text: str) -> bool:
     return "user safety" in text.lower()
 
 
+def _fetch_body_via_trafilatura(url: str) -> str | None:
+    """
+    주어진 URL에서 범용으로 본문을 추출 시도한다. 사이트별 맞춤 셀렉터가
+    없어서 성공률은 사이트마다 다르다 - 위 상수 선언부의 트레이드오프
+    설명 참고. 실패(다운로드 실패/추출 실패/타임아웃/예외)하면 조용히
+    None을 반환한다 - 호출부가 기존 "재료 부족" 경로로 안전하게 흡수한다.
+    """
+    try:
+        downloaded = trafilatura.fetch_url(url, no_ssl=True, config=_TRAFILATURA_CONFIG)
+    except Exception:
+        return None
+    if not downloaded:
+        return None
+    try:
+        extracted = trafilatura.extract(downloaded, favor_precision=True, include_comments=False,
+                                         include_tables=False)
+    except Exception:
+        return None
+    return extracted or None
+
+
 def summarize_issue(item: dict, session: requests.Session | None = None) -> dict:
     """
     이슈 하나(scorer.score_group() 결과 dict)에 (A)/(A-1) 로직을 적용해
@@ -226,30 +285,62 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     """
     result = dict(item)
     titles = item.get("titles", [])
+    articles = item.get("articles", [])
+    item_for_prompt = item  # 기본은 원본 그대로 - 본문 추가 수집 성공 시에만 아래서 교체
 
     # (A-1) 얇은 재료 fallback: 이슈 그룹핑이 안 되고
-    # (그룹 크기 1) 언론사 1곳만 보도한 단독 기사라도, 실제로 요약할 재료가
-    # 있으면(예: WATT는 본문 전체를 긁어오므로 body가 충분히 김) 굳이
-    # 생략할 이유가 없다 - 재료가 얇아서 생략하는 거지, "단독 기사"라서
-    # 생략하는 게 아니다. GDELT는 스펙상 body/description이 아예 없고,
-    # 네이버는 description은 있지만 짧은 스니펫뿐이라 대부분 이 기준에
-    # 못 미침 - 결과적으로 WATT 단독 기사만 예외적으로 요약이 생성된다.
-    if len(titles) == 1:
-        article = item.get("articles", [{}])[0] if item.get("articles") else {}
-        body = article.get("body") or ""
-        description = article.get("description") or ""
-        # 잠정값 - 이 정도는 돼야 "제목을 그대로 풀어쓰는 것"을 넘어서는
-        # 실질적 요약이 가능하다고 봄(짧은 스니펫 한두 줄로는 어차피 제목과
-        # 큰 차이 없는 재요약이 나올 뿐이라 기존처럼 생략하는 게 안전).
-        has_substantial_material = len(body) >= 200 or len(description) >= 50
-        if not has_substantial_material:
-            result["summary"] = None
-            result["summary_skipped_reason"] = (
-                "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, "
-                "원문 제목만 노출"
-            )
-            return result
-        # 재료(본문 등)가 충분하면 단독 기사여도 아래 정상 요약 경로로 진행
+    # (그룹 크기 1) 언론사 1곳만 보도한 단독 기사면, 실제로 요약할 재료가
+    # 없을 때 생략한다 - 재료가 얇아서 생략하는 거지, "단독 기사"라서
+    # 생략하는 게 아니다. 그룹(여러 언론사가 같이 보도)은 재료가 얇아도
+    # 스킵하지 않고 있는 재료로나마 요약을 시도한다(기존 동작 그대로).
+    #
+    # ** 재료 부족 판정과 trafilatura 보강 시도는 그룹 크기 무관 (2026-07-28
+    # 확장) ** 처음엔 단독 기사(titles==1)에서만 시도했는데, 네이버는
+    # "주요 문장"만 주는 짧은 스니펫이라 같은 이슈를 여러 네이버 기사가
+    # 다뤄서 그룹이 여러 건이어도(예: 3건) 그룹 전체를 통틀어 재료가
+    # 다 얇은 경우가 실제로 있었다(담당자 확인) - "그룹이니까 재료가
+    # 충분하다"고 볼 수 없었음. 그래서 재료 충분 여부 판정과 trafilatura
+    # 보강 시도는 그룹 크기와 무관하게 항상 하되, "재료 부족하면 아예
+    # 스킵"하는 건 여전히 단독 기사(titles==1)에서만 적용한다 - 그룹은
+    # 원래도 재료가 얇아도 스킵 안 하던 동작이라 그 부분은 안 건드림.
+    has_substantial_material = any(
+        len(a.get("body") or "") >= 200 or len(a.get("description") or "") >= 50
+        for a in articles
+    )
+
+    if not has_substantial_material:
+        # 대표 기사(첫 번째) 하나만 보강 시도 - 그룹 안 기사를 전부 긁으면
+        # 순위(Top N) x 그룹 크기만큼 호출이 늘어나 비용 통제가 안 됨.
+        # 대표 기사 하나만 채워도 _build_user_prompt가 참고할 재료로는
+        # 충분하다고 판단(다른 3차 로직도 대표 기사 하나로 판단하는 것과
+        # 같은 전제).
+        article = articles[0] if articles else {}
+        url = article.get("url") or (item.get("urls", [None])[0] if item.get("urls") else None)
+        if url:
+            label = "단독 기사" if len(titles) == 1 else f"그룹({len(titles)}건)"
+            print(f"[llm_summarizer] 🟡 주의 [LS-06] - {label} 재료 부족 - 본문 추가 수집 시도: {url}")
+            fetched_body = _fetch_body_via_trafilatura(url)
+            if fetched_body and len(fetched_body) >= _BODY_FETCH_MIN_LENGTH:
+                print(f"[llm_summarizer] 본문 추가 수집 성공({len(fetched_body)}자) - 요약 진행: {url}")
+                has_substantial_material = True
+                # item은 원본이라 직접 안 건드리고, 프롬프트 생성에만 쓸
+                # 얕은 복사본을 따로 만든다(함수 docstring의 "원본 미변경"
+                # 약속 유지).
+                enriched_article = dict(article)
+                enriched_article["body"] = fetched_body
+                item_for_prompt = dict(item)
+                item_for_prompt["articles"] = [enriched_article] + articles[1:]
+
+    if len(titles) == 1 and not has_substantial_material:
+        result["summary"] = None
+        result["summary_skipped_reason"] = (
+            "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, "
+            "원문 제목만 노출 (범용 본문 추가 수집도 실패/미시도)"
+        )
+        return result
+    # 재료(본문 등)가 충분하면(원래 있었거나, 방금 보강했거나) 단독
+    # 기사여도 아래 정상 요약 경로로 진행. 그룹은 재료가 여전히 부족해도
+    # (위에서 skip 안 하므로) 이 시점 이후로 그대로 진행한다.
 
     key_env_var = "OPENROUTER_API_KEY" if _ig.LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
@@ -260,7 +351,7 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
         )
         return result
 
-    user_prompt = _build_user_prompt(item)
+    user_prompt = _build_user_prompt(item_for_prompt)
     if session is not None:
         summary_text = _call_llm(_SYSTEM_PROMPT, user_prompt, api_key, session)
     else:

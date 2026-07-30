@@ -1,575 +1,589 @@
 {
-  "generated_at": "2026-07-28T07:34:49.243184+00:00",
+  "generated_at": "2026-07-29T08:59:11.752367+00:00",
   "domestic": [
     {
-      "issue_score": 12.5,
-      "mention_count": 23,
-      "raw_mention_count": 25,
+      "issue_score": 29.0,
+      "mention_count": 29,
+      "raw_mention_count": 29,
       "titles": [
-        "논에서도 잘 자라는 여름 풀사료 '사료피'… 신품종 개발로 자급률 높인...",
-        "'여름철 논에서 잘 자라요'…사료피 주목",
-        "\"폭염과 장마에도 끄떡없다\"…여름철 풀사료 '만온'",
-        "농진청, 여름철 풀사료 '사료피' 논 활용 높이고 자급기반 넓힌다",
-        "장마에 강한 여름철 풀사료 개발",
-        "여름철 풀사료 '사료피' 주목…논 활용 높이고 자급기반 넓힌다",
-        "여름철 풀사료 ‘사료피’ 논 활용도 높이고 자급기반 넓힌다",
-        "더위-습기강한 풀사료 작물 '사료피' 새품종 개발",
-        "농진청, 논 재배용 '사료피' 신품종 개발",
-        "“무더위·장마에도 잘 버텨”…만생종 사료피 ‘만온’ 개발",
-        "경제성·생산성 높인 논 재배용 '사료피' 개발 … 풀사료 자급 확대",
-        "논에서 잘 자라는 '사료피'…풀사료 자급 확대 나선다",
-        "농진청, 논에서 잘 자라는 하계 사료피 개발…\"벼 대신 재배시 농가소득...",
-        "수입 조사료 의존 낮춘다…농진청, 사료피 신품종 개발",
-        "논에서도 잘 자라는 여름철 풀사료 ‘사료피’…“경제성·생산성 효과...",
-        "농진청, 논 풀사료 '사료피' 신품종 개발…자급률 제고",
-        "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
-        "사료풀 '만온' 품종 개발 발표하는 조용민 국립축산과학원장",
-        "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
-        "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
-        "국립축산과학원, 만생종 '만온' 품종 개발 발표",
-        "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
-        "논에 벼 대신 풀 심는다…'사료피'가 전략작물 새 카드로",
-        "[현장인터뷰] 조용민 국립축산과학원장",
-        "논에서도 잘 자라는 ‘사료피’ 나왔다…여름철 풀사료 자급 확대 기대"
+        "대동, '국가 농업AX플랫폼 구축·운영 사업' 본격 착수",
+        "대동, 20년간 1조5300억원 규모 농업AX 사업모델 구축",
+        "대동, '국가 농업AX플랫폼' 이끈다…20년간 1.53조 사업모델 구축",
+        "대동, 농식품부 '국가 농업AX플랫폼' 사업 최종 사업자 선정",
+        "대동, 국가 농업 AX 이끈다…20년 장기 사업모델 만든다",
+        "대동, 국가 농업AX플랫폼 사업 수주...\"K-AI 농업 표준모델 구축\"",
+        "대동, ‘국가 농업AX플랫폼’ 이끈다…20년간 1.53조 사업모델 구축",
+        "대동, 국가 농업AX플랫폼 사업자 낙점…LG CNS 등 컨소시엄",
+        "대동 \"국가 농업AX 플랫폼 구축 주도 ··· 장기 사업 모델 마련\"",
+        "대동, ‘국가 농업 AX플랫폼’ 주도",
+        "[더벨][i-point] 대동, ‘국가 농업AX플랫폼 사업' 최종 사업자 선정",
+        "대동, 국가 농업 AX 플랫폼 사업자 선정…AI 온실·로봇 연계",
+        "대동, '국가 농업AX플랫폼 구축·운영 사업' 최종 사업자 선정",
+        "대동, 국가 농업 AI전환 플랫폼 사업 맡는다…20년간 1.5조 사업모델 추...",
+        "대동, 국가 농업AX플랫폼 사업자로 선정…AI 농업 표준모델 구축",
+        "대동, '국가 농업AX플랫폼' 사업자로 선정…\"1.5조원 매출 창출\"",
+        "대동, '국가 농업AX플랫폼' 이끈다…20년간 1.53조 사업모델 구축",
+        "대동, 국가 농업AX플랫폼 최종 사업자 선정 '쾌거'",
+        "대동, '국가 농업AX플랫폼' 구축 나서…\"20년간 1.5조 사업모델 계획\"",
+        "민관 합작 농업AX 구축…대동, 2546억 규모 '국가 농업AX플랫폼' 수주",
+        "대동, ‘국가 농업AX플랫폼’ 사업자 선정…AI 농업 표준모델 구축 나선...",
+        "대동, 국가 농업 AX플랫폼 구축·운영 최종 사업자 선정",
+        "대동, '국가 농업AX플랫폼' 구축 나서…\"20년간 1.5조 사업모델 계획\"",
+        "대동, '국가 농업AX플랫폼' 맡는다",
+        "대동, 국가 농업AX플랫폼 사업자 선정…20년간 1.5조 매출 목표",
+        "2546억 국가 AI 농업사업 따냈다…대동, 농업AX 플랫폼 구축",
+        "미래농업 준비한 대동, K농업 AI 대전환 이끈다",
+        "대동, '국가 농업AX플랫폼' 이끈다…20년간 1.53조 사업모델 구축",
+        "대동, '국가 농업AX 플랫폼' 맡는다…농기계 기업 넘어 AI 플랫폼 기업 ..."
       ],
       "urls": [
-        "http://www.youngnong.co.kr/news/articleView.html?idxno=61190",
-        "https://www.obsnews.co.kr/news/articleView.html?idxno=1531895",
-        "http://news.lghellovision.net/news/articleView.html?idxno=549270",
-        "https://www.kenews.co.kr/news/article.html?no=89712",
-        "https://www.naeil.com/news/read/596230?ref=naver",
-        "https://www.farmnmarket.com/news/article.html?no=27195",
-        "https://www.newsam.co.kr/news/article.html?no=43554",
-        "http://www.jjn.co.kr/news/articleView.html?idxno=1047249",
-        "https://www.asiatoday.co.kr/kn/view.php?key=20260722010007983",
-        "https://www.nongmin.com/article/20260722500076",
-        "https://biz.newdaily.co.kr/site/data/html/2026/07/22/2026072200209.html",
-        "https://news.tf.co.kr/read/economy/2345859.htm",
-        "https://view.asiae.co.kr/article/2026072214075694660",
-        "https://www.etnews.com/20260722000220",
-        "https://www.mediapen.com/news/view/1111503",
-        "https://www.newsis.com/view/NISX20260722_0003718640",
-        "https://www.news1.kr/photos/8019830",
-        "https://www.news1.kr/photos/8019829",
-        "https://www.news1.kr/photos/8019831",
-        "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
-        "https://www.news1.kr/photos/8019828",
-        "https://www.news1.kr/photos/8019832",
-        "https://www.mt.co.kr/economy/2026/07/23/2026072213341472182",
-        "http://www.amnews.co.kr/news/articleView.html?idxno=73612",
-        "https://biz.heraldcorp.com/article/10815810?ref=naver"
+        "http://www.amnews.co.kr/news/articleView.html?idxno=73713",
+        "https://www.ddaily.co.kr/page/view/2026072818483124981",
+        "https://www.etnews.com/20260728000368",
+        "https://daily.hankooki.com/news/articleView.html?idxno=1390324",
+        "https://www.newspim.com/news/view/20260728000990",
+        "http://www.paxetv.com/news/articleView.html?idxno=278068",
+        "https://www.mk.co.kr/article/12109495",
+        "https://www.digitaltoday.co.kr/news/articleView.html?idxno=687661",
+        "https://www.datanet.co.kr/news/articleView.html?idxno=213367",
+        "https://biz.heraldcorp.com/article/10823087?ref=naver",
+        "https://www.thebell.co.kr/free/content/ArticleView.asp?key=202607281347264720106714",
+        "https://www.etoday.co.kr/news/view/2608351",
+        "https://www.newsam.co.kr/news/article.html?no=43598",
+        "https://www.smarttoday.co.kr/ko-kr/articles/109883",
+        "https://www.socialvalue.kr/news/view/1065586582429068",
+        "https://www.yna.co.kr/view/AKR20260728103900030?input=1195m",
+        "https://www.irobotnews.com/news/articleView.html?idxno=47642",
+        "https://news.tf.co.kr/read/economy/2347843.htm",
+        "https://www.widedaily.com/news/articleView.html?idxno=298290",
+        "https://www.m-i.kr/news/articleView.html?idxno=1396171",
+        "https://biz.chosun.com/industry/business-venture/2026/07/28/JULQMKRNGNH7ZEJYK4I7LX4UUY/?utm_source=naver&utm_medium=original&utm_campaign=biz",
+        "http://www.inews24.com/view/1989458",
+        "https://www.newsis.com/view/NISX20260728_0003726379",
+        "https://www.sentv.co.kr/article/view/sentv202607280103",
+        "https://www.mt.co.kr/living/2026/07/28/2026072813390396199",
+        "https://www.news1.kr/industry/general-industry/6241321",
+        "https://www.shinailbo.co.kr/news/articleView.html?idxno=5045327",
+        "https://www.aitimes.kr/news/articleView.html?idxno=41202",
+        "https://news.mtn.co.kr/news-detail/2026072812400147261"
       ],
       "press_list": [
+        "aitimes.kr",
         "amnews.co.kr",
-        "asiatoday.co.kr",
+        "biz.chosun.com",
         "biz.heraldcorp.com",
-        "biz.newdaily.co.kr",
-        "dailian.co.kr",
+        "daily.hankooki.com",
+        "datanet.co.kr",
+        "ddaily.co.kr",
+        "digitaltoday.co.kr",
         "etnews.com",
-        "farmnmarket.com",
-        "jjn.co.kr",
-        "kenews.co.kr",
-        "mediapen.com",
+        "etoday.co.kr",
+        "inews24.com",
+        "irobotnews.com",
+        "m-i.kr",
+        "mk.co.kr",
         "mt.co.kr",
-        "naeil.com",
-        "news.lghellovision.net",
+        "news.mtn.co.kr",
         "news.tf.co.kr",
         "news1.kr",
         "newsam.co.kr",
         "newsis.com",
-        "nongmin.com",
-        "obsnews.co.kr",
-        "view.asiae.co.kr",
-        "youngnong.co.kr"
+        "newspim.com",
+        "paxetv.com",
+        "sentv.co.kr",
+        "shinailbo.co.kr",
+        "smarttoday.co.kr",
+        "socialvalue.kr",
+        "thebell.co.kr",
+        "widedaily.com",
+        "yna.co.kr"
       ],
       "cross_axis_partner": null,
-      "summary": "농촌진흥청 국립축산과학원이 논 재배에 적합한 만생종 사료피 신품종 '만온(Manon)'을 개발해 폭염과 장마에도 안정적인 수확이 가능해졌다. 이 품종은 동계 풀사료와 이모작이 가능해 논 한 곳에서 연중 풀사료를 생산할 수 있으며, 쌀 수급 안정과 국내 풀사료 자급률 향상에 기여할 것으로 기대된다. 농진청은 체계적인 종자 증식과 보급을 통해 현장 안착을 추진할 계획이다.",
-      "summary_skipped_reason": null
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
+    },
+    {
+      "issue_score": 13.0,
+      "mention_count": 13,
+      "raw_mention_count": 13,
+      "titles": [
+        "충남도 빈번한 축사 화재, AI·로봇으로 잡는다.",
+        "축사 화재, AI·로봇이 잡는다… 충남도, '5년간 280건' 악순환 끊는다",
+        "충남도 \"축사 화재, AI·로봇으로 잡는다\"",
+        "충남도, 축사 화재 AI·로봇으로 막는다…25억 투입 실증 추진",
+        "[통하는 충남] 빈번한 축사 화재, AI·로봇으로 잡는다",
+        "빈번한 축사 화재, AI·로봇으로 잡는다",
+        "충남도, AI·로봇 활용 축사 화재 대응체계 개발",
+        "충남도, 빈번한 축사 화재, AI·로봇으로 잡는다",
+        "‘축사 화재, AI·로봇으로’…충남도, 행안부 공모 선정",
+        "AI가 불꽃 찾고 로봇이 끈다…충남도, 축사 화재 잡는 통합망 구축",
+        "빈번한 축사 화재, AI·로봇으로 잡는다",
+        "충남도 \"축사 불 나면 AI가 정밀 살수·탈출로 안내\"",
+        "빈번한 축사 화재, AI·로봇이 파수꾼"
+      ],
+      "urls": [
+        "https://www.ccdn.co.kr/news/articleView.html?idxno=1090909",
+        "https://www.shinailbo.co.kr/news/articleView.html?idxno=5045884",
+        "https://www.dynews.co.kr/news/articleView.html?idxno=859728",
+        "https://www.aflnews.co.kr/news/articleView.html?idxno=325441",
+        "https://www.kukinews.com/article/view/kuk202607290119",
+        "http://www.cctimes.kr/news/articleView.html?idxno=919060",
+        "https://www.jeonmae.co.kr/news/articleView.html?idxno=1278974",
+        "https://www.ccdailynews.com/news/articleView.html?idxno=2430919",
+        "https://www.kmib.co.kr/article/view.asp?arcid=0030177361&code=61121111&cp=nv",
+        "http://www.inews24.com/view/1989763",
+        "http://www.chungnamilbo.co.kr/news/articleView.html?idxno=901096",
+        "https://www.news1.kr/local/daejeon-chungnam/6242247",
+        "https://biz.heraldcorp.com/article/10823678?ref=naver"
+      ],
+      "press_list": [
+        "aflnews.co.kr",
+        "biz.heraldcorp.com",
+        "ccdailynews.com",
+        "ccdn.co.kr",
+        "cctimes.kr",
+        "chungnamilbo.co.kr",
+        "dynews.co.kr",
+        "inews24.com",
+        "jeonmae.co.kr",
+        "kmib.co.kr",
+        "kukinews.com",
+        "news1.kr",
+        "shinailbo.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
+    },
+    {
+      "issue_score": 8.0,
+      "mention_count": 8,
+      "raw_mention_count": 8,
+      "titles": [
+        "청양군, '벼 전면적 동시방제' 전격 돌입",
+        "청양군, 8월 1일부터 '벼 병해충 전면적 동시방제'",
+        "'농가 부담 줄이고 병해충 잡는다'… 청양군, 8월 1일부터 '벼 전면적 동...",
+        "청양군, 8월 1일부터 '벼 병해충 전면 동시방제'",
+        "충남 청양군, 8월 1일부터 '벼 전면적 동시방제' 전격 돌입",
+        "청양군, 8월 1일부터 벼 전면적 동시방제 실시",
+        "청양군, '2026년 벼 병해충 전면적 동시방제' 실시",
+        "청양군, 8월 1일부터 '벼 전면적 동시방제' 전격 돌입"
+      ],
+      "urls": [
+        "http://www.gocj.net/news/articleView.html?idxno=150555",
+        "https://www.ggilbo.com/news/articleView.html?idxno=1171636",
+        "http://www.cctimes.kr/news/articleView.html?idxno=918651",
+        "https://www.newstnt.com/news/articleView.html?idxno=711734",
+        "https://www.ccdn.co.kr/news/articleView.html?idxno=1090322",
+        "https://www.farmnmarket.com/news/article.html?no=27225",
+        "https://www.m-i.kr/news/articleView.html?idxno=1395483",
+        "https://www.ccdailynews.com/news/articleView.html?idxno=2430366"
+      ],
+      "press_list": [
+        "ccdailynews.com",
+        "ccdn.co.kr",
+        "cctimes.kr",
+        "farmnmarket.com",
+        "ggilbo.com",
+        "gocj.net",
+        "m-i.kr",
+        "newstnt.com"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
+    },
+    {
+      "issue_score": 6.2,
+      "mention_count": 11,
+      "raw_mention_count": 11,
+      "titles": [
+        "충남도의회 농수해위, 스마트농업·가축방역 현장 점검",
+        "충남도의회 농해수위, 스마트농업본부·동물위생시험소 점검... 종자·방...",
+        "충남도의회, 축산·수산 현안 점검…입양률 제고·청년농 육성 당부",
+        "충남도의회 농수산해양위, 축산·수산 현장서 도민 체감 정책 점검",
+        "충남도의회 농수산해양위, 기후변화 대응·농어익 소득 증대 주문",
+        "충남도의회 농수산해양위, 축산·수산 현장 점검…“도민 체감 정책 추...",
+        "충남도의회 농해수위, 축산기술연구소·수산자원연구소 점검... 기후대응...",
+        "농수산해양위원회 \"도민 체감형 정책 추진 강력 당부\"",
+        "충남도의회 농수산해양위원회 \"도민 체감형 정책 추진 강력 당부\"",
+        "충남도의회 농수산해양委 \"축산·수산 현장 점검…기후변화·소득정책 ...",
+        "충남도의회 농수해위, 도민 체감형 정책 추진 당부"
+      ],
+      "urls": [
+        "https://www.aflnews.co.kr/news/articleView.html?idxno=325018",
+        "http://www.newsworker.co.kr/news/articleView.html?idxno=437734",
+        "https://www.gukjenews.com/news/articleView.html?idxno=3645788",
+        "https://www.aflnews.co.kr/news/articleView.html?idxno=325126",
+        "http://www.breaknews.com/1224078",
+        "http://www.sisanews24.co.kr/19092",
+        "http://www.newsworker.co.kr/news/articleView.html?idxno=438017",
+        "https://www.ccdailynews.com/news/articleView.html?idxno=2429860",
+        "http://www.dtnews24.com/news/articleView.html?idxno=813563",
+        "https://www.gukjenews.com/news/articleView.html?idxno=3644324",
+        "https://www.kukinews.com/article/view/kuk202607230164"
+      ],
+      "press_list": [
+        "aflnews.co.kr",
+        "breaknews.com",
+        "ccdailynews.com",
+        "dtnews24.com",
+        "gukjenews.com",
+        "kukinews.com",
+        "newsworker.co.kr",
+        "sisanews24.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
+    },
+    {
+      "issue_score": 4.3,
+      "mention_count": 10,
+      "raw_mention_count": 10,
+      "titles": [
+        "당진시 “빗물 타고 유입될라”, 장마철 아프리카돼지열병 차단 총력",
+        "당진시, 장마철 ASF 방역 수칙 홍보 강화",
+        "충남 당진시, 장마철 ASF 위험주의보 발령 양돈농가 차단방역 총력",
+        "당진시, 장마철 ASF 위험주의보 발령",
+        "당진시, 장마철 ASF 차단방역 강화…양돈농가 예찰·점검 확대",
+        "당진시, 폭우·태풍에 ASF 비상... '양돈농가 방역' 총력 대응",
+        "당진시, 장마철 ASF 위험주의보 발령 ··· 양돈농가 차단방역 총력",
+        "장마철 ASF 위험 커져…당진시 차단방역 나서",
+        "장마철 빗물·토양 타고 ASF 유입 위험..당진시, 양돈농가 차단방역 총력",
+        "당진시, 장마철 ASF 위험주의보 발령…양돈농가 차단방역 총력"
+      ],
+      "urls": [
+        "http://www.breaknews.com/1224047",
+        "https://www.newstnt.com/news/articleView.html?idxno=711433",
+        "https://www.ccdn.co.kr/news/articleView.html?idxno=1089799",
+        "https://www.dynews.co.kr/news/articleView.html?idxno=858985",
+        "https://www.m-i.kr/news/articleView.html?idxno=1394512",
+        "http://www.newsworker.co.kr/news/articleView.html?idxno=437859",
+        "https://www.ggilbo.com/news/articleView.html?idxno=1170916",
+        "http://www.djtimes.co.kr/news/articleView.html?idxno=112787",
+        "https://www.idjnews.kr/news/articleView.html?idxno=301769",
+        "http://www.chungnamilbo.co.kr/news/articleView.html?idxno=900071"
+      ],
+      "press_list": [
+        "breaknews.com",
+        "ccdn.co.kr",
+        "chungnamilbo.co.kr",
+        "djtimes.co.kr",
+        "dynews.co.kr",
+        "ggilbo.com",
+        "idjnews.kr",
+        "m-i.kr",
+        "newstnt.com",
+        "newsworker.co.kr"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
+    }
+  ],
+  "international": [
+    {
+      "issue_score": 4.2,
+      "mention_count": 6,
+      "raw_mention_count": 6,
+      "titles": [
+        "Odisha : Puri gears up for Lord Jagannath Bahuda Yatra amid heavy security",
+        "Puri Gears Up For Lord Jagannath Bahuda Yatra Amid Heavy Security",
+        "Puri ready for Bahuda Yatra ; devotees rush for Sandhya Darshan",
+        "Bahuda Yatra begins in Puri amid tight security , lakhs witness deitie procession",
+        "Bahuda Yatra : Chariot pulling begins in Puri",
+        "Puri braces for Bahuda Yatra with tight security"
+      ],
+      "urls": [
+        "https://www.hindustantimes.com/cities/odisha-puri-gears-up-for-lord-jagannath-s-bahuda-yatra-amid-heavy-security-101784865104859.html",
+        "https://www.deccanchronicle.com/nation/odisha-puri-gears-up-for-lord-jagannaths-bahuda-yatra-amid-heavy-security-1973481",
+        "https://timesofindia.indiatimes.com/city/bhubaneswar/puri-ready-for-bahuda-yatra-devotees-rush-for-sandhya-darshan/articleshow/132584041.cms",
+        "https://www.hindustantimes.com/india-news/bahuda-yatra-begins-in-puri-amid-tight-security-lakhs-witness-deities-procession-101784876608355.html",
+        "https://www.orissapost.com/bahuda-yatra-chariot-pulling-begins-in-puri/",
+        "https://www.orissapost.com/puri-braces-for-bahuda-yatra-with-tight-security/"
+      ],
+      "press_list": [
+        "deccanchronicle.com",
+        "hindustantimes.com",
+        "orissapost.com",
+        "timesofindia.indiatimes.com"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
     },
     {
       "issue_score": 3.0,
       "mention_count": 3,
       "raw_mention_count": 3,
       "titles": [
-        "경주시, 산지 휴경농지 활용 '알팔파' 재배 확대",
-        "경주시, 산지 휴경지서 고단백 조사료 키운다...알팔파 자급화 본격 시...",
-        "경주시, 산지 휴경농지 활용 알팔파 재배 확대"
+        "IPS Transfer in UP : यूपी के 15 आईपीएस अधिकारियों का तबदला , लखनऊ - प्रयागराज के बदले कमिश्नर",
+        "IPS Transfers : यूपी में 15 आईपीएस अफसरों के हुए तबादले , तरुण गाबा बने लखनऊ के नए पुलिस कमिश्नर",
+        "यूपी पुलिस में बड़ा फेरबदल : 15 वरिष्ठ IPS अफसरों के तबादले , तरुण गाबा बने लखनऊ के नए पुलिस कमिश्नर"
       ],
       "urls": [
-        "https://www.m-i.kr/news/articleView.html?idxno=1395273",
-        "https://www.hidomin.com/news/articleView.html?idxno=714703",
-        "https://www.kbmaeil.com/article/20260726500106"
+        "https://www.naidunia.com/uttar-pradesh/lucknow-15-ips-officers-of-up-transferred-commissioner-of-lucknow-prayagraj-replaced-see-list-8454187",
+        "https://hindi.pardaphash.com/ips-transfers-15-ips-officers-transferred-in-up-tarun-gaba-appointed-as-the-new-police-commissioner-of-lucknow/",
+        "https://www.tarunmitra.in/state/uttar-pradesh/major-reshuffle-in-up-police-15-senior-ips-officers-transferred/article-155045"
       ],
       "press_list": [
-        "hidomin.com",
-        "kbmaeil.com",
-        "m-i.kr"
-      ],
-      "cross_axis_partner": null,
-      "summary": "경주시가 산지 휴경농지를 활용해 알팔파 재배를 확대하며 축산농가의 사료비 절감과 조사료 자급률 제고에 나섰다. 알팔파는 한 번 파종하면 여러 해 수확 가능한 다년생 작물로 안정적인 조사료 생산 기반 마련에 유리하다. 주낙영 시장은 수입 조사료 의존도를 낮추고 축산농가 생산비 부담을 줄이기 위해 재배 기반을 지속 확대하겠다고 밝혔다.",
-      "summary_skipped_reason": null
-    },
-    {
-      "issue_score": 1.0,
-      "mention_count": 1,
-      "raw_mention_count": 1,
-      "titles": [
-        "고성군, 농어업인수당 선불카드 배부"
-      ],
-      "urls": [
-        "https://www.newsgn.com/news/articleView.html?idxno=564733"
-      ],
-      "press_list": [
-        "newsgn.com"
-      ],
-      "cross_axis_partner": null,
-      "summary": "고성군이 농어업인 경영 안정을 위해 농어업인수당을 선불카드 형태로 지급하기 시작했다. 치솟는 비료값과 사료값으로 인한 농어가의 부담을 덜고 지역 골목상권 활성화에도 기여할 것으로 기대된다. 카드 사용 기한은 2026년 12월 31일까지이다.",
-      "summary_skipped_reason": null
-    },
-    {
-      "issue_score": 1.0,
-      "mention_count": 1,
-      "raw_mention_count": 1,
-      "titles": [
-        "고령성주축협, 선진지 견학 통해 소통·화합 다져"
-      ],
-      "urls": [
-        "https://www.seongjuro.co.kr/news/view.php?idx=60586"
-      ],
-      "press_list": [
-        "seongjuro.co.kr"
-      ],
-      "cross_axis_partner": null,
-      "summary": "고령성주축협이 조합원 간 소통과 화합을 강화하기 위해 선진지 견학을 실시했다. 김영덕 조합장은 소값 하락과 사료값 인상 등 어려운 여건에서도 노력해온 조합원들에게 감사를 전하며, 이번 견학이 조합과 농가의 동반 성장을 위한 내부 결속의 계기가 되길 기대했다.",
-      "summary_skipped_reason": null
-    },
-    {
-      "issue_score": 1.0,
-      "mention_count": 1,
-      "raw_mention_count": 1,
-      "titles": [
-        "[Issue+] ASF 방역 강화 속 돼지 혈장단백질 규제 논란"
-      ],
-      "urls": [
-        "https://www.aflnews.co.kr/news/articleView.html?idxno=325254"
-      ],
-      "press_list": [
-        "aflnews.co.kr"
-      ],
-      "cross_axis_partner": null,
-      "summary": "ASF 방역 강화 조치로 돼지 혈장단백질 사용이 제한되면서 사료 가격 상승과 함께 양돈 현장의 우려가 커지고 있다. 특히 이유(Weaning)기 자돈은 모체 이행 항체 소실로 장관 면역이 급격히 저하되는 시기에 혈장단백질 공급 차질로 인한 피해가 우려된다.",
-      "summary_skipped_reason": null
-    }
-  ],
-  "international": [
-    {
-      "issue_score": 2.0,
-      "mention_count": 2,
-      "raw_mention_count": 2,
-      "titles": [
-        "数润黑土 智兴三江 看黑龙江省智慧农业新实践",
-        "让  数字  说话 用  智能  种养 看我省智慧农业新实践"
-      ],
-      "urls": [
-        "https://www.hljnews.cn/jjny/content/2026-07/26/content_901761.html",
-        "https://www.hljnews.cn/kjjk/content/2026-07/28/content_901955.html"
-      ],
-      "press_list": [
-        "hljnews.cn"
-      ],
-      "cross_axis_partner": null,
-      "summary": "헤이룽장성(Heilongjiang)이 흑토(黑土) 보호와 삼강평원(三江平原) 등지에서 디지털 기술과 지능형 영농·사육(智能种养)을 접목한 스마트 농업(智慧农业) 신규 실천 사례를 추진하고 있다. 데이터 기반 의사결정과 첨단 장비 도입을 통해 농업 생산 효율성과 품질을 높이는 방향의 현장 적용이 확대되는 모습이다.",
-      "summary_skipped_reason": null
-    },
-    {
-      "issue_score": 1.4,
-      "mention_count": 2,
-      "raw_mention_count": 2,
-      "titles": [
-        "连江定海 ： 往昔海防门户 今日海上牧场 _ 福州 _ 新闻频道 _ 福州新闻网",
-        "潮声 | 连江定海 ： 往昔海防门户 今日海上牧场 - 社会"
-      ],
-      "urls": [
-        "https://news.fznews.com.cn/lianjiang/20260724/1QrJ4j9r34.shtml",
-        "http://fjnews.fjsen.com/2026-07/24/content_32224187.htm"
-      ],
-      "press_list": [
-        "fjnews.fjsen.com",
-        "news.fznews.com.cn"
-      ],
-      "cross_axis_partner": null,
-      "summary": "연강(連江) 정해(定海)는 과거 해방(海防)의 요충지였던 곳이 현재 해상 목장(海上牧場)으로 탈바꿈했다. 이 지역은 푸저우(福州) 인근에 위치하며, 역사적 방어 기능에서 현대적 양식·어업 기지로 용도가 전환되었다.",
-      "summary_skipped_reason": null
-    },
-    {
-      "issue_score": 1.0,
-      "mention_count": 1,
-      "raw_mention_count": 1,
-      "titles": [
-        "Kenya wins bid to host World Veterinary Congress , set to boost livestock economy"
-      ],
-      "urls": [
-        "https://www.standardmedia.co.ke/smart-harvest/article/2001553818/kenya-wins-bid-to-host-world-veterinary-congress-set-to-boost-livestock-economy"
-      ],
-      "press_list": [
-        "standardmedia.co.ke"
+        "hindi.pardaphash.com",
+        "naidunia.com",
+        "tarunmitra.in"
       ],
       "cross_axis_partner": null,
       "summary": null,
-      "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출"
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
+    },
+    {
+      "issue_score": 1.7,
+      "mention_count": 2,
+      "raw_mention_count": 2,
+      "titles": [
+        "6 , 000 Join Run For Life Marathon Under Anti - Drug Campaign In Bhopal",
+        "Bhopal Police Organises  Run for Life  Anti - Drug Marathon"
+      ],
+      "urls": [
+        "https://www.freepressjournal.in/bhopal/6000-join-run-for-life-marathon-under-anti-drug-campaign-in-bhopal",
+        "https://www.newkerala.com/news/a/bhopal-police-social-justice-department-organise-run-life-564.htm"
+      ],
+      "press_list": [
+        "freepressjournal.in",
+        "newkerala.com"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
     },
     {
       "issue_score": 1.0,
       "mention_count": 1,
       "raw_mention_count": 1,
       "titles": [
-        "Stakeholders Push for Implementation of Kenya National Agroecology Strategy to Strengthen Food Security – Capital FM Kenya"
+        "Animal feed fraud punished in Bangladesh"
       ],
       "urls": [
-        "https://capitalfm.africa/stakeholders-push-for-implementation-of-kenyas-national-agroecology-strategy-to-strengthen-food-security/"
-      ],
-      "press_list": [
-        "capitalfm.africa"
-      ],
-      "cross_axis_partner": null,
-      "summary": null,
-      "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출"
-    },
-    {
-      "issue_score": 0.7,
-      "mention_count": 1,
-      "raw_mention_count": 1,
-      "titles": [
-        "Rumin8: New compound provides more methane reducing options for producers"
-      ],
-      "urls": [
-        "https://www.feedstrategy.com/sustainability-in-feed-production/carbon-emissions-reduction/news/15830838/rumin8-new-compound-provides-more-methane-reducing-options-for-producers"
+        "https://www.feedstrategy.com/animal-feed-regulations-safety/news/15830999/animal-feed-fraud-punished-in-bangladesh"
       ],
       "press_list": [
         "Feed Strategy"
       ],
       "cross_axis_partner": null,
-      "summary": "호주 스타트업 Rumin8이 반추동물 섭취 후 체내에서만 활성화되는 ‘프로드러그(prodrug)’ 방식의 신물질을 개발해 소의 메탄 배출 저감 옵션을 확대했다. 이 화합물은 섭취 시 비활성 상태였다가 반추위 환경에서 활성화되어 메탄 생성 억제 효과를 낸다.",
-      "summary_skipped_reason": null
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
+    },
+    {
+      "issue_score": 1.0,
+      "mention_count": 1,
+      "raw_mention_count": 1,
+      "titles": [
+        "Positive start to financial year for Cranswick"
+      ],
+      "urls": [
+        "https://www.feedstrategy.com/animal-feed-manufacturing/animal-feed-manufacturers/news/15830922/positive-start-to-year-for-cranswick"
+      ],
+      "press_list": [
+        "Feed Strategy"
+      ],
+      "cross_axis_partner": null,
+      "summary": null,
+      "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
     }
   ],
   "domestic_by_category": {
     "정부·제도 용어": [
       {
-        "issue_score": 3.0,
-        "mention_count": 3,
-        "raw_mention_count": 3,
+        "issue_score": 2.0,
+        "mention_count": 2,
+        "raw_mention_count": 2,
         "titles": [
-          "경주시, 산지 휴경농지 활용 '알팔파' 재배 확대",
-          "경주시, 산지 휴경지서 고단백 조사료 키운다...알팔파 자급화 본격 시...",
-          "경주시, 산지 휴경농지 활용 알팔파 재배 확대"
+          "경남도, 가축 전염병 차단 방역 강화",
+          "경남도, 집중호우·폭염 속 가축전염병 차단방역 강화"
         ],
         "urls": [
-          "https://www.m-i.kr/news/articleView.html?idxno=1395273",
-          "https://www.hidomin.com/news/articleView.html?idxno=714703",
-          "https://www.kbmaeil.com/article/20260726500106"
+          "https://www.gnnews.co.kr/news/articleView.html?idxno=642029",
+          "https://www.newsgn.com/news/articleView.html?idxno=564757"
         ],
         "press_list": [
-          "hidomin.com",
-          "kbmaeil.com",
-          "m-i.kr"
+          "gnnews.co.kr",
+          "newsgn.com"
         ],
         "cross_axis_partner": null,
         "category": "정부·제도 용어",
-        "summary": "경주시가 산지 휴경농지를 활용해 다년생 고단백 조사료인 알팔파 재배를 확대하며 축산농가 사료비 절감과 조사료 자급률 제고에 나섰다. 시는 수입 조사료 의존도를 낮춰 생산비 부담을 덜고, 안정적인 조사료 생산 기반을 지속적으로 확충할 계획이다.",
-        "summary_skipped_reason": null
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
+      }
+    ],
+    "축종별 용어": [
+      {
+        "issue_score": 1.4,
+        "mention_count": 2,
+        "raw_mention_count": 2,
+        "titles": [
+          "박광욱 도드람양돈농협 조합장 \"도축장 출하차 소독 강화···가축질병...",
+          "[박광욱 도드람양돈농협 조합장 기자간담] \"출하차량부터 확실히 방역\""
+        ],
+        "urls": [
+          "https://www.agrinet.co.kr/news/articleView.html?idxno=405934",
+          "https://www.chukkyung.co.kr/news/articleView.html?idxno=82165"
+        ],
+        "press_list": [
+          "agrinet.co.kr",
+          "chukkyung.co.kr"
+        ],
+        "cross_axis_partner": null,
+        "category": "축종별 용어",
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
+      }
+    ],
+    "질병명": [
+      {
+        "issue_score": 4.3,
+        "mention_count": 10,
+        "raw_mention_count": 10,
+        "titles": [
+          "당진시 “빗물 타고 유입될라”, 장마철 아프리카돼지열병 차단 총력",
+          "당진시, 장마철 ASF 방역 수칙 홍보 강화",
+          "충남 당진시, 장마철 ASF 위험주의보 발령 양돈농가 차단방역 총력",
+          "당진시, 장마철 ASF 위험주의보 발령",
+          "당진시, 장마철 ASF 차단방역 강화…양돈농가 예찰·점검 확대",
+          "당진시, 폭우·태풍에 ASF 비상... '양돈농가 방역' 총력 대응",
+          "당진시, 장마철 ASF 위험주의보 발령 ··· 양돈농가 차단방역 총력",
+          "장마철 ASF 위험 커져…당진시 차단방역 나서",
+          "장마철 빗물·토양 타고 ASF 유입 위험..당진시, 양돈농가 차단방역 총력",
+          "당진시, 장마철 ASF 위험주의보 발령…양돈농가 차단방역 총력"
+        ],
+        "urls": [
+          "http://www.breaknews.com/1224047",
+          "https://www.newstnt.com/news/articleView.html?idxno=711433",
+          "https://www.ccdn.co.kr/news/articleView.html?idxno=1089799",
+          "https://www.dynews.co.kr/news/articleView.html?idxno=858985",
+          "https://www.m-i.kr/news/articleView.html?idxno=1394512",
+          "http://www.newsworker.co.kr/news/articleView.html?idxno=437859",
+          "https://www.ggilbo.com/news/articleView.html?idxno=1170916",
+          "http://www.djtimes.co.kr/news/articleView.html?idxno=112787",
+          "https://www.idjnews.kr/news/articleView.html?idxno=301769",
+          "http://www.chungnamilbo.co.kr/news/articleView.html?idxno=900071"
+        ],
+        "press_list": [
+          "breaknews.com",
+          "ccdn.co.kr",
+          "chungnamilbo.co.kr",
+          "djtimes.co.kr",
+          "dynews.co.kr",
+          "ggilbo.com",
+          "idjnews.kr",
+          "m-i.kr",
+          "newstnt.com",
+          "newsworker.co.kr"
+        ],
+        "cross_axis_partner": null,
+        "category": "질병명",
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
       }
     ],
     "사료업계 특화 용어": [
       {
-        "issue_score": 12.5,
-        "mention_count": 23,
-        "raw_mention_count": 25,
+        "issue_score": 0.8,
+        "mention_count": 2,
+        "raw_mention_count": 2,
         "titles": [
-          "논에서도 잘 자라는 여름 풀사료 '사료피'… 신품종 개발로 자급률 높인...",
-          "'여름철 논에서 잘 자라요'…사료피 주목",
-          "\"폭염과 장마에도 끄떡없다\"…여름철 풀사료 '만온'",
-          "농진청, 여름철 풀사료 '사료피' 논 활용 높이고 자급기반 넓힌다",
-          "장마에 강한 여름철 풀사료 개발",
-          "여름철 풀사료 '사료피' 주목…논 활용 높이고 자급기반 넓힌다",
-          "여름철 풀사료 ‘사료피’ 논 활용도 높이고 자급기반 넓힌다",
-          "더위-습기강한 풀사료 작물 '사료피' 새품종 개발",
-          "농진청, 논 재배용 '사료피' 신품종 개발",
-          "“무더위·장마에도 잘 버텨”…만생종 사료피 ‘만온’ 개발",
-          "경제성·생산성 높인 논 재배용 '사료피' 개발 … 풀사료 자급 확대",
-          "논에서 잘 자라는 '사료피'…풀사료 자급 확대 나선다",
-          "농진청, 논에서 잘 자라는 하계 사료피 개발…\"벼 대신 재배시 농가소득...",
-          "수입 조사료 의존 낮춘다…농진청, 사료피 신품종 개발",
-          "논에서도 잘 자라는 여름철 풀사료 ‘사료피’…“경제성·생산성 효과...",
-          "농진청, 논 풀사료 '사료피' 신품종 개발…자급률 제고",
-          "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
-          "사료풀 '만온' 품종 개발 발표하는 조용민 국립축산과학원장",
-          "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
-          "농진청, 논 재배용 사료피 품종 완성…2028년 농가 공급",
-          "국립축산과학원, 만생종 '만온' 품종 개발 발표",
-          "국립축산과학원, 사료풀 '만온' 품종 개발 발표",
-          "논에 벼 대신 풀 심는다…'사료피'가 전략작물 새 카드로",
-          "[현장인터뷰] 조용민 국립축산과학원장",
-          "논에서도 잘 자라는 ‘사료피’ 나왔다…여름철 풀사료 자급 확대 기대"
+          "경남도 축산농가 사료구매자금 최대 9억 원 지원 추진",
+          "경남도, 축산농가 사료구매자금 수요조사 28일까지 신청"
         ],
         "urls": [
-          "http://www.youngnong.co.kr/news/articleView.html?idxno=61190",
-          "https://www.obsnews.co.kr/news/articleView.html?idxno=1531895",
-          "http://news.lghellovision.net/news/articleView.html?idxno=549270",
-          "https://www.kenews.co.kr/news/article.html?no=89712",
-          "https://www.naeil.com/news/read/596230?ref=naver",
-          "https://www.farmnmarket.com/news/article.html?no=27195",
-          "https://www.newsam.co.kr/news/article.html?no=43554",
-          "http://www.jjn.co.kr/news/articleView.html?idxno=1047249",
-          "https://www.asiatoday.co.kr/kn/view.php?key=20260722010007983",
-          "https://www.nongmin.com/article/20260722500076",
-          "https://biz.newdaily.co.kr/site/data/html/2026/07/22/2026072200209.html",
-          "https://news.tf.co.kr/read/economy/2345859.htm",
-          "https://view.asiae.co.kr/article/2026072214075694660",
-          "https://www.etnews.com/20260722000220",
-          "https://www.mediapen.com/news/view/1111503",
-          "https://www.newsis.com/view/NISX20260722_0003718640",
-          "https://www.news1.kr/photos/8019830",
-          "https://www.news1.kr/photos/8019829",
-          "https://www.news1.kr/photos/8019831",
-          "https://www.dailian.co.kr/news/view/1669466/?sc=Naver",
-          "https://www.news1.kr/photos/8019828",
-          "https://www.news1.kr/photos/8019832",
-          "https://www.mt.co.kr/economy/2026/07/23/2026072213341472182",
-          "http://www.amnews.co.kr/news/articleView.html?idxno=73612",
-          "https://biz.heraldcorp.com/article/10815810?ref=naver"
+          "http://www.newstown.co.kr/news/articleView.html?idxno=710072",
+          "http://www.gndomin.com/news/articleView.html?idxno=483046"
         ],
         "press_list": [
-          "amnews.co.kr",
-          "asiatoday.co.kr",
-          "biz.heraldcorp.com",
-          "biz.newdaily.co.kr",
-          "dailian.co.kr",
-          "etnews.com",
-          "farmnmarket.com",
-          "jjn.co.kr",
-          "kenews.co.kr",
-          "mediapen.com",
-          "mt.co.kr",
-          "naeil.com",
-          "news.lghellovision.net",
-          "news.tf.co.kr",
-          "news1.kr",
-          "newsam.co.kr",
-          "newsis.com",
-          "nongmin.com",
-          "obsnews.co.kr",
-          "view.asiae.co.kr",
-          "youngnong.co.kr"
+          "gndomin.com",
+          "newstown.co.kr"
         ],
         "cross_axis_partner": null,
         "category": "사료업계 특화 용어",
-        "summary": "농촌진흥청 국립축산과학원이 논 재배에 적합하고 폭염과 장마에도 잘 견디는 여름철 풀사료 '사료피'의 만생종 신품종 '만온'을 개발했다. 이 품종은 동계 풀사료와 이모작이 가능해 논 활용도를 높이고 국내 풀사료 자급률 향상에 기여할 것으로 기대된다. 농진청은 체계적인 종자 증식과 보급을 통해 농가 현장 안착을 추진할 계획이다.",
-        "summary_skipped_reason": null
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
       }
     ],
-    "질병명": [
+    "시장/가격 용어": [
       {
         "issue_score": 1.0,
         "mention_count": 1,
         "raw_mention_count": 1,
         "titles": [
-          "[Issue+] ASF 방역 강화 속 돼지 혈장단백질 규제 논란"
+          "고려산업, 배합사료 매출 확대… 곡물가 하향 안정화 수혜 마중물"
         ],
         "urls": [
-          "https://www.aflnews.co.kr/news/articleView.html?idxno=325254"
+          "https://www.pinpointnews.co.kr/news/articleView.html?idxno=472491"
         ],
         "press_list": [
-          "aflnews.co.kr"
-        ],
-        "cross_axis_partner": null,
-        "category": "질병명",
-        "summary": "ASF 방역 강화 조치로 돼지 혈장단백질 사용이 제한되면서 사료 가격 상승과 함께 양돈 현장의 우려가 커지고 있다. 특히 이유기 자돈은 모돈 초유 면역 물질 공급 중단으로 스트레스와 장관 면역 저하가 심화되는 시기에 혈장단백질이 필수적인데, 규제로 인해 대체재 확보에 어려움을 겪고 있다.",
-        "summary_skipped_reason": null
-      }
-    ],
-    "축종별 용어": [
-      {
-        "issue_score": 0.7,
-        "mention_count": 1,
-        "raw_mention_count": 1,
-        "titles": [
-          "박광욱 조합장 \"사료는 싸게, 돼지는 비싸게… 대한민국 1등 양돈농협 역..."
-        ],
-        "urls": [
-          "https://www.farminsight.net/news/articleView.html?idxno=16686"
-        ],
-        "press_list": [
-          "farminsight.net"
-        ],
-        "cross_axis_partner": null,
-        "category": "축종별 용어",
-        "summary": "박광욱 도드람양돈농협 조합장은 \"사료는 싸게, 돼지는 비싸게\"라는 경영 원칙을 강조하며, 사료 판매량 65만 톤에도 불구하고 당기순이익이 20억 원대에 그친 것은 조합원에게 사료값 인하로 수익을 환원했기 때문이라고 설명했다.",
-        "summary_skipped_reason": null
-      }
-    ],
-    "시장/가격 용어": [
-      {
-        "issue_score": 0.4,
-        "mention_count": 1,
-        "raw_mention_count": 1,
-        "titles": [
-          "한우농가 사료값 부담...여름 논에서 키운 '풀'이 해결사"
-        ],
-        "urls": [
-          "http://www.fnnews.com/news/202607221418219043"
-        ],
-        "press_list": [
-          "fnnews.com"
+          "pinpointnews.co.kr"
         ],
         "cross_axis_partner": null,
         "category": "시장/가격 용어",
-        "summary": "농촌진흥청이 한우 농가의 사료비 부담을 덜기 위해 수입 건초보다 저렴한 풀사료 작물 '사료피' 신품종을 개발했다. 벼 재배 농가가 여름철 논에서 사료피를 재배할 수 있어 국내 공급 확대를 통한 축산 농가 생산비 절감 효과가 기대된다.",
-        "summary_skipped_reason": null
-      }
-    ],
-    "가금 계열화/수직계열화": [
-      {
-        "issue_score": 0.7,
-        "mention_count": 1,
-        "raw_mention_count": 1,
-        "titles": [
-          "원종계부터 유통까지... 체리부로, 완전 수직계열화로 품질 경쟁력 확보"
-        ],
-        "urls": [
-          "http://digitalchosun.dizzo.com/site/data/html_dir/2026/07/23/2026072380189.html"
-        ],
-        "press_list": [
-          "digitalchosun.dizzo.com"
-        ],
-        "cross_axis_partner": null,
-        "category": "가금 계열화/수직계열화",
-        "summary": "체리부로가 원종계 사육부터 사료 제조, 도계·가공, 유통까지 전 과정을 직접 관리하는 완전 수직계열화 체계를 구축해 품질 경쟁력을 확보했다. 회사 측은 이 시스템이 국산 육계 자급률을 높이고 국내 물가 안정에 기여하는 핵심 기반이라고 강조했다.",
-        "summary_skipped_reason": null
-      }
-    ],
-    "무역/관세 이슈": [
-      {
-        "issue_score": 0.7,
-        "mention_count": 1,
-        "raw_mention_count": 1,
-        "titles": [
-          "3년째 50% 밑도는 식량자급률… 해외 곡물기지 '필요성' 대두"
-        ],
-        "urls": [
-          "https://www.fetv.co.kr/news/articleView.html?idxno=306958"
-        ],
-        "press_list": [
-          "fetv.co.kr"
-        ],
-        "cross_axis_partner": null,
-        "category": "무역/관세 이슈",
-        "summary": "정부의 2027년 식량자급률 55% 목표 달성이 기후 변화와 경지면적 감소로 어려워지면서 3년째 50%를 밑도는 상황이다. 이에 따라 러시아-우크라이나 전쟁 사례처럼 주요국의 수출 제한 조치에 대비해 해외 곡물기지 확보의 필요성이 대두되고 있다.",
-        "summary_skipped_reason": null
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
       }
     ]
   },
   "international_by_category": {
-    "스마트팜/축산 기술": [
-      {
-        "issue_score": 2.0,
-        "mention_count": 2,
-        "raw_mention_count": 2,
-        "titles": [
-          "数润黑土 智兴三江 看黑龙江省智慧农业新实践",
-          "让  数字  说话 用  智能  种养 看我省智慧农业新实践"
-        ],
-        "urls": [
-          "https://www.hljnews.cn/jjny/content/2026-07/26/content_901761.html",
-          "https://www.hljnews.cn/kjjk/content/2026-07/28/content_901955.html"
-        ],
-        "press_list": [
-          "hljnews.cn"
-        ],
-        "cross_axis_partner": null,
-        "category": "스마트팜/축산 기술",
-        "summary": "헤이룽장성(黑龙江省)은 흑토(黑土)와 삼강(三江) 지역을 중심으로 디지털 기술과 스마트 기술을 활용한 스마트 농업(智慧农业) 새로운 실천 사례를 소개하고 있다. 데이터 기반의 정밀 관리와 스마트한 식재·축산 방식을 통해 농업 생산성 향상을 추진하고 있으며, 이를 통해 지역 농업의 혁신과 고도화를 도모하고자 한다.",
-        "summary_skipped_reason": null
-      }
-    ],
     "사료업계 특화 용어": [
       {
-        "issue_score": 0.7,
+        "issue_score": 1.0,
         "mention_count": 1,
         "raw_mention_count": 1,
         "titles": [
-          "De Heus expands aquaculture capabilities with marine and cold-water fish feed mill"
+          "Animal feed fraud punished in Bangladesh"
         ],
         "urls": [
-          "https://www.feedstrategy.com/animal-nutrition/aquaculture/news/15830751/de-heus-expands-aquaculture-capabilities-with-marine-and-coldwater-fish-feed-mill"
+          "https://www.feedstrategy.com/animal-feed-regulations-safety/news/15830999/animal-feed-fraud-punished-in-bangladesh"
         ],
         "press_list": [
           "Feed Strategy"
         ],
         "cross_axis_partner": null,
         "category": "사료업계 특화 용어",
-        "summary": "De Heus Animal Nutrition이 베트남 빈롱성(Vinh Long Province)에 해양 및 냉수어 사료 공장을 공식 개장하며 양식 사료 역량을 확대했다.",
-        "summary_skipped_reason": null
+        "summary": null,
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
       }
     ],
     "시장/가격 용어": [
       {
-        "issue_score": 0.4,
+        "issue_score": 0.7,
         "mention_count": 1,
         "raw_mention_count": 1,
         "titles": [
-          "Zimbabwe Emergency Food Production Project Delivers Transformative Results , Boosts Climate - Smart Agriculture and Record Wheat Harvest"
+          "Camp Abilities Four Corners completes its fifth year"
         ],
         "urls": [
-          "https://allafrica.com/stories/202607220010.html"
+          "https://www.havasunews.com/parker_pioneer/camp-abilities-four-corners-completes-its-fifth-year/article_4c7efc9d-8bdc-5d6b-8c4c-4d5988af2732.html"
         ],
         "press_list": [
-          "allafrica.com"
+          "havasunews.com"
         ],
         "cross_axis_partner": null,
         "category": "시장/가격 용어",
         "summary": null,
-        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출"
-      }
-    ],
-    "정부·제도 용어": [
-      {
-        "issue_score": 1.0,
-        "mention_count": 1,
-        "raw_mention_count": 1,
-        "titles": [
-          "Stakeholders Push for Implementation of Kenya National Agroecology Strategy to Strengthen Food Security – Capital FM Kenya"
-        ],
-        "urls": [
-          "https://capitalfm.africa/stakeholders-push-for-implementation-of-kenyas-national-agroecology-strategy-to-strengthen-food-security/"
-        ],
-        "press_list": [
-          "capitalfm.africa"
-        ],
-        "cross_axis_partner": null,
-        "category": "정부·제도 용어",
-        "summary": null,
-        "summary_skipped_reason": "단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출"
+        "summary_skipped_reason": "LLM 호출/응답 실패 - 요약 생략, 원문 제목만 노출"
       }
     ]
   },
   "category_distribution": {
     "국내": {
-      "정부·제도 용어": 6,
-      "기타": 2,
-      "질병명": 6,
-      "축종별 용어": 2,
-      "시장/가격 용어": 5,
-      "사료업계 특화 용어": 27,
-      "가금 계열화/수직계열화": 1,
-      "무역/관세 이슈": 1
+      "기타": 151,
+      "질병명": 18,
+      "정부·제도 용어": 9,
+      "시장/가격 용어": 2,
+      "축종별 용어": 10,
+      "사료업계 특화 용어": 3
     },
     "해외": {
-      "스마트팜/축산 기술": 8,
-      "기타": 2,
-      "사료업계 특화 용어": 3,
-      "시장/가격 용어": 1,
-      "정부·제도 용어": 1
+      "사료업계 특화 용어": 2,
+      "기타": 34,
+      "시장/가격 용어": 1
     }
   },
   "gdelt_timeline": {},

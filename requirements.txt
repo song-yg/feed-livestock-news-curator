@@ -10,3 +10,8 @@ beautifulsoup4
 playwright
 gdeltdoc
 sentence-transformers
+# llm_summarizer.py의 단독 기사 본문 추가 수집용(2026-07-28 추가) - 네이버/
+# GDELT처럼 본문을 못 가져오는 소스라도, 순위권(Top N)에 든 단독 기사는
+# 원문 URL에서 범용으로 본문 추출을 한 번 더 시도해본다. lxml/courlan 등
+# 하위 의존 패키지는 pip가 자동으로 같이 설치해줘서 따로 안 적어도 됨.
+trafilatura
