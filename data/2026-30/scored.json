@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-07-23T09:00:00+00:00",
+  "domestic": [
+    {
+      "issue_score": 3.2,
+      "mention_count": 4,
+      "titles": [
+        "구제역 국내 첫 발생",
+        "구제역 방역대 확대"
+      ],
+      "urls": [
+        "https://a.com/1",
+        "https://a.com/2"
+      ],
+      "summary": "국내 일부 농가에서 구제역이 확인되어 방역 당국이 방역대를 확대 운영하고 있다.",
+      "category": "질병명"
+    }
+  ],
+  "international": [
+    {
+      "issue_score": 2.1,
+      "mention_count": 3,
+      "titles": [
+        "Avian flu detected in region"
+      ],
+      "urls": [
+        "https://b.com/1"
+      ],
+      "summary": "해당 지역 가금농가에서 조류인플루엔자가 확인됐다.",
+      "generated_title": "해외 가금농가 조류인플루엔자 확인",
+      "category": "질병명"
+    }
+  ],
+  "domestic_by_category": {
+    "질병명": [
+      {
+        "issue_score": 3.2,
+        "mention_count": 4,
+        "titles": [
+          "구제역 국내 첫 발생",
+          "구제역 방역대 확대"
+        ],
+        "urls": [
+          "https://a.com/1",
+          "https://a.com/2"
+        ],
+        "summary": "국내 일부 농가에서 구제역이 확인되어 방역 당국이 방역대를 확대 운영하고 있다.",
+        "category": "질병명"
+      }
+    ]
+  },
+  "international_by_category": {
+    "질병명": [
+      {
+        "issue_score": 2.1,
+        "mention_count": 3,
+        "titles": [
+          "Avian flu detected in region"
+        ],
+        "urls": [
+          "https://b.com/1"
+        ],
+        "summary": "해당 지역 가금농가에서 조류인플루엔자가 확인됐다.",
+        "generated_title": "해외 가금농가 조류인플루엔자 확인",
+        "category": "질병명"
+      }
+    ]
+  },
+  "category_distribution": {
+    "국내": {
+      "질병명": 8,
+      "시장/가격 용어": 5,
+      "정부·제도 용어": 3,
+      "축종별 용어": 6,
+      "사료업계 특화 용어": 2,
+      "사료첨가제/항생제 규제": 1,
+      "무역/관세 이슈": 4,
+      "가금 계열화/수직계열화": 2,
+      "스마트팜/축산 기술": 3,
+      "기타": 5
+    },
+    "해외": {
+      "질병명": 6,
+      "시장/가격 용어": 7,
+      "정부·제도 용어": 2,
+      "축종별 용어": 4,
+      "사료업계 특화 용어": 3,
+      "사료첨가제/항생제 규제": 2,
+      "무역/관세 이슈": 5,
+      "가금 계열화/수직계열화": 1,
+      "스마트팜/축산 기술": 2,
+      "기타": 3
+    }
+  },
+  "gdelt_timeline": {},
+  "failed_sources": []
+}

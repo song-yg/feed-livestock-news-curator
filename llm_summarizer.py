@@ -21,6 +21,7 @@ API 키가 없거나 LLM 호출/응답이 실패해도 요약을 생략하고 �
 
 import os
 import re
+import time
 
 import requests
 import trafilatura
@@ -136,12 +137,37 @@ _BODY_EXCERPT_CHARS = 600
 # 트레이드오프를 감수하기로 결정함(전용 스크레이퍼 vs 범용 추출 중 범용
 # 선택).
 #
-# 비용/부담 통제를 위해 "재료 부족 판정이 실제로 난 시점"에만, 그것도
-# 이미 순위(Top N)로 추려진 기사에 대해서만, 그룹이어도 대표 기사 1건만
-# 시도한다(summarize_top_issues 호출 시점엔 이미 main.py의 TOP_N으로
-# 걸러진 상태 - 전체 수집분 수백 건에 대해 매번 시도하는 게 아님).
+# --- 그룹당 최대 20건으로 확장 (2026-07-30, 담당자 요청) ---
+#
+# 기존엔 "그룹 전체를 통틀어 재료 충분한 기사가 하나도 없을 때만" 대표
+# 기사(articles[0]) 1건만 보강했다. 그 사이 _build_user_prompt가 그룹
+# 내 모든 기사의 본문/설명을 다 프롬프트에 반영하도록 이미 바뀌어서
+# (기사 개수 상한 제거, 위 주석 참고), "대표 기사 하나만 본문이 있고
+# 나머지는 여전히 재료가 얇은 채로 프롬프트에 들어가는" 불균형이 생겼다.
+# 그래서 트리거 조건을 "그룹 전체 상태" 판정에서 "기사 단위" 판정으로
+# 바꿨다: 다른 기사가 이미 충분한 재료를 갖고 있어도 무관하게, 그룹 안에서
+# 재료가 얇은 기사 각각을 대상으로 보강을 시도한다 - "그룹 전체를 다
+# LLM에 보낸다"는 기존 확장 방향과 더 맞는다고 판단(담당자 확인 없이
+# 합리적 기본값으로 진행, 문제 있으면 조건 되돌리기 쉬움). 그룹당 최대
+# _BODY_FETCH_MAX_ARTICLES_PER_GROUP(20)건까지만 시도해서 호출 폭증을
+# 막고, 그 20건은 재료 얇은 기사를 원래 수집/그룹핑 순서 그대로 앞에서부터
+# 고른다(이미 Top N으로 추려진 그룹이라 그 안에서 추가로 우열을 가릴
+# 근거가 약해 순위를 따로 매기지 않음).
+#
+# 시간 통제: trafilatura 타임아웃(10초) 기준 최악의 경우 20건 x 10초 =
+# 200초/그룹이 걸릴 수 있어, GDELT collector의 TIME_BUDGET_SECONDS
+# 패턴을 참고해 그룹 하나당 총 소요 시간 상한
+# (_BODY_FETCH_GROUP_TIME_BUDGET_SECONDS)을 별도로 둔다. 예산을 넘기면
+# 남은 기사는 건너뛰고 그때까지 확보한 재료로 진행한다 - "부분 성공이
+# 완전 포기보다 낫다"는 이 프로젝트 전반의 원칙과 동일.
+#
+# 비용/부담 통제를 위해, 이미 순위(Top N)로 추려진 기사에 대해서만 시도한다
+# (summarize_top_issues 호출 시점엔 이미 main.py의 TOP_N으로 걸러진 상태 -
+# 전체 수집분 수백 건에 대해 매번 시도하는 게 아님).
 _BODY_FETCH_TIMEOUT_SECONDS = 10
 _BODY_FETCH_MIN_LENGTH = 200  # has_substantial_material의 본문 기준과 동일
+_BODY_FETCH_MAX_ARTICLES_PER_GROUP = 20  # 그룹당 최대 보강 시도 건수
+_BODY_FETCH_GROUP_TIME_BUDGET_SECONDS = 60  # 그룹 하나당 보강 시도 총 소요 시간 상한(초)
 
 # trafilatura 기본 타임아웃(30초)은 Top N 몇 건에 대해서만 시도한다 해도
 # 사이트가 응답 없이 매달리면 그만큼 전체 실행이 늘어질 수 있어, 위
@@ -481,28 +507,59 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
 
     has_substantial_material = any(_article_has_substantial_material(a) for a in articles)
 
-    if not has_substantial_material:
-        # 대표 기사(첫 번째) 하나만 보강 시도 - 그룹 안 기사를 전부 긁으면
-        # 순위(Top N) x 그룹 크기만큼 호출이 늘어나 비용 통제가 안 됨.
-        # 대표 기사 하나만 채워도 _build_user_prompt가 참고할 재료로는
-        # 충분하다고 판단(다른 3차 로직도 대표 기사 하나로 판단하는 것과
-        # 같은 전제).
-        article = articles[0] if articles else {}
-        url = article.get("url") or (item.get("urls", [None])[0] if item.get("urls") else None)
-        if url:
-            label = "단독 기사" if len(titles) == 1 else f"그룹({len(titles)}건)"
-            print(f"[llm_summarizer] 🟡 주의 [LS-06] - {label} 재료 부족 - 본문 추가 수집 시도: {url}")
+    # ** 대표 기사 1건 -> 그룹당 최대 20건으로 확장 (2026-07-30, 담당자
+    # 요청) ** 트리거 조건을 "그룹 전체에 재료 충분한 기사가 하나도 없을
+    # 때만"에서 "기사 하나하나가 재료 부족이면(다른 기사가 이미 충분해도
+    # 무관하게) 보강 시도"로 바꿨다 - 위 상수 선언부 주석 참고. 재료가
+    # 얇은 기사만 원래 순서대로 골라 최대 _BODY_FETCH_MAX_ARTICLES_PER_GROUP
+    # (20)건까지 시도한다.
+    needing_indices = [i for i, a in enumerate(articles) if not _article_has_substantial_material(a)]
+    targets = needing_indices[:_BODY_FETCH_MAX_ARTICLES_PER_GROUP]
+
+    if targets:
+        label = "단독 기사" if len(titles) == 1 else f"그룹({len(titles)}건)"
+        print(f"[llm_summarizer] 🟡 주의 [LS-06] - {label} 재료 부족 기사 {len(targets)}건 "
+              f"(최대 {_BODY_FETCH_MAX_ARTICLES_PER_GROUP}건 한도) - 본문 추가 수집 시도")
+
+        # item은 원본이라 직접 안 건드리고, 프롬프트 생성에만 쓸 얕은
+        # 복사 리스트를 따로 만든다(함수 docstring의 "원본 미변경" 약속
+        # 유지) - 보강 성공한 인덱스만 교체.
+        enriched_articles = list(articles)
+        attempted = 0
+        succeeded = 0
+        group_urls = item.get("urls", [])
+        start_time = time.monotonic()
+
+        for idx in targets:
+            if time.monotonic() - start_time >= _BODY_FETCH_GROUP_TIME_BUDGET_SECONDS:
+                remaining = len(targets) - attempted
+                print(f"[llm_summarizer] 🟡 주의 - {label} 본문 보강 시간 예산"
+                      f"({_BODY_FETCH_GROUP_TIME_BUDGET_SECONDS}초) 초과 - 남은 {remaining}건 "
+                      f"건너뛰고 지금까지 확보한 재료로 진행")
+                break
+
+            article = articles[idx]
+            url = article.get("url") or (group_urls[idx] if idx < len(group_urls) else None)
+            if not url:
+                continue
+
+            attempted += 1
             fetched_body = _fetch_body_via_trafilatura(url)
             if fetched_body and len(fetched_body) >= _BODY_FETCH_MIN_LENGTH:
-                print(f"[llm_summarizer] 본문 추가 수집 성공({len(fetched_body)}자) - 요약 진행: {url}")
-                has_substantial_material = True
-                # item은 원본이라 직접 안 건드리고, 프롬프트 생성에만 쓸
-                # 얕은 복사본을 따로 만든다(함수 docstring의 "원본 미변경"
-                # 약속 유지).
+                succeeded += 1
                 enriched_article = dict(article)
                 enriched_article["body"] = fetched_body
-                item_for_prompt = dict(item)
-                item_for_prompt["articles"] = [enriched_article] + articles[1:]
+                enriched_articles[idx] = enriched_article
+
+        print(f"[llm_summarizer] 본문 추가 수집 결과 [LS-09] - {label} {attempted}건 시도, "
+              f"{succeeded}건 성공")
+
+        if succeeded > 0:
+            item_for_prompt = dict(item)
+            item_for_prompt["articles"] = enriched_articles
+            has_substantial_material = any(
+                _article_has_substantial_material(a) for a in enriched_articles
+            )
 
     if len(titles) == 1 and not has_substantial_material:
         result["summary"] = None
