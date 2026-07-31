@@ -232,9 +232,10 @@ TIME_BUDGET_SECONDS = 4 * 60 * 60  # 4시간 (파이프라인 시작 기준 체�
 
 # --- 적응형 배치 수집 ---
 # 키워드를 작게 묶어(BATCH_SIZE) OR 요청 후, 상한 근처까지 찼는데 특정
-# 키워드가 결과 대부분을 차지하면("크라우딩") 나머지 키워드만 개별 재요청.
+# 키워드가 결과 대부분을 차지하면("크라우딩") 크라우더를 포함한 배치
+# 전체를 개별 재요청.
 BATCH_SIZE = 5  # 잠정값
-CROWDING_CAP_TRIGGER_RATIO = 0.9  # 이 비율 이상 찼을 때만 크라우딩 검사
+CROWDING_CAP_TRIGGER_RATIO = 1.0  # 정확히 상한(250)에 도달했을 때만 크라우딩 검사(그 미만은 API가 있는 그대로 다 준 것)
 CROWDING_SHARE_THRESHOLD = 0.4  # 한 키워드가 이 비율 이상 차지하면 크라우딩 판정
 
 REQUEST_INTERVAL = 15.0  # 키워드/배치 사이 요청 간격(초, 경험적 조정값)
@@ -514,8 +515,9 @@ def _collect_articles_individually(gd: "GdeltDoc", keywords: list[str]) -> tuple
 def _detect_crowded_keywords(articles: list[dict], keywords: list[str]) -> list[str]:
     """
     배치(OR 결합) 결과에서 특정 키워드가 과도하게 차지해 다른 키워드가
-    상한에 밀렸을 가능성을 감지. 반환: 크라우딩 원인 키워드 목록(호출부가
-    나머지 키워드를 개별 재요청). 제목 기준 근사치라 과소 탐지 쪽으로 편향
+    상한에 밀렸을 가능성을 감지. 반환: 크라우딩 원인 키워드 목록(비어있지
+    않으면 호출부 _handle_batch_crowding이 크라우더를 포함한 배치 전체를
+    개별 재요청 대상으로 삼음). 제목 기준 근사치라 과소 탐지 쪽으로 편향
     (안전한 방향 - 불필요한 추가 요청은 안 만듦).
     """
     total = len(articles)
@@ -537,14 +539,21 @@ def _handle_batch_crowding(batch: list[str], batch_articles: list[dict]) -> list
     결과를 한 줄로 로그에 남긴다(예전엔 트리거 안 되면 아무 로그도 없어서
     "이 배치가 개별 재요청으로 넘어갔는지"를 확인하기 어려웠음).
     반환: 개별 재요청 대상으로 넘길 키워드 리스트(없으면 빈 리스트).
+
+    크라우딩이 감지되면(즉 250건 상한을 특정 키워드가 과점) 그 키워드
+    (크라우더) 자신도 나머지와 함께 배치 전체를 개별 재요청 대상으로
+    편입한다 - 크라우더가 배치 결과의 상당 비율을 차지했다는 건 크라우더
+    자신도 250건 한도를 다른 키워드와 나눠 쓰느라 잘렸을 가능성이 크다는
+    뜻이지, "이미 충분히 챙겼다"는 뜻이 아니다(학습형 크라우딩 목록도 같은
+    전제로 동작함 - 혼자 요청했을 때도 상한 근처면 그 키워드 자체가
+    물량이 많다고 보고 다음 실행부터 배치 없이 개별 처리).
     """
     crowders = _detect_crowded_keywords(batch_articles, batch)
     if crowders:
-        others = [kw for kw in batch if kw not in crowders]
         print(f"[gdelt] 🟡 주의 [GD-12] - 배치 {batch} 내 크라우딩 감지({crowders}가 결과의 "
               f"{int(CROWDING_SHARE_THRESHOLD * 100)}% 이상 차지 추정) - "
-              f"나머지 키워드 {others} 개별 재요청 대상으로 편입")
-        return others
+              f"크라우더 포함 배치 전체를 개별 재요청 대상으로 편입")
+        return list(batch)
     if len(batch_articles) >= MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
         print(f"[gdelt] 🟡 주의 [GD-13] - 배치 {batch} 결과가 상한 근처까지 참({len(batch_articles)}건) - "
               f"골고루 밀렸을 위험 있어 배치 전체를 개별 재요청 대상으로 편입")
@@ -587,7 +596,7 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
     후로 자체 계산해 하위호환 유지.
 
     적응형 배치 수집: ① 활성 키워드를 BATCH_SIZE씩 묶어 OR 결합 요청 ②
-    크라우딩 감지되면 그 배치의 나머지 키워드만 개별 재요청 대상으로 표시
+    크라우딩 감지되면 크라우더를 포함한 배치 전체를 개별 재요청 대상으로 표시
     ③ 배치 요청 자체 실패(429 등)는 같은 배치로 외부 재시도, 최종 실패해야
     개별 전환. deadline 초과 시 남은 키워드는 이번 실행 건너뜀(다음 실행에서 처음부터 재시도).
     """
