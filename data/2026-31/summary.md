@@ -1,282 +1,314 @@
 # 사료·축산업 뉴스 큐레이션 - 2026-31
 
-생성 시각(UTC): 2026-07-30T02:44:35.321285+00:00
+생성 시각(UTC): 2026-07-31T07:15:59.486363+00:00
 
 
 ## 카테고리별 지난주 대비 증감
 
 ### 국내
-- 질병명: 14건 (지난주 8건, +6)
-- 무역/관세 이슈: 1건 (지난주 4건, -3)
-- 시장/가격 용어: 1건 (지난주 5건, -4)
-- 사료첨가제/항생제 규제: 0건 (지난주 1건, -1)
-- 축종별 용어: 7건 (지난주 6건, +1)
-- 사료업계 특화 용어: 0건 (지난주 2건, -2)
-- 스마트팜/축산 기술: 2건 (지난주 3건, -1)
-- 가금 계열화/수직계열화: 0건 (지난주 2건, -2)
-- 기타: 0건 (지난주 5건, -5)
-- 정부·제도 용어: 10건 (지난주 3건, +7)
+- 시장/가격 용어: 10건 (지난주 5건, +5)
+- 질병명: 72건 (지난주 8건, +64)
+- 가금 계열화/수직계열화: 1건 (지난주 2건, -1)
+- 축종별 용어: 197건 (지난주 6건, +191)
+- 사료업계 특화 용어: 33건 (지난주 2건, +31)
+- 기타: 2092건 (지난주 5건, +2087)
+- 사료첨가제/항생제 규제: 7건 (지난주 1건, +6)
+- 스마트팜/축산 기술: 0건 (지난주 3건, -3)
+- 무역/관세 이슈: 15건 (지난주 4건, +11)
+- 정부·제도 용어: 63건 (지난주 3건, +60)
 
 ### 해외
-- 질병명: 46건 (지난주 6건, +40)
-- 무역/관세 이슈: 9건 (지난주 5건, +4)
-- 시장/가격 용어: 7건 (지난주 7건, +0)
-- 사료첨가제/항생제 규제: 2건 (지난주 2건, +0)
-- 축종별 용어: 3건 (지난주 4건, -1)
+- 시장/가격 용어: 28건 (지난주 7건, +21)
+- 질병명: 153건 (지난주 6건, +147)
+- 축종별 용어: 12건 (지난주 4건, +8)
+- 가금 계열화/수직계열화: 0건 (지난주 1건, -1)
 - 사료업계 특화 용어: 5건 (지난주 3건, +2)
-- 스마트팜/축산 기술: 0건 (지난주 2건, -2)
-- 가금 계열화/수직계열화: 1건 (지난주 1건, +0)
-- 기타: 2건 (지난주 3건, -1)
-- 정부·제도 용어: 17건 (지난주 2건, +15)
+- 기타: 2389건 (지난주 3건, +2386)
+- 사료첨가제/항생제 규제: 6건 (지난주 2건, +4)
+- 스마트팜/축산 기술: 2건 (지난주 2건, +0)
+- 무역/관세 이슈: 1건 (지난주 5건, -4)
+- 정부·제도 용어: 56건 (지난주 2건, +54)
 ## 국내
 
-### 경산시, 드론 활용 선제 방역으로 ASF 유입 차단 총력
-- 점수: 4.00 / 언급 4건 (그룹 내 추가 3건 생략)
+### 청주시, 폭염 대응 축산농가 열 스트레스 저감시설 지원
+- 점수: 128.20 / 언급 145건 (그룹 내 추가 234건 생략)
 
-경산시가 가축위생방역지원본부와 협력해 지난 29일 압량읍 양돈농장 9곳을 대상으로 드론을 활용한 집중 소독을 실시했다. 드론 3개 조를 투입해 차량 진입이 어려운 농장 외곽과 울타리 등 취약지역을 소독하고 야생 멧돼지 기피제를 살포했다. 시는 지난해 도입한 드론 방역을 올해 분기별 정례화해 상시 차단방역 체계를 구축하고 있다.
+연일 계속되는 폭염으로 전국에서 가축 36만여 마리가 폐사하고 젖소 산유량·산란계 산란율 저하 등 생산성 피해가 심각해지고 있다. 경북도(165억 원), 청주시, 인천시, 광주 광산구 등 지자체는 냉방시설·환풍기·안개분무·면역강화 사료첨가제·열차단 도포제(드론 시공) 지원과 동물의료지원반 운영 등 긴급 대응에 나섰다. 농식품부와 농협은 과채류 가격 불안정에 대비해 토마토·애호박 등 5개 품목 수급안정사업에 12억4천만 원을 투입하고, 축산자조금을 활용한 폭염 피해 경감 대책을 추진 중이다.
 
-원문 링크: https://www.kbsm.net/news/view.php?idx=528572, https://daily.hankooki.com/news/articleView.html?idxno=1390951, http://www.newsprime.co.kr/news/article.html?no=742013 외 1건
+원문 링크: https://www.ccreview.co.kr/news/articleView.html?idxno=353927, https://www.jbnews.com/news/articleView.html?idxno=1508551, https://www.inews365.com/news/article.html?no=929796 외 232건
 
-### 당진시, 장마철 ASF 방역 수칙 홍보 강화
-- 점수: 2.40 / 언급 6건 (그룹 내 추가 5건 생략)
+### '화재 사고' 故 허범욱 감독, 영면의 길…한우진 "끝까지 유작 가슴에 품...
+- 점수: 81.30 / 언급 93건 (그룹 내 추가 99건 생략)
 
-충남 당진시가 장마철 하천 범람과 오염된 빗물 등을 통한 아프리카돼지열병(ASF) 바이러스 유입 위험이 커짐에 따라 관내 양돈농가를 대상으로 8대 방역시설 점검과 예찰 활동을 대폭 강화한다. 주요 조치로 축사 주변 배수로·울타리 정비, 외부 차량 출입 최소화, 거점 소독시설 이용 확인 등을 추진하며, 호우 후 철저한 소독과 야생 멧돼지 폐사체 발견 시 즉시 신고(1588-4060)를 당부했다.
+애니메이션 '구제역에서 살아 돌아온 돼지'의 연출자 허범욱 감독이 2024년 7월 23일 발생한 화재 사고로 치료받던 중 7월 28일 향년 43세로 별세했다. 고인의 두 번째 장편이자 유작이 된 이 작품은 당초 8월 5일 개봉 예정이었으나 배급사 인디스토리가 잠정 연기를 발표했으며, 안시·시체스·부천 등 국내외 유수 영화제 35곳에 초청되며 작품성을 인정받은 바 있다.
 
-원문 링크: https://www.newstnt.com/news/articleView.html?idxno=711433, https://www.ccdn.co.kr/news/articleView.html?idxno=1089799, https://www.dynews.co.kr/news/articleView.html?idxno=858985 외 3건
+원문 링크: https://www.tvreport.co.kr/entertainment/article/1064951/, https://www.starnewskorea.com/star/2026/07/30/2026073009411499901, https://www.xportsnews.com/article/2177848 외 97건
 
-### 경남도, 가축 전염병 차단 방역 강화
-- 점수: 2.00 / 언급 2건 (그룹 내 추가 1건 생략)
+### [기업 리포트] "33조 팔고도 이익 줄어"…기아, '외형 성장의 착시' 경고...
+- 점수: 63.30 / 언급 144건 (그룹 내 추가 143건 생략)
 
-경남도는 집중호우와 폭염이 반복되는 이상기후로 아프리카돼지열병(ASF)·구제역 등 가축전염병 유입 위험이 커지자 도내 차단방역을 대폭 강화한다고 28일 밝혔다. 농림축산검역본부는 지난 7월 1일 전국 양돈농장 대상 ASF 위험주의보를 발령했으며, 경남도는 호우·범람 시 야생멧돼지 오염원 유입 차단과 폭염 대비 축사 시설 점검을 당부했다. 시군·축협·생산자단체와 협력해 방역수칙 홍보·예찰 강화, 공동방제단 활용 취약지역 소독 등 종합 대응에 나선다.
+기아는 2분기 글로벌 도매 판매 85만1639대와 매출 33조370억 원으로 분기 기준 역대 최대를 기록했으나, 국내·유럽에서 중국 전기차 대응을 위한 인센티브 확대(약 7230억 원)와 원화 약세에 따른 판매보증충당금 증가로 영업이익이 전년 동기 대비 4.9% 감소한 2조6285억 원에 그쳤다. 주요 증권사들은 수익성 둔화 우려로 목표주가를 일제히 하향 조정했으나, 연간 영업이익 10조2000억 원 가이던스 유지와 하반기 EV3 미국 출시·유럽 현지 생산(EV2·EV4·PV5) 확대 전략을 감안해 '매수' 의견은 유지했다. 현대차 역시 매출 역대 최대를 달성했으나 관세·인센티브·협력사 화재 등 일회성 비용으로 영업이익이 20.8% 급감해 양사 모두 하반기 수익성 회복이 과제로 남았다.
 
-원문 링크: https://www.gnnews.co.kr/news/articleView.html?idxno=642029, https://www.newsgn.com/news/articleView.html?idxno=564757
+원문 링크: http://www.bizwnews.com/news/articleView.html?idxno=141848, https://www.ggilbo.com/news/articleView.html?idxno=1171458, https://www.hankyung.com/article/2026072898141 외 141건
 
 ### 국내 - 카테고리별 Top N
 
-#### 질병명
-
-### 경산시, 드론 활용 선제 방역으로 ASF 유입 차단 총력
-- 점수: 4.00 / 언급 4건 (그룹 내 추가 3건 생략)
-
-경산시가 가축위생방역지원본부와 협력해 지난 29일 압량읍 양돈농장 9곳을 대상으로 드론을 투입, 차량 접근이 어려운 외곽과 진입로 등 취약지역 소독과 기피제 살포를 실시했다. 시는 지난해 도입한 드론 방역을 올해 분기별 정기 체계로 확대 운영하며, 야생 멧돼지 차단 등 선제적 방역 관리를 강화하고 있다.
-
-원문 링크: https://www.kbsm.net/news/view.php?idx=528572, https://daily.hankooki.com/news/articleView.html?idxno=1390951, http://www.newsprime.co.kr/news/article.html?no=742013 외 1건
-
-### 당진시, 장마철 ASF 방역 수칙 홍보 강화
-- 점수: 2.40 / 언급 6건 (그룹 내 추가 5건 생략)
-
-충남 당진시가 장마철 집중호우와 태풍으로 인한 아프리카돼지열병(ASF) 바이러스 유입 위험이 커짐에 따라 관내 양돈농가를 대상으로 8대 방역시설 점검 등 차단방역을 대폭 강화한다. 시는 하천 범람과 오염된 빗물을 통한 농장 유입을 막기 위해 축사 주변 배수로·울타리 정비, 외부 차량 출입 통제, 거점 소독시설 이용 확인 등 예찰 활동을 확대하고 있다. 호우 종료 후 철저한 소독과 야생 멧돼지 폐사체 발견 시 즉시 신고(1588-4060), 농장 관계자 기본 수칙 준수도 함께 당부했다.
-
-원문 링크: https://www.newstnt.com/news/articleView.html?idxno=711433, https://www.ccdn.co.kr/news/articleView.html?idxno=1089799, https://www.dynews.co.kr/news/articleView.html?idxno=858985 외 3건
-
 #### 정부·제도 용어
 
-### 경남도, 가축 전염병 차단 방역 강화
-- 점수: 2.00 / 언급 2건 (그룹 내 추가 1건 생략)
+### 소똥이 연료 된다…정부, 298억원 들여 에너지 만든다
+- 점수: 29.00 / 언급 41건 (그룹 내 추가 40건 생략)
 
-경남도는 최근 집중호우와 폭염이 반복되는 이상기후로 아프리카돼지열병(ASF)과 구제역 등 가축전염병 유입 위험이 커짐에 따라 도내 차단방역을 강화한다고 밝혔다. 농림축산검역본부가 전국 양돈농장 대상 ASF 위험주의보를 발령한 가운데, 경남도는 하천 범람과 토사 유실 시 야생멧돼지 오염원 유입 가능성을 경고하며 축사 환기·차광·급수시설 점검 등 폭염 피해 예방도 병행할 것을 당부했다. 시군·축협·생산자단체와 협력해 방역수칙 홍보와 예찰을 강화하고 공동방제단을 통한 취약지역 소독을 확대하는 등 선제적 대응에 나섰다.
+기후에너지환경부와 농림축산식품부가 2029년까지 총 298억 원을 투입해 가축분뇨(우분) 바이오매스 고체연료 생산·이용 기술개발 다부처 R&D 사업을 본격 착수했다. 이번 사업은 우분 수거·이력관리부터 저에너지 건조·발효, 고체연료 제조, 발전소 혼소·전소 실증, 악취·암모니아 저감까지 전주기 기술을 확보해 퇴비 과잉 살포로 인한 수질오염을 줄이고 수입 목재펠릿 의존도를 낮추는 자원순환형 에너지 모델 구축을 목표로 한다. 실증 목표는 발열량 3,500㎉/㎏ 이상 고체연료를 하루 15톤 규모로 생산해 330㎿급 상용 발전설비 혼소 및 4㎿급 열병합발전 전소 보일러에 투입하는 것이다.
 
-원문 링크: https://www.gnnews.co.kr/news/articleView.html?idxno=642029, https://www.newsgn.com/news/articleView.html?idxno=564757
+원문 링크: https://www.nongmin.com/article/20260729500534, http://www.engdaily.com/news/articleView.html?idxno=22947, https://www.esgeconomy.com/news/articleView.html?idxno=16177 외 38건
 
-### 박완수 도지사, 폭염·가뭄 비상대책회의 주재… “인명피해 막아야”
-- 점수: 1.00 / 언급 1건
+### 악취·수질오염 사전 차단…안성시, 양돈농가 51곳 특별점검 돌입
+- 점수: 2.40 / 언급 3건 (그룹 내 추가 2건 생략)
 
-박완수 경남도지사가 28일 폭염·가뭄 비상대책회의를 주재하고 고령층·야외근로자 보호, 농업용수 확보, 축산 방역 강화 등 현장 대응을 지시했다. 도는 32억 7천만 원을 긴급 투입하고, 아프리카돼지열병(ASF)·구제역(FMD) 등 가축전염병 차단을 위해 축사 환기·소독·백신 접종 등 방역 수칙을 강화하고 있다. 현재 도내 6개 시군에 폭염 중대경보가 발효된 가운데 온열질환자 122명, 사망자 3명이 발생해 인명 피해 예방에 행정력을 집중하고 있다.
+안성시가 8월 10일부터 10월 30일까지 약 3개월간 관내 양돈농가 51곳의 가축분뇨 정화방류시설 운영 실태를 집중 점검한다. 주요 점검 대상은 방류수 수질기준 준수 여부, 공공수역 무단 유출, 분뇨·퇴비 야외 방치 등이며 위반 시 가축분뇨법에 따라 고발·행정처분·과태료 부과 등 엄정 조치하고 사후관리 교육도 병행할 예정이다.
 
-원문 링크: https://biz.heraldcorp.com/article/10822838?ref=naver
-
-#### 축종별 용어
-
-### 박광욱 도드람양돈농협 조합장 "도축장 출하차 소독 강화···가축질병...
-- 점수: 1.40 / 언급 2건 (그룹 내 추가 1건 생략)
-
-박광욱 도드람양돈농협 조합장은 올해 아프리카돼지열병(ASF)과 돼지유행성설사병(PED), PRRS 등 가축질병으로 조합원 농가가 막대한 경제적 손실을 입었다고 밝혔다. 이에 따라 도축장 출하차량의 소독을 강화하기 위한 시설 투자를 추진하고, 비상상황실 운영과 수의사 파견 등 현장 방역 지원을 지속할 계획이다.
-
-원문 링크: https://www.agrinet.co.kr/news/articleView.html?idxno=405934, https://www.chukkyung.co.kr/news/articleView.html?idxno=82165
-
-### 폭염과의 사투…고령 양돈농가, 얼음까지 동원해 돼지 지킨다
-- 점수: 1.00 / 언급 1건
-
-경북 고령군에 폭염중대경보가 발령된 가운데 축사 내부 온도가 40℃에 육박하고 열대야까지 겹치면서 양돈농가들이 제빙기 얼음과 환기팬·쿨링패드·안개분무시설을 24시간 가동하며 돼지 폐사를 막기 위해 사투를 벌이고 있다. 밤에도 온도가 떨어지지 않아 돼지들이 체력을 회복하지 못하면서 사료 섭취량 감소와 증체율 저하가 현실화하고 있으며, 냉방비 폭증과 사료값 상승 이중고 속에 농가들은 실질적인 폭염 대응 지원이 절실하다고 호소한다.
-
-원문 링크: https://www.kyongbuk.co.kr/news/articleView.html?idxno=4079683
-
-#### 스마트팜/축산 기술
-
-### [기고] AI 시대 스마트축산의 성공 조건 '협업 생태계 구축'
-- 점수: 0.70 / 언급 1건
-
-농촌진흥청 국립축산과학원은 스마트축산이 ICT 자동화에서 AI 기반 의사결정 지원 기술로 진화하고 있으나, 개별 장비·서비스만으로는 한계가 있다고 진단했다. 축산 현장의 데이터를 표준화하고 장비 간 호환성을 확보해 종합적 데이터 수집·활용 기반을 마련하는 협업 생태계 구축이 필수적이라는 제언이다.
-
-원문 링크: https://www.aflnews.co.kr/news/articleView.html?idxno=325294
-
-### [블루오션 동물 의료기기] ④프리시젼바이오, 동물용 진단 매출 100억원...
-- 점수: 0.70 / 언급 1건
-
-체외진단 전문기업 프리시젼바이오가 인체용 시분해형광(TRF) 면역진단 플랫폼을 동물용으로 확장한 'Exdia PT10V'를 통해 동물용 진단 사업 매출 100억 원 달성을 목전에 두고 있다. A4 용지보다 작은 크기와 EMR 연동 편의성을 갖춘 PT10V를 앞세워 국내 동물병원 시장을 공략하는 동시에 일본·유럽·중동 등으로 수출 판로를 넓혀 매출 성장에 속도를 낸다는 계획이다. ASF·AI·구제역 등 반복되는 가축전염병 상황에서 신속 현장 진단으로 살처분 규모와 경제적 손실을 줄이려는 수요가 맞물려 사업 확장이 가속화되고 있다.
-
-원문 링크: https://www.edaily.co.kr/news/newspath.asp?newsid=01905686645518128
-
-#### 무역/관세 이슈
-
-### 국내산 삼겹살 값 뛰자 대박 났다… 미국산 밀어내고 1위 차지한 '뜻밖...
-- 점수: 1.00 / 언급 1건
-
-올해 3~7월 스페인산 돼지고기 수입액이 2억9749만 달러로 미국산(2억8680만 달러)을 넘어섰으며, 6월 수입 물량에서도 1만8175톤으로 미국산(1만3877톤)을 처음 앞질렀다. 국내산 삼겹살 가격 급등으로 상대적으로 저렴한 스페인산 삼겹살 수요가 급증한 것이 주원인으로 분석된다. 2022년 아프리카돼지열병(ASF)으로 독일산 수입이 중단된 특수 상황을 제외하면 스페인산이 미국산을 제친 것은 이번이 처음이다.
-
-원문 링크: https://www.wikitree.co.kr/articles/1149214
-
-#### 시장/가격 용어
-
-### 당진 합덕읍 석우리 멧돼지 떼 출몰… 고구마·옥수수밭 쑥대밭
-- 점수: 0.70 / 언급 1건
-
-당진시 합덕읍 석우리 일대에서 7월 초순부터 열흘간 어미 멧돼지와 새끼 5~6마리가 주야로 출몰해 수확 앞둔 고구마와 옥수수밭을 집중 훼손했다. 현재 3농가가 올해 농사를 망칠 정도의 직접적 피해를 입었으며, 민간 포수들이 야간 포획을 시도했으나 우천으로 어려움을 겪고 있다.
-
-원문 링크: http://www.djtimes.co.kr/news/articleView.html?idxno=112823
-
-## 해외
-
-###   Cant stop it spreading : more bird flu cases likely
-- 점수: 14.00 / 언급 14건 (그룹 내 추가 13건 생략)
-
-호주 남동부 사우스오스트레일리아주 사우스엔드에서 뿔제비갈매기(greater crested tern) 7마리가 폐사하며 자생 조류로는 첫 집단 감염 사례가 의심되고 있다. 현재까지 남호주, 서호주, 뉴사우스웨일스, 퀸즐랜드 등지에서 20건의 확진 사례가 보고된 가운데, 전문가들은 이번 사태가 확산 억제가 어려운 전환점이 될 수 있다고 우려한다.
-
-원문 링크: https://www.bendigoadvertiser.com.au/story/9318570/cant-stop-it-spreading-more-bird-flu-cases-likely/, https://www.merimbulanewsweekly.com.au/story/9318570/cant-stop-it-spreading-more-bird-flu-cases-likely/, https://www.cessnockadvertiser.com.au/story/9318570/cant-stop-it-spreading-more-bird-flu-cases-likely/ 외 11건
-
-### New confirmed bird flu cases raise fears for wildlife
-- 점수: 9.00 / 언급 9건 (그룹 내 추가 8건 생략)
-
-호주 수석수의관 베스 쿡슨은 CSIRO 호주질병대비센터 검사 결과 남호주 남동부에서 큰바다제비 7마리가 H5형 조류인플루엔자에 감염된 것으로 확인됐다고 밝혔다. 당국은 바이러스 유전자 분석을 통해 이번 감염이 현지 전파인지 여부를 파악 중이다.
-
-원문 링크: https://www.bendigoadvertiser.com.au/story/9319394/new-confirmed-bird-flu-cases-raise-fears-for-wildlife/, https://www.juneesoutherncross.com.au/story/9319394/new-confirmed-bird-flu-cases-raise-fears-for-wildlife/, https://www.bunburymail.com.au/story/9319394/new-confirmed-bird-flu-cases-raise-fears-for-wildlife/ 외 6건
-
-### H5N1 spreading locally in Australian native birds
-- 점수: 8.80 / 언급 10건 (그룹 내 추가 9건 생략)
-
-호주 당국이 남호주주에서 뿔제비갈매기 간 H5N1 바이러스 지역 전파를 공식 확인했으며, 퀸즐랜드주에서도 첫 의심 사례가 보고되는 등 4개 주에서 야생 조류 감염이 확인됐다. 현재까지 가금농가 감염 사례는 없으나, 방역 당국과 축산업계는 바이러스가 가금류로 확산될 가능성에 대비해 예방 조치를 강화하고 있다.
-
-원문 링크: https://www.thepoultrysite.com/news/2026/07/h5n1-spreading-locally-in-australian-native-birds, https://www.theland.com.au/story/9319416/south-australia-seven-h5-bird-flu-cases-confirmed-in-seabirds/, https://www.abc.net.au/news/2026-07-29/queensland-farmers-on-alert-as-h5-bird-flu-reaches-state/106967942 외 7건
-
-### 해외 - 카테고리별 Top N
-
-#### 정부·제도 용어
-
-### Renuevan recomendaciones ante posibles traslados de animales desde islas a tierra firme
-- 점수: 4.00 / 언급 4건 (그룹 내 추가 3건 생략)
-
-스페인 당국이 섬 지역에서 육지로 가축을 이동할 때 발생할 수 있는 질병 전파 위험을 차단하기 위해 기존 방역 권고사항을 갱신했다. 당국은 이동 전 검역 강화와 이동 경로 관리 등 구체적인 예방 조치 이행을 강조하며 축산농가의 주의를 당부했다.
-
-원문 링크: http://www.lavoz901.com/noticias/renuevan-recomendaciones-ante-posibles-traslados-de-animales-desde-islas-a-tierra-firme.htm, https://www.apfdigital.com.ar/noticias/2026/07/28/464766-renuevan-recomendaciones-ante-posibles-traslados-de-animales-desde-islas-a-tierra-firme, https://www.maximaonline.com.ar/sociedad/renuevan-recomendaciones-ante-posibles-traslados-de-animales-desde-islas-a-tierra-firme.htm 외 1건
-
-### Nueva disposición del Gobierno : los productores agropecuarios deberán actualizar sus datos en el RENSPA
-- 점수: 3.00 / 언급 3건 (그룹 내 추가 2건 생략)
-
-아르헨티나 국립농식품위생품질청(Senasa)이 결의안 679/2026호를 통해 렌스파(RENSPA) 등록 생산자들의 데이터 갱신을 의무화했다. 등록일 또는 최종 갱신일로부터 1년 이상 경과한 보유자를 대상으로 하며, 농장 위생 정보의 품질과 무결성을 강화하기 위한 조치다.
-
-원문 링크: https://www.clarin.com/rural/nueva-disposicion-gobierno-productores-agropecuarios-deberan-actualizar-datos-renspa_0_Sso7GBb5TS.html, https://www.anroca.com.ar/noticias/2026/07/29/215921-atencion-productores-senasa-exige-la-actualizacion-de-datos-del-renspa, https://www.infocampo.com.ar/informacion-sanitaria-el-senasa-llama-a-productores-a-actualizar-sus-datos-en-el-renspa/
-
-#### 질병명
-
-###   Cant stop it spreading : more bird flu cases likely
-- 점수: 14.00 / 언급 14건 (그룹 내 추가 13건 생략)
-
-호주 남동부에서 뿔제비갈매기(greater crested tern) 7마리가 집단으로 폐사하며 자생 조류 최초의 의심 사례가 보고돼 방역 당국이 긴장하고 있다. 현재까지 남호주, 서호주, 뉴사우스웨일스, 퀸즐랜드 등지에서 20건의 확진 사례가 확인된 가운데, 이번 집단 감염이 지역 내 자연 전파로 이어질 가능성이 제기된다.
-
-원문 링크: https://www.bendigoadvertiser.com.au/story/9318570/cant-stop-it-spreading-more-bird-flu-cases-likely/, https://www.merimbulanewsweekly.com.au/story/9318570/cant-stop-it-spreading-more-bird-flu-cases-likely/, https://www.cessnockadvertiser.com.au/story/9318570/cant-stop-it-spreading-more-bird-flu-cases-likely/ 외 11건
-
-### New confirmed bird flu cases raise fears for wildlife
-- 점수: 9.00 / 언급 9건 (그룹 내 추가 8건 생략)
-
-호주 당국이 남호주 남동부 지역에서 발견된 뿔제비갈매기 7마리에서 H5형 조류인플루엔자 감염을 확인했다고 발표했다. 감염 개체는 케이프 자파, 포트 맥도넬, 사우스엔드 제티 인근에서 각각 발견되었으며, CSIRO 호주질병대비센터의 검사로 확진됐다. 당국은 바이러스 유전자 분석을 통해 이번 감염이 지역 내 전파에 의한 것인지 여부를 파악 중이다.
-
-원문 링크: https://www.bendigoadvertiser.com.au/story/9319394/new-confirmed-bird-flu-cases-raise-fears-for-wildlife/, https://www.juneesoutherncross.com.au/story/9319394/new-confirmed-bird-flu-cases-raise-fears-for-wildlife/, https://www.bunburymail.com.au/story/9319394/new-confirmed-bird-flu-cases-raise-fears-for-wildlife/ 외 6건
-
-#### 무역/관세 이슈
-
-### Reanudará EU importación de ganado mexicano
-- 점수: 2.00 / 언급 2건 (그룹 내 추가 1건 생략)
-
-미국 농무부 브룩 롤린스 장관이 클라우디아 셰인바움 멕시코 대통령에게 멕시코산 생우 수입 재개를 공식 통보했다. 이에 따라 아메리코 비야레알 타마울리파스 주지사는 1년 전 꾸아우테목 아마야 차관이 발표한 텍사스 국경 검역소 건설 절차를 서둘러야 할 상황이다. 해당 검역소가 완공되면 타마울리파스 국경이 단기적으로 수출 대체 루트가 될 전망이다.
-
-원문 링크: http://www.elmanana.com/opinion/columnas/reanudara-eu-importacion-de-ganado-mexicano-6166020.html, https://laverdad.com.mx/2026/07/reanudara-eu-importacion-de-ganado/
-
-### Agriculture officials reject BAS poultry import claims
-- 점수: 1.00 / 언급 1건
-
-(요약 생략 - 단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출 (범용 본문 추가 수집도 실패/미시도))
-
-원문 링크: https://barbadostoday.bb/2026/07/28/agriculture-officials-reject-bas-poultry-import-claims/
+원문 링크: https://www.kgnews.co.kr/news/article.html?no=905523, https://www.kihoilbo.co.kr/news/articleView.html?idxno=3030114, https://www.kyeonggi.com/article/20260728580300
 
 #### 사료업계 특화 용어
 
-### ABN to withdraw from poultry, pig feed production
-- 점수: 1.00 / 언급 1건
+### 충북 진천축협, 조합사업 우수농가에 퇴비부숙용 톱밥 지원
+- 점수: 4.00 / 언급 4건 (그룹 내 추가 3건 생략)
 
-영국의 주요 단위동물(monogastric) 사료 기업인 ABN이 가금 및 돼지 사료 생산 부문에서 완전히 철수한다고 발표했다. 이번 결정으로 영국 사료 시장의 경쟁 구도에 상당한 변화가 예상된다.
+충북 진천축산농협(조합장 박승서)이 조합사업 우수농가 295곳에 사료사업 활성화 자금 4310만원을, 85곳에는 퇴비부숙용 톱밥 170개(3400만원 상당)를 각각 무상 지원했다. 이번 지원은 사료가격 상승에 따른 농가 경영비 부담을 덜고, 가축분뇨 발효 촉진으로 축사 환경을 개선하며 악취를 저감해 친환경 축산 기반을 조성하기 위해 마련됐다. 박승서 조합장은 조합원 실익 증진과 지속가능한 축산업 발전을 위한 환원 사업을 지속 확대하겠다고 밝혔다.
 
-원문 링크: https://www.feedstrategy.com/animal-feed-manufacturing/animal-feed-manufacturers/news/15831128/abn-to-withdraw-from-poultry-pig-feed-production
+원문 링크: https://www.nongmin.com/article/20260730500224, https://www.ccdailynews.com/news/articleView.html?idxno=2431306, https://www.nongmin.com/article/20260730500227 외 1건
 
-### Animal feed fraud punished in Bangladesh
-- 점수: 1.00 / 언급 1건
+### 농협사료, 국내 최초 '지속가능발전목표 경영시스템' 국제 인증 획득
+- 점수: 4.00 / 언급 4건 (그룹 내 추가 3건 생략)
 
-방글라데시 중부에서 무허가로 사료를 제조·판매해온 '사르카 아그로(Sarkar Agro)'가 청문회 끝에 사기 혐의로 거액의 벌금 처분을 받았다. 당국은 해당 업체가 정식 인허가 없이 불법으로 사료를 생산·유통한 사실을 적발해 제재를 가했다.
+농협사료가 한국경영인증원(KMR)으로부터 유엔 지속가능발전목표(SDGs) 기반의 '지속가능발전목표 경영시스템(ISO/UNDP 53001)' 국제 인증을 국내 최초로 획득했다. 온실가스 감축, 저메탄 사료 출시, 스마트공장 구축 등 환경(E) 분야 노력과 안전보건경영, 윤리경영, 농가 상생 지원 등 사회(S)·지배구조(G) 활동을 종합적으로 인정받은 결과다. 최강필 대표는 이번 인증을 계기로 지속가능한 축산업 발전과 ESG 경영 선도를 더욱 강화하겠다고 밝혔다.
 
-원문 링크: https://www.feedstrategy.com/animal-feed-regulations-safety/news/15830999/animal-feed-fraud-punished-in-bangladesh
-
-#### 가금 계열화/수직계열화
-
-### Positive start to financial year for Cranswick
-- 점수: 1.00 / 언급 1건
-
-크랜윅 그룹이 2026년 6월 27일 마감된 회계연도 1분기(13주) 매출이 전년 동기 대비 5.5% 증가했다고 발표했다. 이번 성장은 8% 이상의 판매 물량 확대에 기인하며, 영국 소비자들의 구매 패턴 변화에 따른 강한 수요가 전 사업 부문에서 고른 실적 개선을 견인했다.
-
-원문 링크: https://www.feedstrategy.com/animal-feed-manufacturing/animal-feed-manufacturers/news/15830922/positive-start-to-year-for-cranswick
-
-#### 사료첨가제/항생제 규제
-
-### Rumin8: New compound provides more methane reducing options for producers
-- 점수: 0.70 / 언급 1건
-
-호주 스타트업 루민8(Rumin8)이 반추동물 섭취 후 체내에서만 활성화되는 '프로드러그(prodrug)' 방식의 신규 메탄 저감 화합물을 개발해 초기 시험에서 메탄 배출 완전 제거 효과를 확인했다. 이 화합물은 섭취 시에는 비활성 상태였다가 반추동물 소화기관 내에서만 작용하도록 설계되어 생산자들에게 새로운 메탄 저감 옵션을 제공할 전망이다.
-
-원문 링크: https://www.feedstrategy.com/sustainability-in-feed-production/carbon-emissions-reduction/news/15830838/rumin8-new-compound-provides-more-methane-reducing-options-for-producers
-
-### New Anthoney takes on antimicrobial resistance to make Sri Lankan poultry safer
-- 점수: 0.40 / 언급 1건
-
-(요약 생략 - 단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출 (범용 본문 추가 수집도 실패/미시도))
-
-원문 링크: https://www.ft.lk/business/New-Anthoney-s-takes-on-antimicrobial-resistance-to-make-Sri-Lankan-poultry-safer/34-795001
+원문 링크: https://www.ajunews.com/view/20260731100547101, http://www.worktoday.co.kr/news/articleView.html?idxno=87370, http://www.press9.kr/news/articleView.html?idxno=80383 외 1건
 
 #### 축종별 용어
 
-### Botswana : Poultry Industry Attains Self - Sufficiency
-- 점수: 1.00 / 언급 1건
+### 농식품부, '계란값 담합' 산란계협회 설립 허가 취소
+- 점수: 55.10 / 언급 56건 (그룹 내 추가 55건 생략)
 
-보츠와나 의회에 보고된 바에 따르면 가금산업이 닭고기와 계란 부문에서 완전 자급자족을 달성했으며, 수출 시장 개척을 준비 중이다. 에드윈 디콜로티 농업부 장관은 15년 이상 운영된 가금연락위원회(Poultry Liaison Committee)가 민간 주도로 월례 회의를 통해 공급망 현안을 해결하며 산업 성장을 견인했다고 밝혔다.
+농림축산식품부가 7월 29일 민법 제38조에 따라 대한산란계협회의 비영리법인 설립허가를 취소했다. 협회는 설립 조건인 '계란 산지가격 결정·통지 금지'를 위반해 가격을 고시했고, 공정거래위원회로부터 담합 혐의로 시정명령과 과징금 5억 9,400만 원을 부과받은 바 있다. 협회는 처분에 반발해 행정소송과 집행정지 신청으로 대응할 방침이다.
 
-원문 링크: https://allafrica.com/stories/202607290540.html
+원문 링크: http://www.inews24.com/view/1989956, https://www.hankookilbo.com/news/article/A2026072913580005345?did=NA, https://biz.heraldcorp.com/article/10824631?ref=naver 외 53건
 
-### Farmer Focus : Misting system averts disaster in broiler shed
-- 점수: 1.00 / 언급 1건
+### ‘청정 제주’ 축산 악취 원인… 양돈장 ‘묵은 분뇨’ 없앤다
+- 점수: 11.90 / 언급 17건 (그룹 내 추가 16건 생략)
 
-영국에서 지속된 건조한 폭염으로 육계 관리에 비상이 걸린 가운데, 미스트 냉각 시스템이 수천 마리의 육계가 밀집된 사육장에서 대량 폐사를 막는 데 결정적 역할을 했다. 2022년 폭염 당시 많은 농장이 큰 피해를 입었던 것과 달리, 이번엔 사전 대비책이 효과를 발휘했으며, 영국 환경식품농림부(Defra)의 관련 지침도 농가 대응에 도움이 된 것으로 평가된다.
+제주특별자치도가 양돈농가 2개소를 대상으로 돈사 피트 바닥에 쌓인 고착슬러지(묵은 분뇨)를 전량 반출·제거하고 주기적 물청소를 지원하는 시범사업을 11월까지 추진한다. 고착슬러지는 혐기성 발효 과정에서 지속적인 악취를 유발하는 핵심 원인으로 지목되며, 제주도는 사업 전후 악취 측정값과 분뇨 수거량 등을 분석해 저감 효과와 현장 적용 가능성을 검증할 계획이다. 최근 축산 악취 민원이 2017년 722건에서 2025년 2,687건으로 급증한 가운데, 이번 사업은 농식품부 저탄소 축산혁신지구 시범사업 등과 연계해 축산환경 개선과 온실가스 감축 방안을 함께 모색한다.
 
-원문 링크: https://www.fwi.co.uk/livestock/livestock-farmer-focus/farmer-focus-misting-system-averts-disaster-in-broiler-shed
+원문 링크: https://www.donga.com/news/Society/article/all/20260729/134390973/2, https://www.jibs.co.kr/news/replay/viewNewsReplayDetail/2026072718063632321?feed=na, https://www.jejumaeil.net/news/articleView.html?idxno=403088 외 14건
+
+#### 질병명
+
+### 경산시, 아프리카돼지열병 예방 방역 드론 띄운다
+- 점수: 8.00 / 언급 8건 (그룹 내 추가 7건 생략)
+
+경산시는 지난 29일 가축위생방역지원본부 경북중부사무소 드론전담팀 3개조를 투입해 압량읍 양돈농장 9개소를 대상으로 차량 진입이 어려운 외곽·울타리·진입로 등 방역 사각지대를 집중 소독하고 야생 멧돼지 기피제를 살포했다. 시는 지난해 도입한 드론 방역을 올해부터 분기별 정례화하여 계절에 관계없이 상시 차단방역 체계를 유지할 계획이다.
+
+원문 링크: https://www.dkilbo.com/news/articleView.html?idxno=550079, https://www.kyongbuk.co.kr/news/articleView.html?idxno=4079791, https://www.idaegu.co.kr/news/articleView.html?idxno=555355 외 5건
+
+### 전북도, 사슴 구제역백신 일제접종 실시…1301마리 대상
+- 점수: 3.00 / 언급 3건 (그룹 내 추가 2건 생략)
+
+전북자치도가 구제역 청정지역 유지를 위해 8월 3일부터 9월 4일까지 도내 76개 농가에서 사육 중인 꽃사슴, 엘크, 레드디어 등 총 1301마리를 대상으로 구제역 백신 일제접종을 실시한다. 사슴의 야생성으로 농가 자체 접종이 어려운 점을 고려해 전문 수의사로 구성된 6개 접종반이 14개 시·군을 순회하며 접종을 지원하며, 백신 구입비와 시술비 3850만 원은 전액 도비와 시군비로 부담한다. 접종 완료 후 항체 양성률 모니터링을 통해 효과를 검증하고 사슴농장 방역체계를 강화할 방침이다.
+
+원문 링크: https://www.newsis.com/view/NISX20260730_0003729809, https://www.nocutnews.co.kr/news/6555812?utm_source=naver&utm_medium=article&utm_campaign=20260730112121, http://www.jmbc.co.kr/news/view/66633
+
+#### 무역/관세 이슈
+
+### 사과 '과원관리사' 대상  FTA 대비 전문농업인 육성 교육 실시
+- 점수: 1.80 / 언급 3건 (그룹 내 추가 2건 생략)
+
+한국과수농협연합회가 지난 7월 23일 경북 상주에서 사과 '과원관리사' 자격 취득자 35명을 대상으로 FTA와 기후변화, 인력난에 대응하기 위한 전문농업인 육성 교육을 진행했다. 2021년 도입된 민간자격인 과원관리사는 현재까지 사과 분야 63명이 배출되어 전정·적과·방제·수확 후 관리 등 전 과정 기술지도 역할을 수행 중이다. 이번 교육은 병해충 예찰·방제 실무와 가락시장 중심 유통·소비 트렌드 분석 등 현장 즉시 활용 가능한 심화 프로그램으로 구성됐다.
+
+원문 링크: http://www.wonyesanup.co.kr/news/articleView.html?idxno=65395, https://www.kenews.co.kr/news/article.html?no=89730, https://www.newsam.co.kr/news/article.html?no=43576
+
+### "더는 미룰 수 없다"…메르코수르 FTA, 실무협상 재개 '속도전'
+- 점수: 1.70 / 언급 2건 (그룹 내 추가 1건 생략)
+
+이재명 대통령의 브라질 국빈 방문을 계기로 11년간 중단됐던 한국과 남미공동시장(MERCOSUR) 간 자유무역협정(FTA) 실무협상이 재개된다. 양국 정상은 보호무역주의 대응과 교역 확대 필요성에 공감하며 무역협정 타결을 '미룰 수 없는 과제'로 규정하고, 방위산업·핵심광물 협력 강화에도 합의했다. 다만 농축산물 개방과 제조업 관세 등 이해관계가 첨예해 실제 타결까지는 상당한 시일이 소요될 전망이며, 브라질의 구제역 청정국 인정에 따른 위생검역 실사가 8월 예정돼 있다.
+
+원문 링크: https://news.einfomax.co.kr/news/articleView.html?idxno=4427129, https://www.g-enews.com/view.php?ud=202607290644579274fbbec65dfb_1
+
+#### 사료첨가제/항생제 규제
+
+### 동물용의약품 GMP 선진화, 2030년부터 단계적 적용
+- 점수: 12.00 / 언급 12건 (그룹 내 추가 11건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.dailyvet.co.kr/news/industry/291814, https://www.newspim.com/news/view/20260730000684, https://www.dailypharm.com/user/news/340990?REFERER=NP 외 9건
 
 #### 시장/가격 용어
 
-### Rosja uzbroi statki ze zbożem . Ceny pszenicy rosną
+### 남동농협, 홍천 찰옥수수·옹진 단호박 소비촉진 행사 성황
+- 점수: 3.10 / 언급 4건 (그룹 내 추가 3건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.fntimes.com/html/view.php?ud=202607282325329886dd55077bc2_18, https://www.shinailbo.co.kr/news/articleView.html?idxno=5045405, https://www.kihoilbo.co.kr/news/articleView.html?idxno=3030092 외 1건
+
+### 고려산업, 배합사료 매출 확대… 곡물가 하향 안정화 수혜 마중물
 - 점수: 1.00 / 언급 1건
 
-러시아 정부와 군, 해운업계가 곡물 수출선 보호를 위해 민간 선박에 중기관총과 이동식 로켓 발사기, 장갑판, 드론 방어망 등을 장착하는 방안을 논의 중이다. 아조프해 봉쇄 등 위협이 지속되는 가운데 이 같은 무장 조치가 밀 가격 상승 요인으로 작용하고 있다.
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
 
-원문 링크: https://www.money.pl/biznes/rosja-uzbroi-statki-ze-zbozem-ceny-pszenicy-rosna-7312384810375552a.html
+원문 링크: https://www.pinpointnews.co.kr/news/articleView.html?idxno=472491
 
-### Producers  struggle to sell  as storage limits , imports bite
+#### 가금 계열화/수직계열화
+
+### 원종계부터 유통까지... 체리부로, 완전 수직계열화로 품질 경쟁력 확보
+- 점수: 0.40 / 언급 1건
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: http://digitalchosun.dizzo.com/site/data/html_dir/2026/07/23/2026072380189.html
+
+## 해외
+
+### Michigan cyclosporiasis cases increase to 9 , 680 in ongoing outbreak
+- 점수: 97.80 / 언급 99건 (그룹 내 추가 98건 생략)
+
+미시간주에서 사이클로스포라증(Cyclosporiasis) 환자가 9,680명으로 급증한 가운데, CDC는 전국적으로 6,700건 이상 확진 및 1만 1,500건 추가 조사를 보고했다. 테일러팜스(Taylor Farms) 아이스버그 상추와 연관된 9개 주 발병과는 별개로, FDA는 감염원 미상의 새로운 발병(약 100명)에 대한 역추적 조사(traceback)를 진행 중이다. 잠복기 탓에 역학 조사가 난항을 겪고 있으며, FDA CORE 테이블상 현재 6건의 사이클로스포라 관련 발병이 조사 대상에 올라 있다.
+
+원문 링크: https://mymixfm.com/2026/07/28/michigan-reports-9680-cyclosporiasis-cases-in-ongoing-outbreak/, https://ktsmradio.iheart.com/content/2026-07-30-fda-investigates-new-cyclosporiasis-outbreak-source/, https://twincitiesnewstalk.iheart.com/content/2026-07-30-fda-investigates-new-cyclosporiasis-outbreak-source/ 외 96건
+
+### Wildlife hospital on alert as H5 bird flu arrives
+- 점수: 87.20 / 언급 95건 (그룹 내 추가 109건 생략)
+
+호주 빅토리아주·남호주·퀸즐랜드·뉴사우스웨일스·서호주 5개 주에서 야생 해조류를 중심으로 H5N1 고병원성 조류인플루엔자 확진 28건과 의심 13건이 보고됐으며, 당국은 본토 내 지역전파(local transmission)를 공식 확인하고 비상 대응 계획을 가동했다. 뉴질랜드 북섬 웰링턴 인근에서도 갈색도둑갈매기(brown skua) 1마리에서 첫 H5N1 감염이 확인됐으나 가금 농장 전파나 집단 폐사 증거는 아직 없는 것으로 나타났다. 전문가들은 야생조류 간 확산 차단이 어렵고 추가 발생이 이어질 것으로 전망하며, 멸종위기 바다사자 등 야생동물 피해 우려가 커지고 있다.
+
+원문 링크: https://www.odt.co.nz/news/dunedin/wildlife-hospital-on-alert-as-h5-bird-flu-arrives-iy7asjr2, https://www.abc.net.au/news/2026-07-25/two-additional-h5-bird-flu-suspected-in-sa/106957832, https://www.sbs.com.au/news/article/bird-flu-queensland-first-case/fub12jlzo 외 107건
+
+### CSIRO chief Doug Hilton flags EBA talks over consultation clause | The Canberra Times
+- 점수: 35.00 / 언급 35건 (그룹 내 추가 34건 생략)
+
+CSIRO 더그 힐튼 최고경영자는 차기 기업협약(EBA) 협상에서 현행 직원 협의 조항이 길고 지연되며 답답하다고 지적하며 절차 단축을 핵심 의제로 제시했다. 최근 2년간 1,100개 이상의 직책이 감축되었고 추가 감원 가능성도 거론되는 상황에서 힐튼은 협의 메커니즘 개선을 협상 테이블에 올리겠다고 밝혔다. 이 내용은 호주 다수 지역 신문에 동시 보도되었다.
+
+원문 링크: https://www.canberratimes.com.au/story/9319384/csiro-chief-doug-hilton-flags-eba-talks-over-consultation-clause/, https://www.standard.net.au/story/9319384/csiro-chief-doug-hilton-flags-eba-talks-over-consultation-clause/, https://www.examiner.com.au/story/9319384/csiro-chief-doug-hilton-flags-eba-talks-over-consultation-clause/ 외 32건
+
+### 해외 - 카테고리별 Top N
+
+#### 질병명
+
+### Wildlife hospital on alert as H5 bird flu arrives
+- 점수: 87.20 / 언급 95건 (그룹 내 추가 109건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.odt.co.nz/news/dunedin/wildlife-hospital-on-alert-as-h5-bird-flu-arrives-iy7asjr2, https://www.abc.net.au/news/2026-07-25/two-additional-h5-bird-flu-suspected-in-sa/106957832, https://www.sbs.com.au/news/article/bird-flu-queensland-first-case/fub12jlzo 외 107건
+
+### Bird flu scare sparks fears of sea lion extinction
+- 점수: 5.00 / 언급 5건 (그룹 내 추가 4건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.batemansbaypost.com.au/story/9319918/bird-flu-scare-sparks-fears-of-sea-lion-extinction/, https://www.bunburymail.com.au/story/9319918/bird-flu-scare-sparks-fears-of-sea-lion-extinction/, https://www.katherinetimes.com.au/story/9319918/bird-flu-scare-sparks-fears-of-sea-lion-extinction/ 외 2건
+
+#### 정부·제도 용어
+
+### Modi faces challenge from activists over surveillance at India youth protest
+- 점수: 8.00 / 언급 11건 (그룹 내 추가 10건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.channelnewsasia.com/asia/modi-india-youth-protest-surveillance-6281626, https://dunyanews.tv/en/World/964936-modi-faces-challenge-from-activists-over-surveillance-at-india-youth-p, https://www.theglobeandmail.com/world/article-modi-government-challenged-over-ai-powered-surveillance-during/ 외 8건
+
+### MP moves SC against Delhi police FRT , biometric surveillance at protests
+- 점수: 7.70 / 언급 8건 (그룹 내 추가 7건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.rediff.com/news/report/mp-moves-sc-against-delhi-polices-frt-biometric-surveillance-at-protests/20260728.htm, https://www.thehindu.com/news/national/rajya-sabha-mp-moves-supreme-court-against-use-of-facial-recognition-technology-at-neet-protests/article71276424.ece, https://news.webindia123.com/news/Articles/India/20260728/4480143.html 외 5건
+
+#### 사료업계 특화 용어
+
+### Norfolk feed mill jobs on the line as ABN exits sector
+- 점수: 2.00 / 언급 2건 (그룹 내 추가 1건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.edp24.co.uk/news/26421351.suffolk-feed-mill-jobs-line-abn-exits-sector/, https://www.eadt.co.uk/news/26421149.suffolk-feed-mill-jobs-line-abn-exits-sector/
+
+### Breakthrough As African Scientists Turn Black Soldier Fly Into Animal Feed
 - 점수: 1.00 / 언급 1건
 
-(요약 생략 - 단독 기사(이슈 그룹핑 안 됨) - 본문/설명 재료가 얇아 요약 생략, 원문 제목만 노출 (범용 본문 추가 수집도 실패/미시도))
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
 
-원문 링크: https://barbadostoday.bb/2026/07/27/producers-struggle-to-sell-as-storage-limits-imports-bite/
+원문 링크: https://leadership.ng/breakthrough-as-african-scientists-turn-black-soldier-fly-into-animal-feed/
+
+#### 시장/가격 용어
+
+### Australian grain prices : global markets fall , local values split | Stock Journal
+- 점수: 3.00 / 언급 3건 (그룹 내 추가 2건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.stockjournal.com.au/story/9319189/australian-grain-prices-global-markets-fall-local-values-split/, https://www.farmweekly.com.au/story/9319189/australian-grain-prices-global-markets-fall-local-values-split/, https://www.queenslandcountrylife.com.au/story/9319189/australian-grain-prices-global-markets-fall-local-values-split/
+
+### Corn Retreating Early on Monday
+- 점수: 2.00 / 언급 2건 (그룹 내 추가 1건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://finance.yahoo.com/markets/commodities/articles/corn-retreating-early-monday-123502335.html, https://finance.yahoo.com/markets/commodities/articles/wheat-fading-back-early-monday-123502896.html
+
+#### 사료첨가제/항생제 규제
+
+### WOAH adopts global antimicrobial resistance action plan for 2026 - 2036
+- 점수: 2.10 / 언급 3건 (그룹 내 추가 2건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.thepoultrysite.com/news/2026/07/woah-adopts-global-antimicrobial-resistance-action-plan-for-2026-2036, https://www.thepigsite.com/news/2026/07/woah-adopts-global-antimicrobial-resistance-action-plan-for-2026-2036, https://www.thecattlesite.com/news/woah-adopts-global-antimicrobial-resistance-action-plan-for-2026-2036
+
+### Shamrock Trail , stop three : The Dairy
+- 점수: 1.00 / 언급 1건
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.boorowanewsonline.com.au/news/shamrock-trail-stop-three-the-dairy-ucprsr3h
+
+#### 축종별 용어
+
+### Beef Cattle Short Course Ranch Horse Program set Aug . 2 in College Station
+- 점수: 2.00 / 언급 2건 (그룹 내 추가 1건 생략)
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.jacksonvilleprogress.com/news/beef-cattle-short-course-ranch-horse-program-set-aug-2-in-college-station/article_3d15be01-53fb-4887-91df-8e5c523bac81.html, https://www.corsicanadailysun.com/news/beef-cattle-short-course-ranch-horse-program-set-aug-2-in-college-station/article_45bdd3b3-0f5d-4a51-b206-8ee6dbf9aedb.html
+
+### Investigation uncovers use of ARVs in Zimbabwe poultry industry
+- 점수: 1.00 / 언급 1건
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.thesouthafrican.com/news/investigation-uncovers-illegal-use-of-arvs-in-zimbabwes-poultry-industry/
+
+#### 무역/관세 이슈
+
+### KPM Analytics Introduces SiftAI FM HD Platform with Smarter AI , Enhanced Hygiene Design , and Clear Plastic Detection
+- 점수: 1.00 / 언급 1건
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.finanznachrichten.de/nachrichten-2026-07/69156892-kpm-analytics-introduces-siftai-fm-hd-platform-with-smarter-ai-enhanced-hygiene-design-and-clear-plastic-detection-008.htm
+
+#### 스마트팜/축산 기술
+
+### CSIR urges climate - smart farming to reduce flood losses
+- 점수: 1.00 / 언급 1건
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: http://www.businessghana.com/site/news/general/352920/CSIR-urges-climate-smart-farming-to-reduce-flood-losses
+
+### Co - op Bank hosts Virtual Seminar promoting Smart Farming and Agriculture – Ghafla ! 
+- 점수: 0.40 / 언급 1건
+
+(요약 생략 - 시간 예산 초과로 요약 생략(원문 제목만 노출))
+
+원문 링크: https://www.ghafla.co.ke/co-op-bank-hosts-virtual-seminar-promoting-smart-farming-and-agriculture/
