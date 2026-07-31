@@ -10,6 +10,7 @@ WATT는 업계 전문지라 이 필터 없이 자동 통과. 소스별 컨텍스
 
 import json
 import os
+import time
 
 import requests
 
@@ -273,12 +274,17 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
         return None
 
 
-def filter_articles(articles: list[dict]) -> list[dict]:
+def filter_articles(articles: list[dict], deadline: float | None = None) -> list[dict]:
     """
     정규화+태깅 완료된 articles 중 LLM이 "관련 없다"고 확정한 것만 제외.
     API 키 없거나 전부 실패하면 원본 그대로 반환(안전 기본값).
     WATT 소스는 LLM 호출 없이 자동 통과(업계 전문지라 이 필터가 잡는
     오매칭 유형이 구조적으로 없음).
+
+    deadline: time.monotonic() 기준 절대 마감 시각(파이프라인 시작 기준
+    체크포인트, main.py가 계산해서 넘김). None이면 시간 제한 없이 끝까지 처리
+    (단독 실행/테스트용 하위호환). 마감을 넘기면 남은 배치는 "애매하면
+    통과"와 같은 방향으로 전부 통과 처리하고 중단.
     """
     if not articles:
         return articles
@@ -310,6 +316,13 @@ def filter_articles(articles: list[dict]) -> list[dict]:
     total_batches = (len(llm_target_articles) + BATCH_SIZE - 1) // BATCH_SIZE
     with requests.Session() as session:
         for batch_num, i in enumerate(range(0, len(llm_target_articles), BATCH_SIZE), start=1):
+            if deadline is not None and time.monotonic() >= deadline:
+                remaining = llm_target_articles[i:]
+                kept.extend(remaining)
+                print(f"[relevance_filter] 🟡 주의 [RF-11] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                      f"남은 {len(remaining)}건({total_batches - batch_num + 1}배치)은 "
+                      f"필터링 없이 전부 통과 처리하고 중단")
+                break
             batch = llm_target_articles[i:i + BATCH_SIZE]
             print(f"[relevance_filter] 배치 {batch_num}/{total_batches} 처리 중 ({len(batch)}건)")
             results = _call_llm(batch, api_key, session)
@@ -426,9 +439,13 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
         return None
 
 
-def recategorize_uncategorized(articles: list[dict]) -> list[dict]:
+def recategorize_uncategorized(articles: list[dict], deadline: float | None = None) -> list[dict]:
     """filter_articles() 통과했지만 category="기타"인 기사를 LLM으로 재분류.
-    API 키 없거나 전부 실패해도 원본 그대로 반환."""
+    API 키 없거나 전부 실패해도 원본 그대로 반환.
+
+    deadline: filter_articles와 동일한 파이프라인 기준 절대 마감. 넘기면
+    남은 배치는 재분류 없이 "기타" 그대로 두고 중단(원래도 이 기사들 기본값이
+    "기타"라 손실 없음)."""
     targets = [a for a in articles if a.get("category") == "기타"]
     if not targets:
         return articles
@@ -453,6 +470,12 @@ def recategorize_uncategorized(articles: list[dict]) -> list[dict]:
     total_batches = (len(targets) + BATCH_SIZE - 1) // BATCH_SIZE
     with requests.Session() as session:
         for batch_num, i in enumerate(range(0, len(targets), BATCH_SIZE), start=1):
+            if deadline is not None and time.monotonic() >= deadline:
+                remaining = len(targets) - i
+                print(f"[relevance_filter] 🟡 주의 [RF-12] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                      f"남은 {remaining}건({total_batches - batch_num + 1}배치)은 "
+                      f"재분류 없이 '기타' 유지하고 중단")
+                break
             batch = targets[i:i + BATCH_SIZE]
             print(f"[relevance_filter] 카테고리 재분류 배치 {batch_num}/{total_batches} "
                   f"처리 중 ({len(batch)}건)")

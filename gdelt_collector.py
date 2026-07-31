@@ -228,7 +228,7 @@ MAX_RECORDS = 250  # article_search 1회 호출 최대 반환 건수(API 자체 
 
 # GDELT 수집 시간 예산(GitHub 러너 job 전체 360분 제한 안에서 다른 단계에도
 # 시간을 남기기 위함). 초과분 키워드는 이번 실행 건너뜀(다음 실행에서 재시도).
-TIME_BUDGET_SECONDS = 5 * 60 * 60  # 5시간
+TIME_BUDGET_SECONDS = 4 * 60 * 60  # 4시간 (파이프라인 시작 기준 체크포인트 - deadline 인자로 안 넘어오면 이 값을 자기 시작부터 씀, 하위호환/단독 실행용)
 
 # --- 적응형 배치 수집 ---
 # 키워드를 작게 묶어(BATCH_SIZE) OR 요청 후, 상한 근처까지 찼는데 특정
@@ -531,6 +531,29 @@ def _detect_crowded_keywords(articles: list[dict], keywords: list[str]) -> list[
     return crowders
 
 
+def _handle_batch_crowding(batch: list[str], batch_articles: list[dict]) -> list[str]:
+    """
+    배치 결과의 크라우딩 여부를 판단하고, 트리거 여부와 무관하게 항상 판정
+    결과를 한 줄로 로그에 남긴다(예전엔 트리거 안 되면 아무 로그도 없어서
+    "이 배치가 개별 재요청으로 넘어갔는지"를 확인하기 어려웠음).
+    반환: 개별 재요청 대상으로 넘길 키워드 리스트(없으면 빈 리스트).
+    """
+    crowders = _detect_crowded_keywords(batch_articles, batch)
+    if crowders:
+        others = [kw for kw in batch if kw not in crowders]
+        print(f"[gdelt] 🟡 주의 [GD-12] - 배치 {batch} 내 크라우딩 감지({crowders}가 결과의 "
+              f"{int(CROWDING_SHARE_THRESHOLD * 100)}% 이상 차지 추정) - "
+              f"나머지 키워드 {others} 개별 재요청 대상으로 편입")
+        return others
+    if len(batch_articles) >= MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
+        print(f"[gdelt] 🟡 주의 [GD-13] - 배치 {batch} 결과가 상한 근처까지 참({len(batch_articles)}건) - "
+              f"골고루 밀렸을 위험 있어 배치 전체를 개별 재요청 대상으로 편입")
+        return list(batch)
+    print(f"[gdelt] 배치 {batch} - 크라우딩/상한 근접 없음, 개별 재요청 없이 결과 확정"
+          f"({len(batch_articles)}건)")
+    return []
+
+
 def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
     """
     키워드 1개 timelinevol/timelinevolraw 수집. 실패 시 None.
@@ -554,17 +577,23 @@ def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
         return None
 
 
-def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
+def collect(keywords: list[str] | None = None, deadline: float | None = None) -> tuple[list[dict], dict]:
     """
     KEYWORDS_EN(또는 인자로 넘긴 keywords)을 대상으로 GDELT에서 기사 수집. 진입점.
     timeline은 시계열 수집 제거로 항상 빈 dict(main.py 언패킹 호환 유지 목적).
 
+    deadline: time.monotonic() 기준 절대 마감 시각(파이프라인 시작 기준 체크포인트,
+    main.py가 계산해서 넘김). None이면(단독 실행/테스트 등) 지금부터 TIME_BUDGET_SECONDS
+    후로 자체 계산해 하위호환 유지.
+
     적응형 배치 수집: ① 활성 키워드를 BATCH_SIZE씩 묶어 OR 결합 요청 ②
     크라우딩 감지되면 그 배치의 나머지 키워드만 개별 재요청 대상으로 표시
     ③ 배치 요청 자체 실패(429 등)는 같은 배치로 외부 재시도, 최종 실패해야
-    개별 전환. 시간 예산(TIME_BUDGET_SECONDS) 초과 시 남은 키워드는
-    이번 실행 건너뜀(다음 실행에서 처음부터 재시도).
+    개별 전환. deadline 초과 시 남은 키워드는 이번 실행 건너뜀(다음 실행에서 처음부터 재시도).
     """
+    if deadline is None:
+        deadline = time.monotonic() + TIME_BUDGET_SECONDS
+
     gd = GdeltDoc()
     target_keywords = keywords if keywords is not None else keyword_source.get_keywords("en", KEYWORDS_EN)
 
@@ -596,12 +625,11 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
     if not active_keywords and not known_crowders:
         return all_articles, timeline_by_keyword
 
-    collect_start = time.monotonic()
+    def _over_budget() -> bool:
+        return time.monotonic() >= deadline
+
     budget_exceeded = False
     skipped_due_to_budget: list[str] = []
-
-    def _over_budget() -> bool:
-        return (time.monotonic() - collect_start) >= TIME_BUDGET_SECONDS
 
     # --- 1단계: 배치 단위 수집 + 크라우딩 감지 ---
     batches = [active_keywords[i:i + BATCH_SIZE] for i in range(0, len(active_keywords), BATCH_SIZE)]
@@ -613,7 +641,7 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
             remaining = [kw for b in batches[batch_idx:] for kw in b]
             skipped_due_to_budget.extend(remaining)
             budget_exceeded = True
-            print(f"[gdelt] 🟡 주의 - 시간 예산({TIME_BUDGET_SECONDS // 3600}시간) 소진 - "
+            print(f"[gdelt] 🟡 주의 - 시간 예산(파이프라인 기준 마감 도달) 소진 - "
                   f"남은 배치 {len(batches) - batch_idx}개(키워드 {len(remaining)}개)는 "
                   f"이번 실행에서 건너뜀. 다음 실행에서 다시 시도됨.")
             break
@@ -631,19 +659,7 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
             pending_batches.append(batch)
         else:
             all_articles.extend(batch_articles)
-            crowders = _detect_crowded_keywords(batch_articles, batch)
-            if crowders:
-                others = [kw for kw in batch if kw not in crowders]
-                print(f"[gdelt] 배치 {batch} 내 크라우딩 감지({crowders}가 결과의 "
-                      f"{int(CROWDING_SHARE_THRESHOLD * 100)}% 이상 차지 추정) - "
-                      f"나머지 키워드 {others} 개별 재요청으로 보충 예정")
-                pending_individual.extend(others)
-            elif len(batch_articles) >= MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
-                # 특정 키워드로 지목은 안 되지만 배치 전체가 상한 근처 - 골고루
-                # 밀렸을 위험 있어 배치 전체를 개별 재요청 대상으로 보충.
-                print(f"[gdelt] 배치 {batch} 결과가 상한 근처까지 참({len(batch_articles)}건) - "
-                      f"골고루 밀렸을 위험 있어 배치 전체 개별 재요청으로 보충 예정")
-                pending_individual.extend(batch)
+            pending_individual.extend(_handle_batch_crowding(batch, batch_articles))
         time.sleep(REQUEST_INTERVAL)
 
     # --- 1-보조단계: 배치 요청 자체가 실패한 것들을 배치 그대로 재시도 ---
@@ -681,12 +697,7 @@ def collect(keywords: list[str] | None = None) -> tuple[list[dict], dict]:
             success, batch_articles = _collect_articles_for_keywords(gd, batch)
             if success:
                 all_articles.extend(batch_articles)
-                crowders = _detect_crowded_keywords(batch_articles, batch)
-                if crowders:
-                    others = [kw for kw in batch if kw not in crowders]
-                    pending_individual.extend(others)
-                elif len(batch_articles) >= MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
-                    pending_individual.extend(batch)
+                pending_individual.extend(_handle_batch_crowding(batch, batch_articles))
             else:
                 still_failed_batches.append(batch)
             time.sleep(REQUEST_INTERVAL)

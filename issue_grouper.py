@@ -8,6 +8,7 @@ issue_grouper.py
 import csv
 import json
 import os
+import time
 from itertools import combinations
 
 import requests
@@ -474,11 +475,17 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
     return results
 
 
-def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]]) -> list[tuple[dict, dict, float]]:
+def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]],
+                       deadline: float | None = None) -> list[tuple[dict, dict, float]]:
     """
     애매 구간 쌍을 LLM에 물어 "같은 사건"으로 확정된 쌍만 반환.
     LLM_PROVIDER에 따라 ANTHROPIC_API_KEY 또는 OPENROUTER_API_KEY 사용.
     키 없거나 전부 실패하면 안 묶음으로 안전하게 fallback.
+
+    deadline: time.monotonic() 기준 절대 마감(파이프라인 기준 체크포인트,
+    main.py가 계산해서 넘김). None이면 시간 제한 없음. 넘기면 남은 배치는
+    "안 묶음" 기본값 그대로 두고 중단(원래도 이 쌍들 기본값이 "안 묶음"이라
+    손실 없음 - 다음 실행에서 다시 애매 구간으로 잡히면 재확인됨).
     """
     if not borderline_pairs:
         return []
@@ -497,6 +504,11 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]]) -> list[
     confirmed = []
     with requests.Session() as session:
         for i in range(0, len(borderline_pairs), LLM_BATCH_SIZE):
+            if deadline is not None and time.monotonic() >= deadline:
+                remaining = len(borderline_pairs) - i
+                print(f"[issue_grouper] 🟡 주의 [IG-14] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                      f"3차 LLM 보조 남은 {remaining}쌍은 '안 묶음' 기본값 유지하고 중단")
+                break
             batch = borderline_pairs[i:i + LLM_BATCH_SIZE]
             results = _call_llm(batch, api_key, session)
             if results is None:
@@ -514,7 +526,7 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]]) -> list[
 # 최종 진입점: 1차 + 2차 + 3차를 합쳐서 scorer.py에 바로 넘길 수 있는 형태로 반환
 # ---------------------------------------------------------------------------
 
-def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
+def group_issues(articles: list[dict], model=None, deadline: float | None = None) -> list[list[dict]]:
     """
     1~3차를 순서대로 실행해 최종 이슈 그룹 리스트 반환(main.py의 score()가 호출).
 
@@ -522,6 +534,9 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
     쌍만 구성요소 단위로 union. 연쇄 병합 방지 - 3개 이상 연결된 컴포넌트는
     모든 쌍이 실제로 LLM에 직접 확인됐는지(클리크인지) 검증하고, 아니면
     빠진 쌍만 추가로 재확인한 뒤에도 안 되면 개별 유지.
+
+    deadline: time.monotonic() 기준 절대 마감(파이프라인 기준 체크포인트).
+    stage3_llm_assist와 재확인 라운드(extra_confirm) 양쪽에 그대로 전파.
     """
     stage1_grouped, stage1_unmatched = stage1_group(articles)
 
@@ -535,10 +550,12 @@ def group_issues(articles: list[dict], model=None) -> list[list[dict]]:
     confirmed_pairs: list[tuple[dict, dict, float]] = []
     if borderline_pairs:
         print(f"[issue_grouper] 임계값 애매 구간 {len(borderline_pairs)}쌍 발견 - 3차 LLM 보조로 최종 판단")
-        confirmed_pairs = stage3_llm_assist(borderline_pairs)
+        confirmed_pairs = stage3_llm_assist(borderline_pairs, deadline=deadline)
 
     components = stage2_grouped + [[a] for a in still_unmatched]
-    components = _merge_confirmed_components(components, confirmed_pairs, extra_confirm=stage3_llm_assist)
+    components = _merge_confirmed_components(
+        components, confirmed_pairs,
+        extra_confirm=lambda pairs: stage3_llm_assist(pairs, deadline=deadline))
 
     return stage1_grouped + components
 
@@ -742,12 +759,17 @@ def _call_stage4_llm(pairs: list[tuple[dict, dict]], api_key: str, session: requ
     return results
 
 
-def stage4_dedupe_and_promote(ranked_pool: list[dict], top_n: int, label: str = "") -> list[dict]:
+def stage4_dedupe_and_promote(ranked_pool: list[dict], top_n: int, label: str = "",
+                               deadline: float | None = None) -> list[dict]:
     """
     ranked_pool(top_n 제한 없는 전체 순위 풀) 상위 top_n을 후보로 삼아 같은
     사건 쌍을 LLM으로 재확인, 병합하고 빈 자리는 다음 순위로 채운다.
     회차당 병합 1건만 적용 후 재판단, 최대 3회. API 키 없으면 기존 순위 그대로 반환.
     반환값은 scorer.score_and_rank(top_n=N)과 동일한 형태.
+
+    deadline: time.monotonic() 기준 절대 마감. 넘기면 그 시점까지의 candidates를
+    그대로 반환하고 남은 회차는 생략(이미 반영된 병합/승격은 유지, 못 다 본
+    나머지는 다음 실행에서 다시 확인됨).
     """
     if top_n is None:
         top_n = len(ranked_pool)
@@ -771,6 +793,10 @@ def stage4_dedupe_and_promote(ranked_pool: list[dict], top_n: int, label: str = 
     with requests.Session() as session:
         for round_idx in range(1, max_rounds + 1):
             if len(candidates) < 2:
+                break
+            if deadline is not None and time.monotonic() >= deadline:
+                print(f"{prefix}🟡 주의 [IG-15] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                      f"4차 재검토 {round_idx}회차부터 생략, 지금까지 결과로 확정")
                 break
 
             index_pairs = list(combinations(range(len(candidates)), 2))

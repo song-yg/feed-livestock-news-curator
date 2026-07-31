@@ -422,8 +422,16 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     return result
 
 
-def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict]:
-    """ranked_items 전체에 summarize_issue 적용. 항목마다 즉시 로그 출력(진행 상황 확인용)."""
+def summarize_top_issues(ranked_items: list[dict], label: str = "",
+                          deadline: float | None = None) -> list[dict]:
+    """
+    ranked_items 전체에 summarize_issue 적용. 항목마다 즉시 로그 출력(진행 상황 확인용).
+
+    deadline: time.monotonic() 기준 절대 마감(파이프라인 기준 체크포인트).
+    넘기면 남은 항목은 summarize_issue를 아예 안 부르고 "시간 예산 초과로
+    요약 생략" 사유로 채워서 반환 - 기존 summary_skipped_reason 경로와
+    동일하게 흡수되므로 저장/배포 쪽 코드 변경 없이 그대로 동작한다.
+    """
     results = []
     total = len(ranked_items)
     with requests.Session() as session:
@@ -431,6 +439,18 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "") -> list[dict
             titles = item.get("titles", [])
             rep_title = titles[0] if titles else "(제목 없음)"
             prefix = f"[llm_summarizer] {label} " if label else "[llm_summarizer] "
+
+            if deadline is not None and time.monotonic() >= deadline:
+                remaining = total - i + 1
+                print(f"{prefix}🟡 주의 [LS-10] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                      f"남은 {remaining}건은 요약 생략하고 원문 제목만 노출")
+                results.extend(
+                    {**dict(remaining_item), "generated_title": None, "summary": None,
+                     "summary_skipped_reason": "시간 예산 초과로 요약 생략(원문 제목만 노출)"}
+                    for remaining_item in ranked_items[i - 1:]
+                )
+                break
+
             print(f"{prefix}({i}/{total}) '{rep_title}' (그룹 {len(titles)}건) - 처리 중...")
 
             result = summarize_issue(item, session)
