@@ -193,9 +193,21 @@ def stage2_group(
       grouped: 2차에서 새로 묶인 그룹들
       still_unmatched: 2차에서도 못 잡은 단독 기사
       borderline_pairs: 애매 구간 (기사A, 기사B, 유사도) - 3차 LLM 보조 대상
+
+    임계값 분류는 numpy 벡터 연산으로 처리(2026-07-31) - 예전엔
+    combinations(range(n), 2)로 전체 쌍을 순수 파이썬 for문으로 돌았는데,
+    n=수천이면 쌍의 개수가 수백만~천만 단위라 관련성 필터가 죽어서
+    필터링 안 된 원본이 그대로 들어오는 등의 상황에서 사실상 멈춘 것처럼
+    보일 정도로 느려졌음. sim_matrix에서 threshold/borderline 조건을 만족하는
+    쌍의 인덱스를 numpy 불리언 마스킹으로 먼저 골라내고, union-find처럼
+    본질적으로 순차 처리가 필요한 부분만 그 소수의 후보 쌍에 대해 파이썬
+    루프를 돈다(대부분의 쌍은 threshold 미만이라 이 후보군 자체가 전체 쌍
+    수보다 훨씬 작음).
     """
     if not articles:
         return [], [], []
+
+    import numpy as np
 
     texts = [_embedding_text(a) for a in articles]
     vectors = model.encode(texts, normalize_embeddings=True)
@@ -207,20 +219,27 @@ def stage2_group(
     n = len(articles)
     uf = UnionFind(n)
 
+    # 상삼각(i<j) 쌍만 필요하므로 triu_indices로 한 번에 추출 - 대칭 행렬의
+    # 절반(대각 제외)만 보면 되고, 이 인덱싱/비교 자체가 전부 numpy 벡터 연산.
+    iu = np.triu_indices(n, k=1)
+    sims = sim_matrix[iu]
+
     # 2-pass: union 먼저 전부 확정한 뒤 borderline 후보를 걸러야, 간접
     # 연결로 이미 확정된 쌍이 borderline에 중복 기록되지 않음.
-    for i, j in combinations(range(n), 2):
-        sim = float(sim_matrix[i][j])
-        if sim >= threshold:
-            uf.union(i, j)
+    above_mask = sims >= threshold
+    for i, j in zip(iu[0][above_mask].tolist(), iu[1][above_mask].tolist()):
+        uf.union(i, j)
+
+    borderline_mask = (sims >= threshold - borderline_margin) & (sims < threshold)
+    borderline_i = iu[0][borderline_mask].tolist()
+    borderline_j = iu[1][borderline_mask].tolist()
+    borderline_sims = sims[borderline_mask].tolist()
 
     borderline_pairs = []
-    for i, j in combinations(range(n), 2):
+    for i, j, sim in zip(borderline_i, borderline_j, borderline_sims):
         if uf.find(i) == uf.find(j):
             continue
-        sim = float(sim_matrix[i][j])
-        if threshold - borderline_margin <= sim < threshold:
-            borderline_pairs.append((articles[i], articles[j], sim))
+        borderline_pairs.append((articles[i], articles[j], sim))
 
     grouped = []
     still_unmatched = []
