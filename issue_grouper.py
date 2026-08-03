@@ -258,8 +258,9 @@ def stage2_group(
 # borderline_pairs만 대상(전수 호출 아님). "같은 사건" 기준: 질병/주제가
 # 같아도 국가·장소·시점이 다르면 별개.
 #
-# LLM_PROVIDER=anthropic(기본, ANTHROPIC_API_KEY) 또는 openrouter(로컬 검증
-# 전용, OPENROUTER_API_KEY). 운영 환경은 기본값(anthropic) 유지할 것.
+# LLM_PROVIDER=openrouter(기본, OPENROUTER_API_KEY) - Anthropic은 안 쓰는
+# 걸로 확정(2026-08-03). anthropic으로 명시적으로 넘기면 그 경로도 여전히
+# 동작은 하지만(ANTHROPIC_API_KEY 필요), 운영 환경 기본값은 openrouter.
 #
 # 무료 모델 하나를 못 박지 않고 OpenRouter의 자체 무료 라우터(openrouter/free)
 # 를 기본값으로 쓴 이유: 개별 :free 모델은 공급사가 예고 없이 무료 태그를
@@ -276,7 +277,7 @@ def stage2_group(
 # Variables에 등록 안 한 상태로 두면 LLM_MODEL_OPENROUTER가 빈 문자열이
 # 되어 OpenRouter API가 "model" 필드 없음으로 400 Bad Request를 던진다.
 # `or` 연산자를 쓰면 빈 문자열도 falsy라 기본값으로 자연스럽게 대체된다.
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER") or "anthropic"
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER") or "openrouter"
 
 LLM_MODEL_ANTHROPIC = "claude-haiku-4-5-20251001"
 LLM_API_URL_ANTHROPIC = "https://api.anthropic.com/v1/messages"
@@ -944,7 +945,8 @@ if __name__ == "__main__":
 
     def _mock_session_post(self, url, headers=None, json=None, timeout=None):
         _mock_calls.append(url)
-        pairs_count = json["messages"][0]["content"].count('A: "')
+        user_content = json["messages"][-1]["content"]  # openrouter는 messages[0]=system, [-1]=user
+        pairs_count = user_content.count('A: "')
         results = [{"id": i, "same_event": True} for i in range(1, pairs_count + 1)]
         text = __import__("json").dumps(results)
 
@@ -952,12 +954,12 @@ if __name__ == "__main__":
             status_code = 200
             def raise_for_status(self): pass
             def json(self):
-                return {"content": [{"type": "text", "text": text}]}
+                return {"choices": [{"message": {"content": text}}]}
         return _MockResp()
 
     _original_session_post = _requests.Session.post
     _requests.Session.post = _mock_session_post
-    _os.environ["ANTHROPIC_API_KEY"] = "sk-ant-smoke-test-dummy-key"
+    _os.environ["OPENROUTER_API_KEY"] = "sk-or-smoke-test-dummy-key"
     try:
         fake_borderline = [
             (
@@ -973,7 +975,7 @@ if __name__ == "__main__":
               f"confirmed {len(confirmed)}쌍")
     finally:
         _requests.Session.post = _original_session_post
-        del _os.environ["ANTHROPIC_API_KEY"]
+        del _os.environ["OPENROUTER_API_KEY"]
 
     # 헤더 latin-1 인코딩 검증(한글 섞이면 UnicodeEncodeError)
     for header_name, header_value in {

@@ -15,7 +15,7 @@ import time
 import requests
 
 # LLM 프로바이더 설정 - issue_grouper.py와 동일한 스위치 방식.
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER") or "anthropic"
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER") or "openrouter"
 
 LLM_MODEL_ANTHROPIC = "claude-haiku-4-5-20251001"
 LLM_API_URL_ANTHROPIC = "https://api.anthropic.com/v1/messages"
