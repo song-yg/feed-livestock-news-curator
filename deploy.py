@@ -10,6 +10,7 @@ import html
 import os
 import smtplib
 from datetime import datetime
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -226,14 +227,61 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     return "".join(parts)
 
 
+def render_email_pdf(html_content: str) -> bytes | None:
+    """
+    render_email_html()이 만든 HTML을 PDF로 변환. Playwright/Chromium 사용 -
+    WATT_collector.py가 이미 같은 브라우저를 쓰고 있어서(워크플로에도 이미
+    설치돼 있음) requirements.txt/워크플로에 새 의존성을 추가할 필요가 없음.
+
+    링크(원문 등)는 href 그대로 살아서 PDF에서도 클릭 가능(하이퍼링크
+    주석으로 보존됨 - 화면에 보이는 글자가 "원문"으로 짧아도 무관).
+
+    실패해도 예외를 던지지 않고 None만 반환 - PDF 변환 실패로 이메일 발송
+    자체가 막히면 안 됨(HTML 본문 발송이 우선, PDF는 부가 기능).
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page()
+                page.set_content(html_content, wait_until="networkidle")
+                pdf_bytes = page.pdf(
+                    format="A4", print_background=True,
+                    margin={"top": "12mm", "bottom": "12mm", "left": "10mm", "right": "10mm"},
+                )
+            finally:
+                browser.close()
+        return pdf_bytes
+    except Exception as e:
+        print(f"[deploy] 🟡 주의 [DP-05] - PDF 변환 실패 - 이메일은 HTML 본문만 발송(첨부 없이): "
+              f"{type(e).__name__} - {e!r}")
+        return None
+
+
 def send_email(html_content: str, subject: str, recipients: list[str],
-               smtp_user: str, smtp_app_password: str) -> bool:
-    """Gmail SMTP(587, STARTTLS)로 발송. 성공 True, 실패해도 예외 없이 False."""
-    msg = MIMEMultipart("alternative")
+               smtp_user: str, smtp_app_password: str,
+               pdf_attachment: bytes | None = None, pdf_filename: str = "weekly.pdf") -> bool:
+    """
+    Gmail SMTP(587, STARTTLS)로 발송. 성공 True, 실패해도 예외 없이 False.
+    pdf_attachment를 넘기면 HTML 본문 + PDF 첨부(mixed) 형태로 같이 보냄 -
+    바깥은 mixed(첨부 지원), 그 안에 본문용 alternative를 한 겹 더 둠(기존
+    HTML 전용 메일 클라이언트 호환은 그대로 유지하면서 첨부만 추가).
+    """
+    msg = MIMEMultipart("mixed")
     msg["Subject"] = subject
     msg["From"] = smtp_user
     msg["To"] = ", ".join(recipients)
-    msg.attach(MIMEText(html_content, "html", "utf-8"))
+
+    body = MIMEMultipart("alternative")
+    body.attach(MIMEText(html_content, "html", "utf-8"))
+    msg.attach(body)
+
+    if pdf_attachment:
+        pdf_part = MIMEApplication(pdf_attachment, _subtype="pdf")
+        pdf_part.add_header("Content-Disposition", "attachment", filename=pdf_filename)
+        msg.attach(pdf_part)
 
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
@@ -244,7 +292,8 @@ def send_email(html_content: str, subject: str, recipients: list[str],
         print(f"[deploy] 🔴 조치필요 [DP-01] - 이메일 발송 실패: {type(e).__name__} - {e!r}")
         return False
 
-    print(f"[deploy] 이메일 발송 완료 -> {', '.join(recipients)}")
+    attach_note = f", PDF 첨부 포함({len(pdf_attachment):,} bytes)" if pdf_attachment else " (PDF 첨부 없음)"
+    print(f"[deploy] 이메일 발송 완료 -> {', '.join(recipients)}{attach_note}")
     return True
 
 
@@ -274,4 +323,7 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
                                       domestic_by_category, international_by_category, failed_sources,
                                       category_comparison)
     subject = f"[사료·축산뉴스] {_format_week_label_kr(week_label)} 주간 큐레이션"
-    return send_email(html_content, subject, recipients, smtp_user, smtp_app_password)
+    pdf_bytes = render_email_pdf(html_content)
+    pdf_filename = f"feed_livestock_news_{week_label}.pdf"  # 파일명은 ASCII로(한글 파일명 인코딩 이슈 회피)
+    return send_email(html_content, subject, recipients, smtp_user, smtp_app_password,
+                       pdf_attachment=pdf_bytes, pdf_filename=pdf_filename)

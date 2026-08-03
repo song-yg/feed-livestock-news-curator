@@ -2,9 +2,9 @@
 main.py
 사료·축산업 뉴스 큐레이션 시스템 오케스트레이션 레이어.
 
-6단계: 수집 -> 정규화(dedup+태깅+관련성필터+카테고리재분류+이슈그룹핑) ->
-스코어링(국내/해외 Top N + 카테고리별 Top N, 4차 사후재검토 포함) ->
-LLM 요약 -> 저장(storage.py) -> 배포(deploy.py, 이메일).
+6단계: 수집 -> 정규화(dedup+태깅) -> 이슈그룹핑(임베딩) -> 관련성필터+카테고리재분류
+(그룹 대표 1건씩만 판단) -> 스코어링(국내/해외 Top N + 카테고리별 Top N, 4차
+사후재검토 포함) -> LLM 요약 -> 저장(storage.py) -> 배포(deploy.py, 이메일).
 """
 
 import os
@@ -35,8 +35,8 @@ CATEGORY_TOP_N = int(os.environ.get("CATEGORY_TOP_N") or 1)
 # (그 단계 자기 시작 시점부터 새로 재는 게 아니라, 앞 단계가 늦어지면
 # 뒷 단계가 자동으로 짧아지는 방식).
 GDELT_DEADLINE_MINUTES = 220        # 3:40 - GDELT 수집
-RELEVANCE_DEADLINE_MINUTES = 270    # 4:30 - 관련성 필터 + 카테고리 재분류
-GROUPING_DEADLINE_MINUTES = 305     # 5:05 - 임베딩 로드 + 이슈 그룹핑(1~3차)
+GROUPING_DEADLINE_MINUTES = 280     # 4:40 - 임베딩 로드 + 이슈 그룹핑(1~3차, 필터링 전 원본 전체 대상)
+RELEVANCE_DEADLINE_MINUTES = 305    # 5:05 - 관련성 필터 + 카테고리 재분류 (그룹 대표 1건씩만 판단)
 STAGE4_DEADLINE_MINUTES = 310       # 5:10 - 4차 Top N 사후 재검토
 SUMMARY_DEADLINE_MINUTES = 355      # 5:55 - LLM 요약
 
@@ -116,34 +116,34 @@ def normalize(articles: list[dict]) -> list[dict]:
 # 3) 스코어링
 # ---------------------------------------------------------------------------
 
-def score(articles: list[dict], model, top_n: int = TOP_N,
-          grouping_deadline: float | None = None,
+def score(groups: list[list[dict]], top_n: int = TOP_N,
           stage4_deadline: float | None = None) -> tuple[list[dict], list[dict], dict, dict]:
     """
-    issue_grouper.group_issues + 국내/해외 Top N + 카테고리별 Top N 계산.
+    이미 그룹핑된 groups(issue_grouper.group_issues 결과)를 국내/해외로 나눠
+    Top N + 카테고리별 Top N을 계산한다.
 
-    그룹핑은 전체 기사 대상으로 먼저 실행 후 국내/해외로 나눠 스코어링(교차
-    매칭을 위해 축 분리 전에 그룹핑). 국내/해외 양쪽에 걸친 그룹은 각 축에
-    그 축 기사만 넘기고 반대 축 대표 기사 URL을 _cross_axis_partner_url로
-    상호 표시(2026-07-31 - 예전엔 여기서 제목까지 바로 확정했는데, Top N 확정
-    전이라 파트너가 실제로 Top N에 들지 알 수 없어 이메일에 없는 제목이
-    표시되는 문제가 있었음. 지금은 URL만 남기고, main.py의
-    _resolve_cross_axis_partners()가 4차/요약까지 다 끝난 뒤 실제로 이메일에
-    남은 항목인지 확인해서 제목을 채운다).
+    ** 그룹핑은 이 함수 밖(run())에서 미리 끝나 있어야 함 (2026-07-31) **
+    예전엔 이 함수 안에서 issue_grouper.group_issues()를 직접 호출했는데,
+    관련성 필터를 "그룹 대표 1건만 판단"하는 방식으로 바꾸면서 그룹핑 자체가
+    관련성 필터보다 먼저 실행돼야 하는 순서가 됐다(run() 참고) - 그래서
+    그룹핑은 run()이 score() 호출 전에 끝내고, 여기서는 이미 필터링까지
+    끝난 groups만 받아 국내/해외 분리·랭킹만 담당한다.
+
+    국내/해외 양쪽에 걸친 그룹은 각 축에 그 축 기사만 넘기고 반대 축 대표
+    기사 URL을 _cross_axis_partner_url로 상호 표시 - 실제 표시용 제목은
+    아직 안 정함(Top N 확정 전이라 파트너가 실제로 Top N에 들지 모름).
+    main.py의 _resolve_cross_axis_partners()가 4차/요약까지 다 끝난 뒤
+    실제로 이메일에 남은 항목인지 확인해서 제목을 채운다.
 
     GDELT 소스 중 한국어 기사는 scorer._is_korean_gdelt_article로 국내 재분류.
-    model=None이면 group_issues가 1차 결과만으로 fallback.
 
-    grouping_deadline: group_issues의 3차(stage3_llm_assist) 배치 루프에 전파.
-    stage4_deadline: 국내/해외 Top N + 카테고리별 Top N 4차 재검토에 전파.
-    둘 다 파이프라인 기준 절대 마감(time.monotonic()) - main.py가 계산해서 넘김.
+    stage4_deadline: 국내/해외 Top N + 카테고리별 Top N 4차 재검토에 전파
+    (파이프라인 기준 절대 마감, time.monotonic() - main.py가 계산해서 넘김).
 
     국내/해외 Top N + 카테고리별 Top N 전부 issue_grouper.stage4_dedupe_and_promote로
     사후 재검토(병합+승격)를 거침. 카테고리별은 scorer.score_by_category의
     dedupe_fn 콜백으로 연결.
     """
-    groups = issue_grouper.group_issues(articles, model=model, deadline=grouping_deadline)
-
     domestic_groups = []
     international_groups = []
     for group in groups:
@@ -309,34 +309,50 @@ def run() -> None:
         print(f"[main] 🔴 조치필요 [MN-05] - [2] 정규화/태깅 단계에서 예상 못 한 오류 발생 - 원본 기사 그대로 다음 단계로 진행: "
               f"{type(e).__name__} - {e!r}")
 
-    relevance_deadline = _deadline(pipeline_start, RELEVANCE_DEADLINE_MINUTES)
-
-    print("\n=== [2.5] 관련성 필터 ===")
-    try:
-        articles = relevance_filter.filter_articles(articles, deadline=relevance_deadline)
-    except Exception as e:
-        print(f"[main] 🔴 조치필요 [MN-06] - [2.5] 관련성 필터 단계에서 예상 못 한 오류 발생 - 필터링 없이 다음 단계로 진행: "
-              f"{type(e).__name__} - {e!r}")
-
-    print("\n=== [2.6] 카테고리 재분류 ===")
-    try:
-        articles = relevance_filter.recategorize_uncategorized(articles, deadline=relevance_deadline)
-    except Exception as e:
-        print(f"[main] 🔴 조치필요 [MN-07] - [2.6] 카테고리 재분류 단계에서 예상 못 한 오류 발생 - 재분류 없이 다음 단계로 진행: "
-              f"{type(e).__name__} - {e!r}")
-
     print("\n=== [2.1] 이슈 그룹핑 임베딩 모델 로드 ===")
     embedding_model = _load_embedding_model()
 
     grouping_deadline = _deadline(pipeline_start, GROUPING_DEADLINE_MINUTES)
+
+    print("\n=== [2.2] 이슈 그룹핑 ===")
+    # 관련성 필터보다 먼저 실행(2026-07-31) - 필터를 "그룹 대표 1건만 판단"
+    # 방식으로 바꾸면서 그룹핑이 먼저 끝나 있어야 함. 필터링 전 원본 전체가
+    # 대상이라 예전보다 입력 규모가 커짐 - stage2_group의 임계값 분류를
+    # numpy로 벡터화해둔 덕에 수천 건이 들어와도 안전하게 처리됨.
+    try:
+        groups = issue_grouper.group_issues(articles, model=embedding_model, deadline=grouping_deadline)
+    except Exception as e:
+        print(f"[main] 🔴 조치필요 [MN-16] - [2.2] 이슈 그룹핑 단계에서 예상 못 한 오류 발생 - "
+              f"그룹핑 없이(기사 1건 = 그룹 1개) 다음 단계로 진행: {type(e).__name__} - {e!r}")
+        groups = scorer.to_singleton_groups(articles)
+
+    relevance_deadline = _deadline(pipeline_start, RELEVANCE_DEADLINE_MINUTES)
+
+    print("\n=== [2.5] 관련성 필터 (그룹 대표 1건씩 판단) ===")
+    try:
+        groups = relevance_filter.filter_groups(groups, deadline=relevance_deadline)
+    except Exception as e:
+        print(f"[main] 🔴 조치필요 [MN-06] - [2.5] 관련성 필터 단계에서 예상 못 한 오류 발생 - 필터링 없이 다음 단계로 진행: "
+              f"{type(e).__name__} - {e!r}")
+
+    print("\n=== [2.6] 카테고리 재분류 (그룹 대표 1건씩 판단) ===")
+    try:
+        groups = relevance_filter.recategorize_uncategorized_groups(groups, deadline=relevance_deadline)
+    except Exception as e:
+        print(f"[main] 🔴 조치필요 [MN-07] - [2.6] 카테고리 재분류 단계에서 예상 못 한 오류 발생 - 재분류 없이 다음 단계로 진행: "
+              f"{type(e).__name__} - {e!r}")
+
+    # 카테고리 집계([3-보조])/raw.json 저장([5])은 개별 기사 단위 리스트가
+    # 필요해서, 필터링/재분류까지 끝난 groups를 다시 평평한 리스트로 펼침.
+    articles = [a for g in groups for a in g]
+
     stage4_deadline = _deadline(pipeline_start, STAGE4_DEADLINE_MINUTES)
 
     print("\n=== [3] 스코어링 ===")
     try:
         (domestic_ranked, international_ranked,
          domestic_category_ranked, international_category_ranked) = score(
-            articles, embedding_model, top_n=TOP_N,
-            grouping_deadline=grouping_deadline, stage4_deadline=stage4_deadline)
+            groups, top_n=TOP_N, stage4_deadline=stage4_deadline)
         scorer.print_top_n("국내", domestic_ranked, n=TOP_N)
         scorer.print_top_n("해외", international_ranked, n=TOP_N)
         scorer.print_category_top_n("국내", domestic_category_ranked, n=CATEGORY_TOP_N)

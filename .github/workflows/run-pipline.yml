@@ -40,8 +40,9 @@ on:
         required: false
         default: '수동 실행 메모 없음'
   schedule:
-    # 매주 월요일 00:00 UTC(한국 시간 09:00) - cron은 UTC 기준
-    - cron: "0 0 * * 1"
+    # 매주 월요일 00:01 한국시간(KST, UTC+9) - cron은 UTC 기준이라
+    # 전날(일요일) 15:01 UTC로 등록해야 함 (KST 00:01 - 9시간 = UTC 15:01)
+    - cron: "1 15 * * 0"
 
 concurrency:
   # 2026-07-23 추가: 이 workflow를 실수로 겹쳐 실행했다가(예: 버튼을 두 번

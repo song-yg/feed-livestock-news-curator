@@ -491,3 +491,143 @@ def recategorize_uncategorized(articles: list[dict], deadline: float | None = No
           f"{reclassified_count}건 재분류됨, {len(targets) - reclassified_count}건 '기타' 유지")
 
     return articles
+
+
+# ---------------------------------------------------------------------------
+# 그룹 단위 버전 (2026-07-31) - 임베딩/그룹핑을 관련성 필터보다 먼저 실행하는
+# 순서로 파이프라인이 바뀌면서 추가. 그룹 대표 기사(group[0]) 1건만 LLM에
+# 판단시키고, 그룹 전체를 하나의 유닛으로 통과/제외한다 - 같은 그룹 안
+# 기사들은 이미 같은 사건을 다루는 것으로 확정된 상태라, 대표 1건의 판정을
+# 나머지 멤버에도 그대로 적용해도 정확도 손실이 크지 않다는 전제. 원본
+# articles 단위 함수(filter_articles/recategorize_uncategorized)보다 LLM
+# 호출량이 "원본 기사 수"가 아니라 "고유 이슈(그룹) 수" 기준으로 줄어드는
+# 게 목적 - 판정 로직(프롬프트, 배치, 부분복구, deadline 처리)은 기존 함수와
+# 동일하게 재사용한다.
+# ---------------------------------------------------------------------------
+
+def filter_groups(groups: list[list[dict]], deadline: float | None = None) -> list[list[dict]]:
+    """
+    이슈 그룹 리스트 중 대표 기사가 "관련 없다"고 확정된 그룹만 통째로 제외.
+    API 키 없거나 전부 실패하면 원본 그대로 반환(안전 기본값).
+    WATT 소스가 대표인 그룹은 filter_articles와 동일하게 자동 통과.
+
+    deadline: filter_articles와 동일한 파이프라인 기준 절대 마감.
+    """
+    if not groups:
+        return groups
+
+    watt_groups = [g for g in groups if g[0].get("source") not in ("네이버", "GDELT")]
+    llm_target_groups = [g for g in groups if g[0].get("source") in ("네이버", "GDELT")]
+
+    if watt_groups:
+        print(f"[relevance_filter] WATT 소스가 대표인 그룹 {len(watt_groups)}개는 업계 전문지 특성상 "
+              f"LLM 호출 없이 자동 통과")
+
+    if not llm_target_groups:
+        return watt_groups
+
+    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    api_key = os.environ.get(key_env_var)
+    if not api_key:
+        print(f"[relevance_filter] 🔴 조치필요 [RF-13] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+              f"관련성 필터 생략, {len(llm_target_groups)}개 그룹(네이버/GDELT 대표) 전부 통과")
+        return groups
+
+    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER) if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
+    print(f"[relevance_filter] 관련성 필터(그룹 단위) 시작 - provider={LLM_PROVIDER}, "
+          f"model={model_desc}, 대상 {len(llm_target_groups)}개 그룹(대표 기사 1건씩, "
+          f"WATT 대표 {len(watt_groups)}개 제외)")
+
+    kept = list(watt_groups)
+    dropped_samples = []
+    total_batches = (len(llm_target_groups) + BATCH_SIZE - 1) // BATCH_SIZE
+    with requests.Session() as session:
+        for batch_num, i in enumerate(range(0, len(llm_target_groups), BATCH_SIZE), start=1):
+            if deadline is not None and time.monotonic() >= deadline:
+                remaining = llm_target_groups[i:]
+                kept.extend(remaining)
+                print(f"[relevance_filter] 🟡 주의 [RF-14] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                      f"남은 {len(remaining)}개 그룹은 필터링 없이 전부 통과 처리하고 중단")
+                break
+            batch_groups = llm_target_groups[i:i + BATCH_SIZE]
+            batch_representatives = [g[0] for g in batch_groups]
+            print(f"[relevance_filter] 그룹 배치 {batch_num}/{total_batches} 처리 중 ({len(batch_groups)}개 그룹)")
+            results = _call_llm(batch_representatives, api_key, session)
+            if results is None:
+                kept.extend(batch_groups)
+                continue
+            for group, relevant in zip(batch_groups, results):
+                if relevant:
+                    kept.append(group)
+                else:
+                    dropped_samples.append(group[0].get("title", ""))
+
+    dropped_count = len(groups) - len(kept)
+    print(f"[relevance_filter] 관련성 필터(그룹 단위) 완료 - 전체 {len(groups)}개 그룹(WATT 자동통과 "
+          f"{len(watt_groups)}개 포함) 중 {dropped_count}개 제외, {len(kept)}개 유지")
+    if dropped_samples:
+        sample_n = min(10, len(dropped_samples))
+        print(f"[relevance_filter] 제외된 그룹 대표 제목 샘플 (최대 {sample_n}건):")
+        for title in dropped_samples[:sample_n]:
+            print(f"   - {title}")
+
+    return kept
+
+
+def recategorize_uncategorized_groups(groups: list[list[dict]], deadline: float | None = None) -> list[list[dict]]:
+    """
+    filter_groups() 통과했지만 대표 기사 category가 "기타"인 그룹만 골라
+    대표 기사로 LLM 재분류. 재분류되면(기타가 아닌 카테고리로 확정되면) 그
+    그룹 안에서 category가 "기타"인 멤버 전원에게 같은 카테고리를 적용한다 -
+    이미 사전 매칭으로 다른 카테고리가 붙은 멤버는 그 신호를 존중해 안 건드림.
+    API 키 없거나 전부 실패해도 원본 그대로 반환.
+
+    deadline: recategorize_uncategorized와 동일한 파이프라인 기준 절대 마감.
+    """
+    targets = [g for g in groups if g[0].get("category") == "기타"]
+    if not targets:
+        return groups
+
+    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    api_key = os.environ.get(key_env_var)
+    if not api_key:
+        print(f"[relevance_filter] 🔴 조치필요 [RF-15] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+              f"카테고리 재분류 생략, {len(targets)}개 그룹 '기타' 그대로 유지")
+        return groups
+
+    import keyword_tagger
+    category_choices = list(keyword_tagger.CATEGORY_KEYWORDS.keys())
+    category_list_text = "\n".join(f"- {c}" for c in category_choices)
+    system_prompt = CATEGORY_RECLASSIFY_SYSTEM_PROMPT_TEMPLATE.format(category_list=category_list_text)
+
+    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER) if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
+    print(f"[relevance_filter] 카테고리 재분류(그룹 단위) 시작 - provider={LLM_PROVIDER}, "
+          f"model={model_desc}, 대상 {len(targets)}개 그룹(대표 기사가 '기타')")
+
+    reclassified_count = 0
+    total_batches = (len(targets) + BATCH_SIZE - 1) // BATCH_SIZE
+    with requests.Session() as session:
+        for batch_num, i in enumerate(range(0, len(targets), BATCH_SIZE), start=1):
+            if deadline is not None and time.monotonic() >= deadline:
+                remaining = len(targets) - i
+                print(f"[relevance_filter] 🟡 주의 [RF-16] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                      f"남은 {remaining}개 그룹은 재분류 없이 '기타' 유지하고 중단")
+                break
+            batch_groups = targets[i:i + BATCH_SIZE]
+            batch_representatives = [g[0] for g in batch_groups]
+            print(f"[relevance_filter] 카테고리 재분류(그룹) 배치 {batch_num}/{total_batches} "
+                  f"처리 중 ({len(batch_groups)}개 그룹)")
+            results = _call_category_llm(batch_representatives, api_key, session, category_choices, system_prompt)
+            if results is None:
+                continue
+            for group, new_category in zip(batch_groups, results):
+                if new_category != "기타":
+                    for article in group:
+                        if article.get("category") == "기타":
+                            article["category"] = new_category
+                    reclassified_count += 1
+
+    print(f"[relevance_filter] 카테고리 재분류(그룹 단위) 완료 - {len(targets)}개 그룹 중 "
+          f"{reclassified_count}개 재분류됨, {len(targets) - reclassified_count}개 '기타' 유지")
+
+    return groups
