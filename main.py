@@ -5,9 +5,26 @@ main.py
 6단계: 수집 -> 정규화(dedup+태깅) -> 이슈그룹핑(임베딩) -> 관련성필터+카테고리재분류
 (그룹 대표 1건씩만 판단) -> 스코어링(국내/해외 Top N + 카테고리별 Top N, 4차
 사후재검토 포함) -> LLM 요약 -> 저장(storage.py) -> 배포(deploy.py, 이메일).
+
+** GitHub Actions 2-job 분리 (2026-08-03) **
+GDELT 429 백오프 등으로 job 1개(하드캡 360분)에 다 넣기 빠듯해질 수 있어,
+job1(수집)과 job2(정규화~배포)로 나눠 각자 360분을 온전히 쓰도록 함
+(run-pipline.yml 참고). 두 job 사이는 파이썬 프로세스가 아예 갈리므로,
+job1이 수집 결과를 JSON 파일로 저장 -> GitHub Actions artifact로 업로드 ->
+job2가 다운로드해서 이어받는 방식. main.py 진입점 3개:
+  run_collect() - job1용. [1] 수집만 하고 결과를 파일로 저장.
+  run_process() - job2용. 파일을 읽어 [2]~[6] 나머지 전부 처리.
+  run()         - 단일 실행용(수동 로컬 테스트 등). [1]~[6]을 한 프로세스에서
+                  전부 처리 - 이 경우 GDELT가 오래 걸리면 뒤 단계 체크포인트가
+                  이미 지난 채로 시작될 수 있음(각자 360분씩 못 받고 한
+                  프로세스 안에서 나눠 써야 하므로) - 운영 자동 실행은
+                  run_collect/run_process 조합을 쓰고, run()은 어디까지나
+                  급하게 로컬에서 전체 한 번 돌려볼 때 정도로만 사용할 것.
 """
 
+import json
 import os
+import sys
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -28,22 +45,45 @@ import deploy
 TOP_N = int(os.environ.get("TOP_N") or 3)
 CATEGORY_TOP_N = int(os.environ.get("CATEGORY_TOP_N") or 1)
 
-# --- 파이프라인 시간 예산 체크포인트 (파이프라인 시작 기준 절대 분) ---
-# GitHub 러너 job 하드캡(360분) 안에서 저장/배포/git커밋에 5분을 남기고,
-# 각 단계가 이 시각까지는 끝나도록 강제한다. 각 단계 시작 직전에 main.py가
-# "목표 시각 - 지금까지 경과 시간"을 계산해 그 단계에 남은 예산으로 넘겨준다
-# (그 단계 자기 시작 시점부터 새로 재는 게 아니라, 앞 단계가 늦어지면
-# 뒷 단계가 자동으로 짧아지는 방식).
-GDELT_DEADLINE_MINUTES = 220        # 3:40 - GDELT 수집
-GROUPING_DEADLINE_MINUTES = 280     # 4:40 - 임베딩 로드 + 이슈 그룹핑(1~3차, 필터링 전 원본 전체 대상)
-RELEVANCE_DEADLINE_MINUTES = 305    # 5:05 - 관련성 필터 + 카테고리 재분류 (그룹 대표 1건씩만 판단)
-STAGE4_DEADLINE_MINUTES = 310       # 5:10 - 4차 Top N 사후 재검토
-SUMMARY_DEADLINE_MINUTES = 355      # 5:55 - LLM 요약
+# job1(수집)과 job2(정규화~배포) 사이에 주고받는 파일. job1이 여기 쓰고
+# GitHub Actions artifact로 업로드하면, job2가 같은 이름으로 내려받아 읽음
+# (run-pipline.yml 참고). 리포에 커밋되는 파일이 아님 - job 사이 임시 전달용.
+COLLECTED_ARTIFACT_PATH = "collected_articles.json"
+
+# --- 파이프라인 시간 예산 체크포인트 (각 진입점 자기 시작 기준 절대 분) ---
+# job1/job2로 나뉜 뒤로는 각 진입점이 자기 몫의 360분을 온전히 쓸 수 있어서
+# 예전(단일 job으로 다 몰아넣던 시절)보다 훨씬 여유 있게 잡음. run_collect()는
+# GDELT_DEADLINE_MINUTES만 쓰고, run_process()는 나머지 넷을 씀 - 둘 다
+# 자기 진입점의 pipeline_start(=자기 job이 시작된 시각)를 기준으로 계산.
+# 값 자체는 실측 전 잠정치이니 몇 주 실행 로그 보고 조정할 것.
+GDELT_DEADLINE_MINUTES = 335         # 5:35 - job1: GDELT 수집(WATT/네이버 포함, 남은 25분은 정리+artifact 저장용)
+GROUPING_DEADLINE_MINUTES = 120      # 2:00 - job2: 임베딩 로드 + 이슈 그룹핑(1~3차, 필터링 전 원본 전체 대상)
+RELEVANCE_DEADLINE_MINUTES = 240     # 4:00 - job2: 관련성 필터 + 카테고리 재분류 (그룹 대표 1건씩만 판단)
+STAGE4_DEADLINE_MINUTES = 250        # 4:10 - job2: 4차 Top N 사후 재검토
+SUMMARY_DEADLINE_MINUTES = 350       # 5:50 - job2: LLM 요약 (남은 10분은 저장+PDF변환+이메일발송+git커밋용)
 
 
 def _deadline(pipeline_start: float, minutes: int) -> float:
     """파이프라인 시작 시각(time.monotonic() 기준) + 목표 분을 절대 마감 시각으로 변환."""
     return pipeline_start + minutes * 60
+
+
+def _save_collected(articles: list[dict], gdelt_timeline: dict, failed_sources: list[str],
+                     path: str = COLLECTED_ARTIFACT_PATH) -> None:
+    """job1(수집) 결과를 job2가 이어받을 수 있게 JSON으로 저장(run-pipline.yml이 artifact로 업로드)."""
+    payload = {"articles": articles, "gdelt_timeline": gdelt_timeline, "failed_sources": failed_sources}
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, default=str)
+    print(f"[main] 수집 결과 저장 완료 -> {path} ({len(articles)}건) - 이 파일이 다음 job의 artifact로 업로드됨")
+
+
+def _load_collected(path: str = COLLECTED_ARTIFACT_PATH) -> tuple[list[dict], dict, list[str]]:
+    """job2가 job1의 수집 결과(artifact로 다운로드된 파일)를 읽어옴."""
+    with open(path, encoding="utf-8") as f:
+        payload = json.load(f)
+    articles = payload["articles"]
+    print(f"[main] 수집 결과 불러오기 완료 <- {path} ({len(articles)}건)")
+    return articles, payload["gdelt_timeline"], payload["failed_sources"]
 
 
 # ---------------------------------------------------------------------------
@@ -294,12 +334,13 @@ def _resolve_cross_axis_partners(domestic_summarized: list[dict], international_
         _resolve(items, domestic_url_to_title)
 
 
-def run() -> None:
-    pipeline_start = time.monotonic()
-
-    print("=== [1] 수집 시작 ===")
-    articles, gdelt_timeline, failed_sources = run_collectors(pipeline_start)
-
+def _process_and_deploy(articles: list[dict], gdelt_timeline: dict, failed_sources: list[str],
+                         pipeline_start: float) -> None:
+    """
+    [2] 정규화 ~ [6] 배포 전체. run_process()(job2 진입점)와 run()(단일 실행,
+    로컬 테스트용)이 공유하는 본체 - pipeline_start만 호출부가 정해서 넘겨준다
+    (run_process()는 자기 job이 시작된 시각, run()은 [1] 수집이 시작된 시각).
+    """
     print("\n=== [2] 정규화 ===")
     try:
         articles = normalize(articles)
@@ -446,5 +487,46 @@ def run() -> None:
               f"({saved_dir_note} failed_sources로 같이 저장됨)")
 
 
+# ---------------------------------------------------------------------------
+# 진입점 3개
+# ---------------------------------------------------------------------------
+
+def run_collect() -> None:
+    """job1(수집) 진입점. [1] 수집만 하고 결과를 COLLECTED_ARTIFACT_PATH에 저장."""
+    pipeline_start = time.monotonic()
+    print("=== [1] 수집 시작 ===")
+    articles, gdelt_timeline, failed_sources = run_collectors(pipeline_start)
+    _save_collected(articles, gdelt_timeline, failed_sources)
+
+
+def run_process() -> None:
+    """job2(정규화~배포) 진입점. job1이 저장한 결과를 이어받아 [2]~[6] 전부 처리.
+    pipeline_start를 이 함수 시작 시점으로 새로 잡음 - job2가 자기 몫의 360분을
+    통째로 받으므로, job1이 얼마나 걸렸는지와 무관하게 여기서부터 새로 잰다."""
+    pipeline_start = time.monotonic()
+    articles, gdelt_timeline, failed_sources = _load_collected()
+    _process_and_deploy(articles, gdelt_timeline, failed_sources, pipeline_start)
+
+
+def run() -> None:
+    """단일 실행 진입점(로컬 테스트/급한 수동 확인용). [1]~[6]을 한 프로세스에서
+    전부 처리 - job을 안 나누므로 pipeline_start를 [1] 수집 시작 시점부터
+    공유한다(GDELT가 오래 걸리면 뒤 단계 체크포인트가 이미 지난 채로 시작될
+    수 있음 - 운영 자동 실행은 run_collect/run_process 조합을 쓸 것)."""
+    pipeline_start = time.monotonic()
+    print("=== [1] 수집 시작 ===")
+    articles, gdelt_timeline, failed_sources = run_collectors(pipeline_start)
+    _process_and_deploy(articles, gdelt_timeline, failed_sources, pipeline_start)
+
+
 if __name__ == "__main__":
-    run()
+    # 인자 없이 실행하면 기존과 동일하게 전체를 한 프로세스에서 처리(run()).
+    # run-pipline.yml은 "python -u main.py collect" / "... process"로 job을
+    # 나눠 호출한다.
+    stage = sys.argv[1] if len(sys.argv) > 1 else "all"
+    if stage == "collect":
+        run_collect()
+    elif stage == "process":
+        run_process()
+    else:
+        run()
