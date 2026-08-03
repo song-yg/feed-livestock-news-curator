@@ -34,11 +34,11 @@ CATEGORY_TOP_N = int(os.environ.get("CATEGORY_TOP_N") or 1)
 # "목표 시각 - 지금까지 경과 시간"을 계산해 그 단계에 남은 예산으로 넘겨준다
 # (그 단계 자기 시작 시점부터 새로 재는 게 아니라, 앞 단계가 늦어지면
 # 뒷 단계가 자동으로 짧아지는 방식).
-GDELT_DEADLINE_MINUTES = 240       # 4:00 - GDELT 수집
-RELEVANCE_DEADLINE_MINUTES = 280   # 4:40 - 관련성 필터 + 카테고리 재분류
-GROUPING_DEADLINE_MINUTES = 315    # 5:15 - 임베딩 로드 + 이슈 그룹핑(1~3차)
-STAGE4_DEADLINE_MINUTES = 320      # 5:20 - 4차 Top N 사후 재검토
-SUMMARY_DEADLINE_MINUTES = 355     # 5:55 - LLM 요약
+GDELT_DEADLINE_MINUTES = 220        # 3:40 - GDELT 수집
+RELEVANCE_DEADLINE_MINUTES = 270    # 4:30 - 관련성 필터 + 카테고리 재분류
+GROUPING_DEADLINE_MINUTES = 305     # 5:05 - 임베딩 로드 + 이슈 그룹핑(1~3차)
+STAGE4_DEADLINE_MINUTES = 310       # 5:10 - 4차 Top N 사후 재검토
+SUMMARY_DEADLINE_MINUTES = 355      # 5:55 - LLM 요약
 
 
 def _deadline(pipeline_start: float, minutes: int) -> float:
