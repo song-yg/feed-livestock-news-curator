@@ -124,7 +124,12 @@ def score(articles: list[dict], model, top_n: int = TOP_N,
 
     그룹핑은 전체 기사 대상으로 먼저 실행 후 국내/해외로 나눠 스코어링(교차
     매칭을 위해 축 분리 전에 그룹핑). 국내/해외 양쪽에 걸친 그룹은 각 축에
-    그 축 기사만 넘기고 cross_axis_partner로 상호 표시.
+    그 축 기사만 넘기고 반대 축 대표 기사 URL을 _cross_axis_partner_url로
+    상호 표시(2026-07-31 - 예전엔 여기서 제목까지 바로 확정했는데, Top N 확정
+    전이라 파트너가 실제로 Top N에 들지 알 수 없어 이메일에 없는 제목이
+    표시되는 문제가 있었음. 지금은 URL만 남기고, main.py의
+    _resolve_cross_axis_partners()가 4차/요약까지 다 끝난 뒤 실제로 이메일에
+    남은 항목인지 확인해서 제목을 채운다).
 
     GDELT 소스 중 한국어 기사는 scorer._is_korean_gdelt_article로 국내 재분류.
     model=None이면 group_issues가 1차 결과만으로 fallback.
@@ -153,8 +158,8 @@ def score(articles: list[dict], model, top_n: int = TOP_N,
             and not (a.get("source") == "GDELT" and scorer._is_korean_gdelt_article(a))
         ]
         if domestic_part and international_part:
-            domestic_part[0]["_cross_axis_partner"] = international_part[0].get("title", "")
-            international_part[0]["_cross_axis_partner"] = domestic_part[0].get("title", "")
+            domestic_part[0]["_cross_axis_partner_url"] = international_part[0].get("url", "")
+            international_part[0]["_cross_axis_partner_url"] = domestic_part[0].get("url", "")
         if domestic_part:
             domestic_groups.append(domestic_part)
         if international_part:
@@ -245,6 +250,50 @@ def step4_llm_summary(domestic_ranked: list[dict],
 # 오케스트레이션 진입점
 # ---------------------------------------------------------------------------
 
+def _resolve_cross_axis_partners(domestic_summarized: list[dict], international_summarized: list[dict],
+                                  domestic_category_summarized: dict[str, list[dict]],
+                                  international_category_summarized: dict[str, list[dict]]) -> None:
+    """
+    score()의 group()에서 미리 붙여둔 cross_axis_partner_url을, [4]/[4-보조]
+    요약까지 전부 끝나 최종 확정된 시점에 실제로 반대 축 결과물(Top N +
+    카테고리별 Top N)에 남아있는지 재검증한다. 있으면 그 항목의 최종 표시용
+    제목(generated_title 우선, 없으면 titles[0])으로 cross_axis_partner를
+    채우고, 없으면(Top N/카테고리 Top N 어디에도 안 남았으면) None으로 둬서
+    이메일/summary.md에서 자동으로 안 보이게 한다.
+
+    in-place로 각 항목의 "cross_axis_partner" 필드를 채운다(반환값 없음) -
+    네 개 리스트/딕셔너리 전부 main.py 안에서만 도는 참조라 안전.
+    """
+    def _rep_title(item: dict) -> str | None:
+        return item.get("generated_title") or (item["titles"][0] if item.get("titles") else None)
+
+    def _build_url_to_title(main_list: list[dict], category_dict: dict[str, list[dict]]) -> dict[str, str]:
+        url_to_title: dict[str, str] = {}
+        all_items = list(main_list) + [item for items in category_dict.values() for item in items]
+        for item in all_items:
+            rep_title = _rep_title(item)
+            if not rep_title:
+                continue
+            for url in item.get("urls", []):
+                url_to_title[url] = rep_title
+        return url_to_title
+
+    domestic_url_to_title = _build_url_to_title(domestic_summarized, domestic_category_summarized)
+    international_url_to_title = _build_url_to_title(international_summarized, international_category_summarized)
+
+    def _resolve(items: list[dict], opposite_url_to_title: dict[str, str]) -> None:
+        for item in items:
+            partner_url = item.get("cross_axis_partner_url")
+            item["cross_axis_partner"] = opposite_url_to_title.get(partner_url) if partner_url else None
+
+    _resolve(domestic_summarized, international_url_to_title)
+    _resolve(international_summarized, domestic_url_to_title)
+    for items in domestic_category_summarized.values():
+        _resolve(items, international_url_to_title)
+    for items in international_category_summarized.values():
+        _resolve(items, domestic_url_to_title)
+
+
 def run() -> None:
     pipeline_start = time.monotonic()
 
@@ -334,6 +383,18 @@ def run() -> None:
               f"{type(e).__name__} - {e!r}")
         domestic_category_summarized, international_category_summarized = (
             domestic_category_ranked, international_category_ranked)
+
+    # cross_axis_partner 최종 확정 (2026-07-31) - Top N/카테고리별 Top N +
+    # 요약까지 전부 끝난 시점이라야 "반대 축에 실제로 남아있는지"를 정확히
+    # 알 수 있음. [4]/[4-보조]의 콘솔 출력(print_summaries)은 이 호출보다
+    # 앞서 실행되므로 이번 실행에서는 🔗 표시 없이 찍힘(진단용 로그라 감수) -
+    # 실제 산출물인 이메일/summary.md는 이 아래 [5]/[6]에서 만들어지므로 문제 없음.
+    try:
+        _resolve_cross_axis_partners(domestic_summarized, international_summarized,
+                                      domestic_category_summarized, international_category_summarized)
+    except Exception as e:
+        print(f"[main] 🟡 주의 [MN-15] - cross_axis_partner 최종 확정 단계에서 예상 못 한 오류 발생 - "
+              f"이번 실행은 🔗 표시 없이 진행(다른 내용엔 영향 없음): {type(e).__name__} - {e!r}")
 
     print("\n=== [5] 저장 ===")
     # 수동 실행(workflow_dispatch)은 저장 생략 - 지난주 대비 증감 비교 기준 오염 방지

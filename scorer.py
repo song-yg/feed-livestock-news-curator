@@ -67,8 +67,15 @@ def score_group(group: list[dict], reference: datetime | None = None) -> dict:
       raw_mention_count: dedup 이전 원본 건수
       titles/urls: 그룹 내 전체 제목/링크
       press_list: 참여 언론사 목록
-      cross_axis_partner: 국내/해외 교차 매칭 시 반대 축 대표 제목(없으면 None).
-        article dict의 "_cross_axis_partner"(내부용)를 정식 필드로 승격.
+      cross_axis_partner_url: 국내/해외 교차 매칭 시 반대 축 그룹의 대표 기사
+        URL(없으면 None). article dict의 "_cross_axis_partner_url"(내부용)을
+        정식 필드로 승격 - 이 시점(Top N 확정 전)엔 아직 반대 축 대표 제목이
+        뭐가 될지(요약 생성 전) 모르므로 URL만 들고 다니고, 실제 표시용
+        cross_axis_partner(제목)는 main.py가 4차/요약까지 다 끝난 뒤
+        _resolve_cross_axis_partners()에서 이 URL로 반대 축 최종 결과물을
+        역참조해서 채운다. 여기서는 항상 None으로 초기화만 해둔다 - 최종
+        결과물에 실제로 없으면 None으로 남아 이메일/summary.md에서
+        자동으로 안 보인다(기존 falsy 체크 그대로 재사용).
     """
     raw_mention_count = len(group)
     deduped = dedup_group_by_press(group)
@@ -77,10 +84,10 @@ def score_group(group: list[dict], reference: datetime | None = None) -> dict:
         recency_weight(_days_elapsed(a["published_at"], reference)) for a in deduped
     )
 
-    cross_axis_partner = None
+    cross_axis_partner_url = None
     for a in group:
-        if a.get("_cross_axis_partner"):
-            cross_axis_partner = a["_cross_axis_partner"]
+        if a.get("_cross_axis_partner_url"):
+            cross_axis_partner_url = a["_cross_axis_partner_url"]
             break
 
     return {
@@ -90,7 +97,8 @@ def score_group(group: list[dict], reference: datetime | None = None) -> dict:
         "titles": [a["title"] for a in group],
         "urls": [a["url"] for a in group],
         "press_list": sorted({_press_of(a) for a in group}),
-        "cross_axis_partner": cross_axis_partner,
+        "cross_axis_partner_url": cross_axis_partner_url,
+        "cross_axis_partner": None,  # main.py가 최종 결과물 확정 후 역참조해서 채움
         "articles": group,
     }
 
