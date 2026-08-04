@@ -8,6 +8,7 @@ category_aggregator.py
 import json
 import os
 from collections import Counter
+from datetime import datetime, timezone
 
 from keyword_tagger import CATEGORY_KEYWORDS
 import scorer
@@ -98,6 +99,47 @@ def compare_with_last_week(current: dict[str, Counter], base_dir: str = "data",
         print(f"[category_aggregator] 🟡 주의 [CA-02] - 지난주 데이터 구조 이상({path}) - "
               f"증감 비교 생략: {type(e).__name__} - {e!r}")
         return None
+
+
+def load_weekly_trend(current_distribution: dict[str, Counter], weeks: int = 4,
+                       base_dir: str = "data", reference: datetime | None = None) -> list[dict]:
+    """
+    이번 주(메모리에 이미 있는 current_distribution) + 지난 (weeks-1)주(디스크의
+    scored.json)를 합쳐 최근 weeks주치 카테고리 집계를 오래된 순으로 반환.
+    반환 형태: [{"week_label": "2026-25", "국내": {카테고리: 건수}, "해외": {...}}, ...]
+
+    특정 주 데이터가 없거나(파일 없음) 손상됐으면 그 주만 건너뛴다(연속성이
+    깨지는 걸 감수하고 나머지 주라도 보여주는 쪽 - compare_with_last_week와
+    같은 방향의 안전 처리).
+    """
+    entries = []
+    for n in range(weeks - 1, 0, -1):
+        week_path = storage.week_dir_n_back(n, base_dir, reference)
+        week_label = os.path.basename(week_path)
+        scored_path = os.path.join(week_path, "scored.json")
+        try:
+            with open(scored_path, encoding="utf-8") as f:
+                payload = json.load(f)
+            distribution = payload.get("category_distribution")
+            if not isinstance(distribution, dict):
+                raise ValueError(f"category_distribution이 dict가 아님(타입: {type(distribution).__name__})")
+            entries.append({
+                "week_label": week_label,
+                "국내": dict(distribution.get("국내") or {}),
+                "해외": dict(distribution.get("해외") or {}),
+            })
+        except (FileNotFoundError, json.JSONDecodeError, OSError, ValueError, AttributeError, TypeError, KeyError) as e:
+            print(f"[category_aggregator] 🟡 주의 [CA-03] - {n}주 전({week_label}) 데이터 없음/읽기 실패 - "
+                  f"트렌드 그래프에서 이 주는 건너뜀: {type(e).__name__} - {e!r}")
+
+    now = reference or datetime.now(timezone.utc)
+    iso = now.isocalendar()
+    entries.append({
+        "week_label": f"{iso.year}-{iso.week:02d}",
+        "국내": dict(current_distribution.get("국내") or {}),
+        "해외": dict(current_distribution.get("해외") or {}),
+    })
+    return entries
 
 
 def print_aggregate_with_comparison(aggregated: dict[str, Counter],

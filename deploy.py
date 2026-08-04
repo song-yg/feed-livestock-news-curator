@@ -164,10 +164,17 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
                        domestic_by_category: dict[str, list[dict]],
                        international_by_category: dict[str, list[dict]],
                        failed_sources: list[str],
-                       category_comparison: dict[str, dict[str, dict]] | None = None) -> str:
+                       category_comparison: dict[str, dict[str, dict]] | None = None,
+                       weekly_trend: list[dict] | None = None) -> str:
     """
     scored.json 데이터로 이메일 본문 HTML 생성. 폭 1000px, 옅은 회색 배경 위
     흰색 콘텐츠 카드, 국내/해외 좌우 2단 레이아웃.
+
+    weekly_trend: category_aggregator.load_weekly_trend() 결과(최근 N주 카테고리
+    집계). 넘기면 "카테고리별 최근 N주 추이" 선그래프 섹션이 추가됨 - 그래프는
+    render_category_trend_chart()가 만든 PNG를 base64로 이메일에 직접 박아넣는
+    방식(별도 파일 첨부/외부 이미지 링크 아님 - 이메일 클라이언트가 외부 이미지
+    링크는 기본 차단하는 경우가 많아서 인라인이 안전함).
     """
     header_html = f"""
     <div style="background:{HEADER_BG}; padding:26px 32px; border-radius:10px 10px 0 0;">
@@ -194,6 +201,19 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
             _format_category_comparison_axis_html(category_comparison.get("국내"), ACCENT_DOMESTIC),
             _format_category_comparison_axis_html(category_comparison.get("해외"), ACCENT_INTL),
         ))
+
+    if weekly_trend and len(weekly_trend) >= 2:
+        domestic_chart_png = render_category_trend_chart(weekly_trend, "국내")
+        international_chart_png = render_category_trend_chart(weekly_trend, "해외")
+        if domestic_chart_png or international_chart_png:
+            parts.append(section_header(f"카테고리별 최근 {len(weekly_trend)}주 추이"))
+            domestic_img = (f'<img src="{_png_to_data_uri(domestic_chart_png)}" width="100%" '
+                            f'style="max-width:100%; display:block;">') if domestic_chart_png else \
+                            '<p style="font-size:13px; color:#999;">(그래프 생성 실패)</p>'
+            international_img = (f'<img src="{_png_to_data_uri(international_chart_png)}" width="100%" '
+                                 f'style="max-width:100%; display:block;">') if international_chart_png else \
+                                 '<p style="font-size:13px; color:#999;">(그래프 생성 실패)</p>'
+            parts.append(_two_column_table(domestic_img, international_img))
 
     parts.append(section_header("주간 Top 이슈"))
     parts.append(_two_column_table(
@@ -227,6 +247,76 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     return "".join(parts)
 
 
+def render_category_trend_chart(trend_entries: list[dict], axis: str) -> bytes | None:
+    """
+    category_aggregator.load_weekly_trend() 결과로 카테고리별 최근 N주 추이
+    선그래프 PNG 생성. "기타"는 항상 압도적으로 커서 나머지 카테고리 흐름이
+    안 보이게 되므로 그래프에서는 제외(scorer.score_by_category의 "기타"
+    제외 관례와 같은 방향). 카테고리 순서/색은 keyword_tagger.CATEGORY_KEYWORDS
+    순서로 고정 - 국내/해외 두 그래프에서 같은 카테고리가 항상 같은 색이 되게 함.
+
+    데이터가 2주 미만이면(추이라고 부를 게 없음) None. 폰트/matplotlib 관련
+    실패도 예외 없이 None만 반환 - 그래프 하나 없다고 이메일 발송 전체가
+    막히면 안 됨.
+    """
+    if not trend_entries or len(trend_entries) < 2:
+        return None
+
+    try:
+        import io
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from keyword_tagger import CATEGORY_KEYWORDS
+
+        # run-pipline.yml이 fonts-nanum을 설치해둠 - 한글 카테고리명이
+        # 안 깨지려면 한글 지원 폰트를 명시해야 함(matplotlib 기본 폰트는
+        # 한글 지원 안 함, 안 하면 네모(tofu)로 깨짐).
+        plt.rcParams["font.family"] = "NanumGothic"
+        plt.rcParams["axes.unicode_minus"] = False
+
+        categories = list(CATEGORY_KEYWORDS.keys())
+        week_labels = [e["week_label"] for e in trend_entries]
+        colors = plt.cm.tab10.colors
+
+        fig, ax_plot = plt.subplots(figsize=(9, 4), dpi=120)
+        plotted_any = False
+        for i, category in enumerate(categories):
+            values = [e.get(axis, {}).get(category, 0) for e in trend_entries]
+            if not any(values):
+                continue  # 기간 내내 0건인 카테고리는 범례만 차지하니 생략
+            ax_plot.plot(week_labels, values, marker="o", label=category,
+                         color=colors[i % len(colors)], linewidth=2)
+            plotted_any = True
+
+        if not plotted_any:
+            plt.close(fig)
+            return None
+
+        ax_plot.set_title(f"{axis} 카테고리별 최근 {len(trend_entries)}주 추이 ('기타' 제외)", fontsize=11)
+        ax_plot.set_ylabel("건수")
+        ax_plot.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=8, frameon=False)
+        ax_plot.spines["top"].set_visible(False)
+        ax_plot.spines["right"].set_visible(False)
+        fig.tight_layout()
+
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", bbox_inches="tight")
+        plt.close(fig)
+        return buf.getvalue()
+    except Exception as e:
+        print(f"[deploy] 🟡 주의 [DP-06] - {axis} 카테고리 트렌드 그래프 생성 실패 - 이메일에서 이 그래프만 생략: "
+              f"{type(e).__name__} - {e!r}")
+        return None
+
+
+def _png_to_data_uri(png_bytes: bytes) -> str:
+    """PNG bytes를 이메일 HTML의 <img>에 바로 박아넣을 수 있는 base64 data URI로 변환."""
+    import base64
+    encoded = base64.b64encode(png_bytes).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
 def render_email_pdf(html_content: str) -> bytes | None:
     """
     render_email_html()이 만든 HTML을 PDF로 변환. Playwright/Chromium 사용 -
@@ -235,6 +325,12 @@ def render_email_pdf(html_content: str) -> bytes | None:
 
     링크(원문 등)는 href 그대로 살아서 PDF에서도 클릭 가능(하이퍼링크
     주석으로 보존됨 - 화면에 보이는 글자가 "원문"으로 짧아도 무관).
+
+    여백 없이 최대한 밀착(margin=0) + scale 조정(2026-08-04) - render_email_html()의
+    콘텐츠 폭이 최대 1000px인데, A4 폭(210mm ≈ 793px @96dpi)보다 넓어서 여백만
+    없애면 오른쪽이 페이지 밖으로 잘려나가 "구조가 깨져 보이는" 원인이 됐음.
+    scale로 전체를 A4 폭에 맞게 축소해서 잘림 없이 한 페이지 폭 안에 들어오게 함
+    (793 / 1000 ≈ 0.79).
 
     실패해도 예외를 던지지 않고 None만 반환 - PDF 변환 실패로 이메일 발송
     자체가 막히면 안 됨(HTML 본문 발송이 우선, PDF는 부가 기능).
@@ -249,7 +345,8 @@ def render_email_pdf(html_content: str) -> bytes | None:
                 page.set_content(html_content, wait_until="networkidle")
                 pdf_bytes = page.pdf(
                     format="A4", print_background=True,
-                    margin={"top": "12mm", "bottom": "12mm", "left": "10mm", "right": "10mm"},
+                    margin={"top": "0mm", "bottom": "0mm", "left": "0mm", "right": "0mm"},
+                    scale=0.79,
                 )
             finally:
                 browser.close()
@@ -301,7 +398,8 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
                        domestic_by_category: dict[str, list[dict]],
                        international_by_category: dict[str, list[dict]],
                        failed_sources: list[str],
-                       category_comparison: dict[str, dict[str, dict]] | None = None) -> bool:
+                       category_comparison: dict[str, dict[str, dict]] | None = None,
+                       weekly_trend: list[dict] | None = None) -> bool:
     """main.py 호출 진입점. 인증정보 없으면 안전하게 생략."""
     smtp_user = os.environ.get("SMTP_USER")
     smtp_app_password = os.environ.get("SMTP_APP_PASSWORD")
@@ -321,7 +419,7 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
 
     html_content = render_email_html(week_label, domestic_summarized, international_summarized,
                                       domestic_by_category, international_by_category, failed_sources,
-                                      category_comparison)
+                                      category_comparison, weekly_trend)
     subject = f"[사료·축산뉴스] {_format_week_label_kr(week_label)} 주간 큐레이션"
     pdf_bytes = render_email_pdf(html_content)
     pdf_filename = f"feed_livestock_news_{week_label}.pdf"  # 파일명은 ASCII로(한글 파일명 인코딩 이슈 회피)

@@ -14,12 +14,17 @@ import os
 from datetime import datetime, timedelta, timezone
 
 
+def week_dir_n_back(n: int, base_dir: str = "data", reference: datetime | None = None) -> str:
+    """n주 전 'data/YYYY-WW' 경로 계산만(디렉토리 생성 안 함). n=1이면 previous_week_dir와 동일."""
+    now = reference or datetime.now(timezone.utc)
+    target = now - timedelta(weeks=n)
+    iso = target.isocalendar()
+    return os.path.join(base_dir, f"{iso.year}-{iso.week:02d}")
+
+
 def previous_week_dir(base_dir: str = "data", reference: datetime | None = None) -> str:
     """지난주 'data/YYYY-WW' 경로 계산만(디렉토리 생성 안 함, 지난주 대비 증감용)."""
-    now = reference or datetime.now(timezone.utc)
-    last_week = now - timedelta(weeks=1)
-    iso = last_week.isocalendar()
-    return os.path.join(base_dir, f"{iso.year}-{iso.week:02d}")
+    return week_dir_n_back(1, base_dir, reference)
 
 
 def week_dir(base_dir: str = "data", reference: datetime | None = None) -> str | None:

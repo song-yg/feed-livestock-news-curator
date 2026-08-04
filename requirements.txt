@@ -15,3 +15,7 @@ sentence-transformers
 # 원문 URL에서 범용으로 본문 추출을 한 번 더 시도해본다. lxml/courlan 등
 # 하위 의존 패키지는 pip가 자동으로 같이 설치해줘서 따로 안 적어도 됨.
 trafilatura
+# 카테고리별 최근 4주 추이 선그래프(deploy.py render_category_trend_chart,
+# 2026-08-04 추가) 렌더링용. 한글 폰트는 별도로 필요 - run-pipline.yml이
+# fonts-nanum을 apt로 설치해줌(pip 패키지가 아니라 시스템 폰트라 여기 안 적음).
+matplotlib
