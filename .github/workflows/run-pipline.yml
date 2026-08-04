@@ -194,6 +194,8 @@ jobs:
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+          OPENROUTER_MODEL_2: ${{ vars.OPENROUTER_MODEL_2 }}
+          OPENROUTER_MODEL_3: ${{ vars.OPENROUTER_MODEL_3 }}
           # --- 6단계(deploy.py) 이메일 발송용 ---
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
