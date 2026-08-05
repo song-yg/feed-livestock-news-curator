@@ -175,7 +175,8 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
                        failed_sources: list[str],
                        category_comparison: dict[str, dict[str, dict]] | None = None,
                        trend_chart_pngs: dict[str, bytes | None] | None = None,
-                       embed_images_as: str = "cid") -> tuple[str, dict[str, bytes]]:
+                       embed_images_as: str = "cid",
+                       error_codes: list[str] | None = None) -> tuple[str, dict[str, bytes]]:
     """
     scored.json 데이터로 이메일 본문 HTML 생성. 폭 1000px, 옅은 회색 배경 위
     흰색 콘텐츠 카드, 국내/해외 좌우 2단 레이아웃.
@@ -191,6 +192,10 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     참조만 걸고, 진짜 이미지 데이터는 send_email()이 Content-ID 붙은 MIME
     인라인 첨부로 따로 붙여야 함(반환값 inline_images가 그 역할). Playwright는
     cid: 스킴을 못 읽으므로 PDF 변환 시에는 "data_uri"로 호출해야 함.
+
+    error_codes: main.py가 이번 실행 로그에서 뽑아낸 🔴 조치필요 코드 목록
+    (2026-08-05 추가). PDF에는 절대 안 넣음(embed_images_as=="cid"일 때만
+    렌더링) - 내용은 안 담고 코드만, 눈에 잘 안 띄게 맨 아래 작게 표시.
 
     반환: (html_content, inline_images) - inline_images는 embed_images_as="cid"일
     때만 채워짐({cid_name: PNG bytes}), "data_uri"면 항상 빈 dict.
@@ -265,6 +270,16 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
         'AI가 자동으로 생성한 요약·헤드라인이 포함되어 있어 실제 내용과 다를 수 있습니다. '
         '정확한 내용은 원문 링크를 확인해주세요.</p>'
     )
+
+    if error_codes and embed_images_as == "cid":
+        # PDF(data_uri 렌더링)에는 절대 안 넣음 - 실제 이메일에만, 그것도
+        # 내용 없이 코드만 아주 작고 흐리게(기본 안내문보다도 더 눈에 안
+        # 띄게) - 운영자가 훑어보다 걸리면 로그에서 그 코드로 바로 찾아볼
+        # 용도지, 수신자가 굳이 눈여겨볼 내용은 아님.
+        parts.append(
+            f'<p style="margin-top:6px; font-size:9px; color:#ccc; text-align:center;">'
+            f'{_escape(", ".join(error_codes))}</p>'
+        )
 
     parts.append('</div>')
     parts.append('</div>')
@@ -451,7 +466,8 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
                        international_by_category: dict[str, list[dict]],
                        failed_sources: list[str],
                        category_comparison: dict[str, dict[str, dict]] | None = None,
-                       weekly_trend: list[dict] | None = None) -> bool:
+                       weekly_trend: list[dict] | None = None,
+                       error_codes: list[str] | None = None) -> bool:
     """main.py 호출 진입점. 인증정보 없으면 안전하게 생략."""
     smtp_user = os.environ.get("SMTP_USER")
     smtp_app_password = os.environ.get("SMTP_APP_PASSWORD")
@@ -481,7 +497,8 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
     html_content, inline_images = render_email_html(
         week_label, domestic_summarized, international_summarized,
         domestic_by_category, international_by_category, failed_sources,
-        category_comparison, trend_chart_pngs, embed_images_as="cid")
+        category_comparison, trend_chart_pngs, embed_images_as="cid",
+        error_codes=error_codes)
 
     subject = f"[사료·축산뉴스] {_format_week_label_kr(week_label)} 주간 큐레이션"
 

@@ -25,6 +25,7 @@ job2가 다운로드해서 이어받는 방식. main.py 진입점 3개:
 
 import json
 import os
+import re
 import sys
 import time
 from collections import defaultdict
@@ -335,13 +336,57 @@ def _resolve_cross_axis_partners(domestic_summarized: list[dict], international_
         _resolve(items, domestic_url_to_title)
 
 
+class _ErrorCodeTee:
+    """
+    sys.stdout을 감싸서 원래대로 화면/로그에는 그대로 출력하면서, 동시에
+    내용을 버퍼에 모아둔다. 흩어진 print("...🔴 조치필요 [XX-NN]...") 수십
+    곳을 일일이 고치는 대신, 실행 로그 전체를 사후에 정규식으로 훑어서
+    발생한 오류 코드만 뽑아내는 방식 - _extract_error_codes()가 사용.
+    """
+
+    def __init__(self, real_stream):
+        self._real = real_stream
+        self.buffer: list[str] = []
+
+    def write(self, s: str) -> int:
+        self.buffer.append(s)
+        return self._real.write(s)
+
+    def flush(self) -> None:
+        self._real.flush()
+
+
+_ERROR_CODE_PATTERN = re.compile(r"🔴 조치필요 \[([A-Za-z]+-\d+)\]")
+
+
+def _extract_error_codes(text: str) -> list[str]:
+    """로그 텍스트에서 "🔴 조치필요 [XX-NN]" 패턴의 코드만 중복 없이(첫 등장 순서 유지) 추출."""
+    return list(dict.fromkeys(_ERROR_CODE_PATTERN.findall(text)))
+
+
 def _process_and_deploy(articles: list[dict], gdelt_timeline: dict, failed_sources: list[str],
                          pipeline_start: float) -> None:
     """
     [2] 정규화 ~ [12] 배포 전체. run_process()(job2 진입점)와 run()(단일 실행,
     로컬 테스트용)이 공유하는 본체 - pipeline_start만 호출부가 정해서 넘겨준다
     (run_process()는 자기 job이 시작된 시각, run()은 [1] 수집이 시작된 시각).
+
+    이 함수 실행 동안의 stdout을 _ErrorCodeTee로 감싸서, [2]~[11] 사이 어디서든
+    찍힌 🔴 조치필요 코드를 모아뒀다가 [12] 배포 시 이메일 하단에 코드만
+    조용히 표시한다(deploy.py가 PDF에는 안 넣음). job1(수집) 쪽 실패는 이미
+    failed_sources로 별도 표시되고 있어 이 수집 대상에서 제외해도 무방 -
+    애초에 job1은 별도 프로세스라 이 tee로는 안 잡힘.
     """
+    tee = _ErrorCodeTee(sys.stdout)
+    sys.stdout = tee
+    try:
+        _run_process_and_deploy_body(articles, gdelt_timeline, failed_sources, pipeline_start, tee)
+    finally:
+        sys.stdout = tee._real
+
+
+def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, failed_sources: list[str],
+                                  pipeline_start: float, _tee: "_ErrorCodeTee") -> None:
     print("\n=== [2] 정규화 ===")
     try:
         articles = normalize(articles)
@@ -476,9 +521,14 @@ def _process_and_deploy(articles: list[dict], gdelt_timeline: dict, failed_sourc
     print("\n=== [12] 배포 ===")
     try:
         week_label = os.path.basename(saved_dir) if saved_dir else datetime.now(timezone.utc).strftime("%G-%V")
+        # 지금까지([2]~[11]) 찍힌 로그에서 🔴 조치필요 코드만 추출 - 이메일
+        # 하단에 코드만 조용히 표시(deploy.py가 PDF에는 안 넣음). 아래
+        # MN-13(배포 실패)은 이 시점 이후 발생이라 이번 이메일 자체엔 반영 안 됨
+        # - 그건 다음 실행 로그를 사람이 직접 봐야 하는 성격의 실패라 괜찮음.
+        error_codes = _extract_error_codes("".join(_tee.buffer))
         deploy.send_weekly_email(week_label, domestic_summarized, international_summarized,
                                   domestic_category_summarized, international_category_summarized,
-                                  failed_sources, category_comparison, weekly_trend)
+                                  failed_sources, category_comparison, weekly_trend, error_codes)
     except Exception as e:
         print(f"[main] 🔴 조치필요 [MN-13] - 배포 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
               f"{type(e).__name__} - {e!r}")
