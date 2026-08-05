@@ -11,6 +11,7 @@ import os
 import smtplib
 from datetime import datetime
 from email.mime.application import MIMEApplication
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -165,17 +166,29 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
                        international_by_category: dict[str, list[dict]],
                        failed_sources: list[str],
                        category_comparison: dict[str, dict[str, dict]] | None = None,
-                       weekly_trend: list[dict] | None = None) -> str:
+                       trend_chart_pngs: dict[str, bytes | None] | None = None,
+                       embed_images_as: str = "cid") -> tuple[str, dict[str, bytes]]:
     """
     scored.json 데이터로 이메일 본문 HTML 생성. 폭 1000px, 옅은 회색 배경 위
     흰색 콘텐츠 카드, 국내/해외 좌우 2단 레이아웃.
 
-    weekly_trend: category_aggregator.load_weekly_trend() 결과(최근 N주 카테고리
-    집계). 넘기면 "카테고리별 최근 N주 추이" 선그래프 섹션이 추가됨 - 그래프는
-    render_category_trend_chart()가 만든 PNG를 base64로 이메일에 직접 박아넣는
-    방식(별도 파일 첨부/외부 이미지 링크 아님 - 이메일 클라이언트가 외부 이미지
-    링크는 기본 차단하는 경우가 많아서 인라인이 안전함).
+    trend_chart_pngs: {"국내": PNG bytes|None, "해외": PNG bytes|None} -
+    render_category_trend_chart()로 호출부(send_weekly_email)가 미리 만들어서
+    넘김(이 함수 안에서 다시 그리지 않음 - PDF용/이메일용 두 번 호출해도
+    matplotlib 렌더링이 중복되지 않게).
+
+    embed_images_as: "cid"(기본, 실제 이메일 발송용) 또는 "data_uri"(PDF 변환용).
+    Gmail이 <img src="data:...">(base64 인라인) 이미지를 막아서(2026-08-05 실측
+    확인 - PDF에는 나오는데 실제 수신 메일 본문엔 안 보임) 실제 발송은 "cid"로
+    참조만 걸고, 진짜 이미지 데이터는 send_email()이 Content-ID 붙은 MIME
+    인라인 첨부로 따로 붙여야 함(반환값 inline_images가 그 역할). Playwright는
+    cid: 스킴을 못 읽으므로 PDF 변환 시에는 "data_uri"로 호출해야 함.
+
+    반환: (html_content, inline_images) - inline_images는 embed_images_as="cid"일
+    때만 채워짐({cid_name: PNG bytes}), "data_uri"면 항상 빈 dict.
     """
+    inline_images: dict[str, bytes] = {}
+
     header_html = f"""
     <div style="background:{HEADER_BG}; padding:26px 32px; border-radius:10px 10px 0 0;">
       <p style="margin:0; font-size:11px; letter-spacing:2px; color:#9fc0ff; font-weight:bold;">NEWSLETTER</p>
@@ -202,18 +215,22 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
             _format_category_comparison_axis_html(category_comparison.get("해외"), ACCENT_INTL),
         ))
 
-    if weekly_trend and len(weekly_trend) >= 2:
-        domestic_chart_png = render_category_trend_chart(weekly_trend, "국내")
-        international_chart_png = render_category_trend_chart(weekly_trend, "해외")
-        if domestic_chart_png or international_chart_png:
-            parts.append(section_header(f"카테고리별 최근 {len(weekly_trend)}주 추이"))
-            domestic_img = (f'<img src="{_png_to_data_uri(domestic_chart_png)}" width="100%" '
-                            f'style="max-width:100%; display:block;">') if domestic_chart_png else \
-                            '<p style="font-size:13px; color:#999;">(그래프 생성 실패)</p>'
-            international_img = (f'<img src="{_png_to_data_uri(international_chart_png)}" width="100%" '
-                                 f'style="max-width:100%; display:block;">') if international_chart_png else \
-                                 '<p style="font-size:13px; color:#999;">(그래프 생성 실패)</p>'
-            parts.append(_two_column_table(domestic_img, international_img))
+    if trend_chart_pngs and (trend_chart_pngs.get("국내") or trend_chart_pngs.get("해외")):
+        def _chart_img_tag(png_bytes: bytes | None, cid_name: str) -> str:
+            if not png_bytes:
+                return '<p style="font-size:13px; color:#999;">(그래프 생성 실패)</p>'
+            if embed_images_as == "cid":
+                inline_images[cid_name] = png_bytes
+                src = f"cid:{cid_name}"
+            else:
+                src = _png_to_data_uri(png_bytes)
+            return f'<img src="{src}" width="100%" style="max-width:100%; display:block;">'
+
+        parts.append(section_header("카테고리별 최근 추이"))
+        parts.append(_two_column_table(
+            _chart_img_tag(trend_chart_pngs.get("국내"), "domestic_trend_chart"),
+            _chart_img_tag(trend_chart_pngs.get("해외"), "international_trend_chart"),
+        ))
 
     parts.append(section_header("주간 Top 이슈"))
     parts.append(_two_column_table(
@@ -244,7 +261,7 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     parts.append('</div>')
     parts.append('</div>')
     parts.append('</div>')
-    return "".join(parts)
+    return "".join(parts), inline_images
 
 
 def render_category_trend_chart(trend_entries: list[dict], axis: str) -> bytes | None:
@@ -267,12 +284,23 @@ def render_category_trend_chart(trend_entries: list[dict], axis: str) -> bytes |
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+        import matplotlib.font_manager as fm
         from keyword_tagger import CATEGORY_KEYWORDS
 
-        # run-pipline.yml이 fonts-nanum을 설치해둠 - 한글 카테고리명이
-        # 안 깨지려면 한글 지원 폰트를 명시해야 함(matplotlib 기본 폰트는
-        # 한글 지원 안 함, 안 하면 네모(tofu)로 깨짐).
-        plt.rcParams["font.family"] = "NanumGothic"
+        # run-pipline.yml이 fonts-nanum을 apt로 설치해둠 - 이름만 지정하면
+        # (rcParams["font.family"]="NanumGothic") matplotlib이 자기 폰트
+        # 캐시를 이미 만든 상태에서 방금 설치된 시스템 폰트를 못 찾아 조용히
+        # 무시하고 기본 폰트(한글 미지원)로 떨어지는 경우가 실측 확인됨(한글
+        # 카테고리명이 네모(tofu)로 깨짐). 폰트 파일 경로를 직접
+        # fontManager.addfont()로 등록하면 캐시 상태와 무관하게 항상 인식됨 -
+        # 훨씬 안정적.
+        _font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+        if os.path.exists(_font_path):
+            fm.fontManager.addfont(_font_path)
+            plt.rcParams["font.family"] = fm.FontProperties(fname=_font_path).get_name()
+        else:
+            print(f"[deploy] 🟡 주의 [DP-07] - 나눔고딕 폰트 파일 없음({_font_path}) - "
+                  f"run-pipline.yml의 fonts-nanum 설치 스텝 확인 필요, 이번엔 한글이 깨질 수 있음")
         plt.rcParams["axes.unicode_minus"] = False
 
         categories = list(CATEGORY_KEYWORDS.keys())
@@ -359,21 +387,36 @@ def render_email_pdf(html_content: str) -> bytes | None:
 
 def send_email(html_content: str, subject: str, recipients: list[str],
                smtp_user: str, smtp_app_password: str,
-               pdf_attachment: bytes | None = None, pdf_filename: str = "weekly.pdf") -> bool:
+               pdf_attachment: bytes | None = None, pdf_filename: str = "weekly.pdf",
+               inline_images: dict[str, bytes] | None = None) -> bool:
     """
     Gmail SMTP(587, STARTTLS)로 발송. 성공 True, 실패해도 예외 없이 False.
-    pdf_attachment를 넘기면 HTML 본문 + PDF 첨부(mixed) 형태로 같이 보냄 -
-    바깥은 mixed(첨부 지원), 그 안에 본문용 alternative를 한 겹 더 둠(기존
-    HTML 전용 메일 클라이언트 호환은 그대로 유지하면서 첨부만 추가).
+
+    구조: mixed(PDF 첨부 지원) > related(인라인 이미지 지원) > alternative(HTML 본문).
+    inline_images({cid_name: PNG bytes})를 넘기면 HTML 본문의
+    <img src="cid:cid_name">가 가리키는 실제 이미지를 Content-ID 붙은 MIME
+    파트로 같이 넣는다 - Gmail이 <img src="data:...">(base64 인라인)는 막지만
+    cid: 참조 방식은 정상 지원한다(2026-08-05, render_email_html의
+    embed_images_as="cid" 모드와 반드시 짝을 맞춰 써야 함 - HTML은 cid를
+    참조하는데 여기서 실제 이미지를 안 붙이면 깨진 이미지로 보임).
     """
     msg = MIMEMultipart("mixed")
     msg["Subject"] = subject
     msg["From"] = smtp_user
     msg["To"] = ", ".join(recipients)
 
+    related = MIMEMultipart("related")
     body = MIMEMultipart("alternative")
     body.attach(MIMEText(html_content, "html", "utf-8"))
-    msg.attach(body)
+    related.attach(body)
+
+    for cid_name, png_bytes in (inline_images or {}).items():
+        img_part = MIMEImage(png_bytes, _subtype="png")
+        img_part.add_header("Content-ID", f"<{cid_name}>")
+        img_part.add_header("Content-Disposition", "inline", filename=f"{cid_name}.png")
+        related.attach(img_part)
+
+    msg.attach(related)
 
     if pdf_attachment:
         pdf_part = MIMEApplication(pdf_attachment, _subtype="pdf")
@@ -390,7 +433,8 @@ def send_email(html_content: str, subject: str, recipients: list[str],
         return False
 
     attach_note = f", PDF 첨부 포함({len(pdf_attachment):,} bytes)" if pdf_attachment else " (PDF 첨부 없음)"
-    print(f"[deploy] 이메일 발송 완료 -> {', '.join(recipients)}{attach_note}")
+    inline_note = f", 인라인 이미지 {len(inline_images)}개" if inline_images else ""
+    print(f"[deploy] 이메일 발송 완료 -> {', '.join(recipients)}{attach_note}{inline_note}")
     return True
 
 
@@ -417,11 +461,31 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
         print("[deploy] 🔴 조치필요 [DP-04] - EMAIL_RECIPIENTS가 비어있음(콤마만 있거나 공백) - 이메일 발송 생략")
         return False
 
-    html_content = render_email_html(week_label, domestic_summarized, international_summarized,
-                                      domestic_by_category, international_by_category, failed_sources,
-                                      category_comparison, weekly_trend)
+    # 트렌드 차트는 여기서 딱 한 번만 렌더링(matplotlib 호출 비용) - 아래
+    # cid용/data_uri용 두 HTML이 같은 PNG bytes를 재사용한다.
+    trend_chart_pngs = None
+    if weekly_trend and len(weekly_trend) >= 2:
+        trend_chart_pngs = {
+            "국내": render_category_trend_chart(weekly_trend, "국내"),
+            "해외": render_category_trend_chart(weekly_trend, "해외"),
+        }
+
+    html_content, inline_images = render_email_html(
+        week_label, domestic_summarized, international_summarized,
+        domestic_by_category, international_by_category, failed_sources,
+        category_comparison, trend_chart_pngs, embed_images_as="cid")
+
     subject = f"[사료·축산뉴스] {_format_week_label_kr(week_label)} 주간 큐레이션"
-    pdf_bytes = render_email_pdf(html_content)
+
+    # PDF는 Playwright(Chromium)가 렌더링하는데 cid: 스킴을 못 읽으므로
+    # data_uri 버전을 따로 만들어서 넘김 - 실제 발송 본문(cid)과는 별개 HTML.
+    pdf_html_content, _ = render_email_html(
+        week_label, domestic_summarized, international_summarized,
+        domestic_by_category, international_by_category, failed_sources,
+        category_comparison, trend_chart_pngs, embed_images_as="data_uri")
+    pdf_bytes = render_email_pdf(pdf_html_content)
     pdf_filename = f"feed_livestock_news_{week_label}.pdf"  # 파일명은 ASCII로(한글 파일명 인코딩 이슈 회피)
+
     return send_email(html_content, subject, recipients, smtp_user, smtp_app_password,
-                       pdf_attachment=pdf_bytes, pdf_filename=pdf_filename)
+                       pdf_attachment=pdf_bytes, pdf_filename=pdf_filename,
+                       inline_images=inline_images)
