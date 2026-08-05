@@ -57,7 +57,7 @@ COLLECTED_ARTIFACT_PATH = "collected_articles.json"
 # GDELT_DEADLINE_MINUTES만 쓰고, run_process()는 나머지 넷을 씀 - 둘 다
 # 자기 진입점의 pipeline_start(=자기 job이 시작된 시각)를 기준으로 계산.
 # 값 자체는 실측 전 잠정치이니 몇 주 실행 로그 보고 조정할 것.
-GDELT_DEADLINE_MINUTES = 335         # 5:35 - job1: GDELT 수집(WATT/네이버 포함, 남은 25분은 정리+artifact 저장용)
+GDELT_DEADLINE_MINUTES = 350          # 5:50 - job1: GDELT 수집(WATT/네이버 포함, 남은 10분은 정리+artifact 저장용)
 GROUPING_DEADLINE_MINUTES = 120      # 2:00 - job2: 임베딩 로드 + 이슈 그룹핑(1~3차, 필터링 전 원본 전체 대상)
 RELEVANCE_DEADLINE_MINUTES = 240     # 4:00 - job2: 관련성 필터 + 카테고리 재분류 (그룹 대표 1건씩만 판단)
 STAGE4_DEADLINE_MINUTES = 250        # 4:10 - job2: 4차 Top N 사후 재검토

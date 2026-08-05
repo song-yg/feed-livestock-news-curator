@@ -157,8 +157,29 @@ def _snippet_for_log(text: str, limit: int = 200) -> str:
     return flat[:limit] + ("..." if len(flat) > limit else "")
 
 
+# --- OpenRouter 무료 티어 분당 상한 대응 (2026-08-04) ---
+# issue_grouper.py와 동일한 이유/값 - $10 결제해도 분당 상한(20회/분)은
+# 그대로라, 배치가 몰리면 429가 대량 발생. 모듈이 갈려있어 카운터도 각자
+# 따로 둠(관련성 필터/재분류는 issue_grouper의 3차와 같은 프로세스 실행
+# 안에서 순서대로만 돌아서, 모듈 간 카운터를 공유 안 해도 실제로는 문제 없음
+# - 두 모듈이 동시에 요청을 쏘는 상황 자체가 없음).
+_OPENROUTER_MIN_INTERVAL_SECONDS = 3.5
+_openrouter_last_request_at = 0.0
+
+
+def _throttle_openrouter_free_tier() -> None:
+    """직전 OpenRouter 요청과의 간격이 _OPENROUTER_MIN_INTERVAL_SECONDS 미만이면 그만큼 대기."""
+    global _openrouter_last_request_at
+    elapsed = time.monotonic() - _openrouter_last_request_at
+    wait = _OPENROUTER_MIN_INTERVAL_SECONDS - elapsed
+    if wait > 0:
+        time.sleep(wait)
+    _openrouter_last_request_at = time.monotonic()
+
+
 def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
                          session: requests.Session, model_name: str) -> str:
+    _throttle_openrouter_free_tier()
     headers = {
         "Authorization": f"Bearer {api_key}",
         "content-type": "application/json",

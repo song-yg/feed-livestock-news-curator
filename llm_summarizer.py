@@ -96,7 +96,13 @@ def _build_user_prompt(item: dict) -> str:
 
 def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
                          session: requests.Session, model_name: str) -> tuple[str, dict]:
-    """반환: (응답 텍스트, 원본 응답 dict)."""
+    """반환: (응답 텍스트, 원본 응답 dict).
+    OpenRouter 무료 티어 분당 상한(20회/분, $10 결제해도 그대로) 대응 -
+    issue_grouper의 스로틀 함수를 그대로 재사용(2026-08-04) - 이미 _ig로
+    import해서 쓰고 있는 모듈이라 새로 안 만들고 재사용하면, 3차/4차
+    그룹핑과 요약이 같은 파이프라인 실행 안에서 같은 카운터를 공유해
+    더 정확하게 간격을 지킨다(둘 다 순서대로만 돌아서 문제 없음)."""
+    _ig._throttle_openrouter_free_tier()
     headers = {
         "Authorization": f"Bearer {api_key}",
         "content-type": "application/json",

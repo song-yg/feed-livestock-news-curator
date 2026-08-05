@@ -369,8 +369,28 @@ def _snippet_for_log(text: str, limit: int = 200) -> str:
     return flat[:limit] + ("..." if len(flat) > limit else "")
 
 
+# --- OpenRouter 무료 티어 분당 상한 대응 (2026-08-04) ---
+# $10 결제하면 일일 한도(50->1000회)는 늘어나지만, 분당 상한(20회/분)은
+# 결제 여부와 무관하게 그대로 적용됨(OpenRouter 정책). 배치가 몰리면(특히
+# 재시도 체인으로 한 배치가 최대 4개 모델을 연달아 두드릴 때) 분당 상한을
+# 순식간에 넘겨 429가 대량 발생 - 요청 사이 최소 간격을 강제해서 방지.
+_OPENROUTER_MIN_INTERVAL_SECONDS = 3.5  # 60초/20회=3.0초 + 타이밍 오차 여유
+_openrouter_last_request_at = 0.0
+
+
+def _throttle_openrouter_free_tier() -> None:
+    """직전 OpenRouter 요청과의 간격이 _OPENROUTER_MIN_INTERVAL_SECONDS 미만이면 그만큼 대기."""
+    global _openrouter_last_request_at
+    elapsed = time.monotonic() - _openrouter_last_request_at
+    wait = _OPENROUTER_MIN_INTERVAL_SECONDS - elapsed
+    if wait > 0:
+        time.sleep(wait)
+    _openrouter_last_request_at = time.monotonic()
+
+
 def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
                          session: requests.Session, model_name: str) -> str:
+    _throttle_openrouter_free_tier()
     headers = {
         "Authorization": f"Bearer {api_key}",
         "content-type": "application/json",
