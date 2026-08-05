@@ -93,6 +93,14 @@ def _format_issue_html(item: dict, rank: int | None = None, accent: str = ACCENT
     """
 
 
+def _axis_label_html(title: str, accent: str) -> str:
+    """국내/해외 컬러바 라벨(_format_section_html과 동일 스타일) - 좌우 2단 배치 시
+    "왼쪽=국내, 오른쪽=해외"가 표 형태만으론 안 드러나는 섹션(증감 표, 트렌드
+    그래프)에 명시적으로 붙인다."""
+    return (f'<h3 style="font-size:16px; color:#222; margin:20px 0 10px 0; '
+            f'padding-left:10px; border-left:4px solid {accent};">{_escape(title)}</h3>')
+
+
 def _format_section_html(title: str, items: list[dict], accent: str = ACCENT_DOMESTIC) -> str:
     """축 색상 컬러바가 붙은 섹션 제목 + 순위 매긴 이슈 카드들."""
     title_html = (f'<h3 style="font-size:16px; color:#222; margin:20px 0 10px 0; '
@@ -211,8 +219,8 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     if category_comparison:
         parts.append(section_header("카테고리별 지난주 대비 증감"))
         parts.append(_two_column_table(
-            _format_category_comparison_axis_html(category_comparison.get("국내"), ACCENT_DOMESTIC),
-            _format_category_comparison_axis_html(category_comparison.get("해외"), ACCENT_INTL),
+            _axis_label_html("국내", ACCENT_DOMESTIC) + _format_category_comparison_axis_html(category_comparison.get("국내"), ACCENT_DOMESTIC),
+            _axis_label_html("해외", ACCENT_INTL) + _format_category_comparison_axis_html(category_comparison.get("해외"), ACCENT_INTL),
         ))
 
     if trend_chart_pngs and (trend_chart_pngs.get("국내") or trend_chart_pngs.get("해외")):
@@ -228,8 +236,8 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
 
         parts.append(section_header("카테고리별 최근 추이"))
         parts.append(_two_column_table(
-            _chart_img_tag(trend_chart_pngs.get("국내"), "domestic_trend_chart"),
-            _chart_img_tag(trend_chart_pngs.get("해외"), "international_trend_chart"),
+            _axis_label_html("국내", ACCENT_DOMESTIC) + _chart_img_tag(trend_chart_pngs.get("국내"), "domestic_trend_chart"),
+            _axis_label_html("해외", ACCENT_INTL) + _chart_img_tag(trend_chart_pngs.get("해외"), "international_trend_chart"),
         ))
 
     parts.append(section_header("주간 Top 이슈"))

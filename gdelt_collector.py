@@ -769,7 +769,7 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
 
     if failed_keywords:
         detail = ", ".join(f"{kw} ({failure_reasons.get(kw, '사유 불명')})" for kw in failed_keywords)
-        print(f"[gdelt] 🔴 조치필요 [GD-11] - 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
+        print(f"[gdelt] 🟡 주의 [GD-11] - 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
               f"기사 0건으로 처리됨): {detail}")
 
     if skipped_due_to_budget:
