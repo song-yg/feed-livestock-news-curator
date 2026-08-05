@@ -30,6 +30,7 @@ import scorer
 import issue_grouper
 import llm_summarizer
 from WATT_collector import collect as watt_collect  # noqa: N813
+import keyword_source
 import keyword_tagger
 import category_aggregator
 import relevance_filter
@@ -376,6 +377,8 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
     print("\n=== [2] 정규화 ===")
     try:
         articles = normalize(articles)
+        keyword_tagger.set_category_keywords(
+            keyword_source.get_category_keywords(keyword_tagger.CATEGORY_KEYWORDS))
         keyword_tagger.tag_articles(articles)
         keyword_tagger.print_category_distribution(articles)
     except Exception as e:

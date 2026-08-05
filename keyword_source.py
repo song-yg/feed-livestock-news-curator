@@ -124,3 +124,50 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
 
     print(f"[keyword_source] 구글 시트에서 {lang} 키워드 {len(keywords)}개 로드: {keywords}")
     return keywords
+
+
+def get_category_keywords(fallback: dict[str, dict[str, list[str]]]) -> dict[str, dict[str, list[str]]]:
+    """
+    시트의 category 컬럼으로 카테고리 판정 사전(keyword_tagger.CATEGORY_KEYWORDS와
+    같은 형식: {카테고리: {"kr": [...], "en": [...]}})을 만든다.
+
+    get_keywords()(수집용)와 달리 active 컬럼은 무시하고 전체 행을 다 쓴다 -
+    active=FALSE는 "검색 중복이라 껐다"는 뜻이지 "판정에도 못 쓴다"는 뜻이
+    아니고, 판정 사전은 오히려 동의어가 많을수록 유리하다.
+
+    시트 URL 없음/읽기 실패/유효한 행이 하나도 없음 등 어떤 이유로든 못
+    만들면 fallback(keyword_tagger.CATEGORY_KEYWORDS)을 그대로 반환.
+    """
+    csv_url = os.environ.get("KEYWORD_SHEET_CSV_URL")
+    if not csv_url:
+        print("[keyword_source] KEYWORD_SHEET_CSV_URL 없음 - 카테고리 판정 사전은 코드 내장 기본값 사용")
+        return fallback
+
+    rows = _fetch_csv_rows(csv_url)
+    if rows is None:
+        return fallback
+
+    result: dict[str, dict[str, list[str]]] = {}
+    skipped = 0
+    for row in rows:
+        keyword = row.get("keyword", "").strip()
+        category = row.get("category", "").strip()
+        lang = row.get("lang", "").strip().lower()
+        if not keyword or not category or lang not in ("ko", "en") or not _is_valid_keyword(keyword):
+            skipped += 1
+            continue
+        bucket = "kr" if lang == "ko" else "en"
+        entry = result.setdefault(category, {"kr": [], "en": []})
+        if keyword not in entry[bucket]:
+            entry[bucket].append(keyword)
+
+    if not result:
+        print("[keyword_source] 🔴 조치필요 [KS-08] - 시트에서 카테고리 판정 사전을 하나도 못 만듦"
+              "(category 컬럼이 비었거나 형식이 다를 가능성) - 코드 내장 기본값 사용")
+        return fallback
+
+    if skipped:
+        print(f"[keyword_source] 🟡 주의 [KS-09] - keyword/category/lang 중 형식이 이상한 행 {skipped}건 건너뜀")
+
+    print(f"[keyword_source] 구글 시트에서 카테고리 판정 사전 로드 완료 - {len(result)}개 카테고리")
+    return result
