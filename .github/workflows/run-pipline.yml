@@ -196,6 +196,8 @@ jobs:
 
       - name: 처리+배포 실행 (main.py process)
         env:
+          # --- [2] 정규화의 카테고리 판정 사전(keyword_source.get_category_keywords) ---
+          KEYWORD_SHEET_CSV_URL: ${{ vars.KEYWORD_SHEET_CSV_URL }}
           # --- 3차 LLM 그룹핑 보조 / 관련성 필터·재분류 / LLM 요약 공용 ---
           # Anthropic은 안 쓰는 걸로 확정(2026-08-03) - OpenRouter만 사용.
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}

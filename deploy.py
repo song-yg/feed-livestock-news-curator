@@ -24,7 +24,7 @@ ACCENT_DOMESTIC_TINT = "#e8f0fe"
 ACCENT_INTL = "#7c3aed"
 ACCENT_INTL_TINT = "#f3ebfd"
 
-HEADER_BG = "#0f2f5c"
+HEADER_BG = f"linear-gradient(90deg, {ACCENT_DOMESTIC} 0%, {ACCENT_INTL} 100%)"  # 왼쪽 국내색 -> 오른쪽 해외색
 
 
 def _escape(value) -> str:
@@ -101,33 +101,6 @@ def _axis_label_html(title: str, accent: str) -> str:
             f'padding-left:10px; border-left:4px solid {accent};">{_escape(title)}</h3>')
 
 
-def _format_section_html(title: str, items: list[dict], accent: str = ACCENT_DOMESTIC) -> str:
-    """축 색상 컬러바가 붙은 섹션 제목 + 순위 매긴 이슈 카드들."""
-    title_html = (f'<h3 style="font-size:16px; color:#222; margin:20px 0 10px 0; '
-                  f'padding-left:10px; border-left:4px solid {accent};">{_escape(title)}</h3>')
-    if not items:
-        return f'{title_html}<p style="color:#999; font-size:13px;">(이번 주 이슈 없음)</p>'
-    body = "".join(_format_issue_html(item, rank=i, accent=accent) for i, item in enumerate(items, start=1))
-    return f'{title_html}{body}'
-
-
-def _format_category_html(label: str, by_category: dict[str, list[dict]],
-                           accent: str = ACCENT_DOMESTIC, accent_tint: str = ACCENT_DOMESTIC_TINT) -> str:
-    """카테고리별 Top N. 카테고리마다 알약 태그 + 그 안에서 1부터 순위 매김."""
-    if not by_category:
-        return ""
-    blocks = []
-    for category, items in by_category.items():
-        tag_html = (f'<span style="display:inline-block; padding:4px 14px; border-radius:14px; '
-                    f'background:{accent_tint}; color:{accent}; font-size:15px; font-weight:bold; '
-                    f'margin:14px 0 8px 0;">{_escape(category)}</span>')
-        blocks.append(f'<div>{tag_html}</div>')
-        blocks.append("".join(_format_issue_html(item, rank=i, accent=accent) for i, item in enumerate(items, start=1)))
-    title_html = (f'<h3 style="font-size:16px; color:#222; margin:24px 0 8px 0; '
-                  f'padding-left:10px; border-left:4px solid {accent};">{_escape(label)}</h3>')
-    return f'{title_html}{"".join(blocks)}'
-
-
 def _format_category_comparison_axis_html(axis_data: dict[str, dict] | None, accent: str) -> str:
     """카테고리별 지난주 대비 증감 표(축 하나 분량). 2단 레이아웃에서 좌우 배치용."""
     if not axis_data:
@@ -155,6 +128,94 @@ def _format_category_comparison_axis_html(axis_data: dict[str, dict] | None, acc
         f'<th style="text-align:right; padding:6px 8px; font-size:11px; color:#888;">증감</th>'
         f'</tr>{"".join(rows)}</table>'
     )
+
+
+def _empty_cell_html(text: str = "(해당 없음)") -> str:
+    return f'<p style="color:#999; font-size:13px;">{_escape(text)}</p>'
+
+
+def _format_section_html_aligned(left_label: str, left_items: list[dict],
+                                  right_label: str, right_items: list[dict],
+                                  left_accent: str = ACCENT_DOMESTIC, right_accent: str = ACCENT_INTL) -> str:
+    """
+    _format_section_html의 좌우 정렬 버전 - 국내 1위와 해외 1위가 같은 행에
+    오도록 표 자체를 하나로 합침(한쪽이 짧아도 그쪽 칸만 비고, 반대쪽까지
+    위로 쏠리지 않음). 한쪽이 아예 0건이면 그 칸에 "이번 주 이슈 없음" 1줄만.
+    """
+    left_header = _axis_label_html(left_label, left_accent)
+    right_header = _axis_label_html(right_label, right_accent)
+
+    left_cards = [_format_issue_html(item, rank=i, accent=left_accent) for i, item in enumerate(left_items, start=1)]
+    right_cards = [_format_issue_html(item, rank=i, accent=right_accent) for i, item in enumerate(right_items, start=1)]
+
+    if not left_cards:
+        left_cards = [_empty_cell_html("(이번 주 이슈 없음)")]
+    if not right_cards:
+        right_cards = [_empty_cell_html("(이번 주 이슈 없음)")]
+
+    rows = [f'<tr><td width="50%" valign="top" style="padding-right:14px;">{left_header}</td>'
+            f'<td width="50%" valign="top" style="padding-left:14px;">{right_header}</td></tr>']
+    for i in range(max(len(left_cards), len(right_cards))):
+        left_cell = left_cards[i] if i < len(left_cards) else ""
+        right_cell = right_cards[i] if i < len(right_cards) else ""
+        rows.append(f'<tr><td width="50%" valign="top" style="padding-right:14px;">{left_cell}</td>'
+                    f'<td width="50%" valign="top" style="padding-left:14px;">{right_cell}</td></tr>')
+
+    return ('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+            'style="width:100%; border-collapse:collapse; table-layout:fixed;">'
+            + "".join(rows) + '</table>')
+
+
+def _format_category_html_aligned(domestic_by_category: dict[str, list[dict]],
+                                   international_by_category: dict[str, list[dict]],
+                                   left_label: str = "국내", right_label: str = "해외",
+                                   left_accent: str = ACCENT_DOMESTIC, right_accent: str = ACCENT_INTL,
+                                   left_tint: str = ACCENT_DOMESTIC_TINT, right_tint: str = ACCENT_INTL_TINT) -> str:
+    """
+    _format_category_html의 좌우 정렬 버전 - 같은 카테고리가 국내/해외
+    양쪽에서 같은 행에 오도록 카테고리 단위로 행을 맞춘다(한쪽에만 있는
+    카테고리도 반대쪽에 빈 칸으로 자리를 잡아줘서, 그 아래 다른 카테고리들의
+    높이가 밀리지 않게 함). 카테고리 순서는 keyword_tagger.CATEGORY_KEYWORDS
+    순서 고정(이메일마다 카테고리 위치가 안 바뀌게).
+    """
+    from keyword_tagger import CATEGORY_KEYWORDS
+
+    canonical_order = list(CATEGORY_KEYWORDS.keys())
+    seen = set(domestic_by_category) | set(international_by_category)
+    categories = [c for c in canonical_order if c in seen] + [c for c in seen if c not in canonical_order]
+
+    if not categories:
+        return ""
+
+    def _tag(text: str, accent: str, tint: str) -> str:
+        return (f'<span style="display:inline-block; padding:4px 14px; border-radius:14px; '
+                f'background:{tint}; color:{accent}; font-size:15px; font-weight:bold; '
+                f'margin:14px 0 8px 0;">{_escape(text)}</span>')
+
+    rows = []
+    for category in categories:
+        left_items = domestic_by_category.get(category, [])
+        right_items = international_by_category.get(category, [])
+
+        rows.append(f'<tr><td width="50%" valign="top" style="padding-right:14px;">{_tag(category, left_accent, left_tint)}</td>'
+                    f'<td width="50%" valign="top" style="padding-left:14px;">{_tag(category, right_accent, right_tint)}</td></tr>')
+
+        left_cards = [_format_issue_html(item, rank=i, accent=left_accent) for i, item in enumerate(left_items, start=1)]
+        right_cards = [_format_issue_html(item, rank=i, accent=right_accent) for i, item in enumerate(right_items, start=1)]
+        if not left_cards:
+            left_cards = [_empty_cell_html()]
+        if not right_cards:
+            right_cards = [_empty_cell_html()]
+
+        for i in range(max(len(left_cards), len(right_cards))):
+            left_cell = left_cards[i] if i < len(left_cards) else ""
+            right_cell = right_cards[i] if i < len(right_cards) else ""
+            rows.append(f'<tr><td width="50%" valign="top" style="padding-right:14px;">{left_cell}</td>'
+                        f'<td width="50%" valign="top" style="padding-left:14px;">{right_cell}</td></tr>')
+
+    return ('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+            'style="width:100%; border-collapse:collapse; table-layout:fixed;">'
+            + "".join(rows) + '</table>')
 
 
 def _two_column_table(left_html: str, right_html: str) -> str:
@@ -212,7 +273,7 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
 
     parts = [
         '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Arial, sans-serif; '
-        'background:#f2f4f7; padding:24px 0;">',
+        'background:#f2f4f7; padding:24px 0; word-break:keep-all; overflow-wrap:break-word;">',
         '<div style="max-width:1000px; margin:0 auto; background:#fff; border-radius:10px; '
         'overflow:hidden; border:1px solid #e5e5e5;">',
         header_html,
@@ -244,15 +305,16 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
         ))
 
     parts.append(section_header("주간 Top 이슈"))
-    parts.append(_two_column_table(
-        _format_section_html("국내", domestic_summarized, accent=ACCENT_DOMESTIC),
-        _format_section_html("해외", international_summarized, accent=ACCENT_INTL),
+    parts.append(_format_section_html_aligned(
+        "국내", domestic_summarized, "해외", international_summarized,
+        left_accent=ACCENT_DOMESTIC, right_accent=ACCENT_INTL,
     ))
 
     parts.append(section_header("카테고리별 Top N"))
-    parts.append(_two_column_table(
-        _format_category_html("국내", domestic_by_category, accent=ACCENT_DOMESTIC, accent_tint=ACCENT_DOMESTIC_TINT),
-        _format_category_html("해외", international_by_category, accent=ACCENT_INTL, accent_tint=ACCENT_INTL_TINT),
+    parts.append(_format_category_html_aligned(
+        domestic_by_category, international_by_category,
+        left_accent=ACCENT_DOMESTIC, right_accent=ACCENT_INTL,
+        left_tint=ACCENT_DOMESTIC_TINT, right_tint=ACCENT_INTL_TINT,
     ))
 
     if failed_sources:
