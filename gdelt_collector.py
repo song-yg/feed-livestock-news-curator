@@ -550,12 +550,12 @@ def _handle_batch_crowding(batch: list[str], batch_articles: list[dict]) -> list
     """
     crowders = _detect_crowded_keywords(batch_articles, batch)
     if crowders:
-        print(f"[gdelt] 🟡 주의 [GD-12] - 배치 {batch} 내 크라우딩 감지({crowders}가 결과의 "
+        print(f"[gdelt] 🟡 주의 [GD-10] - 배치 {batch} 내 크라우딩 감지({crowders}가 결과의 "
               f"{int(CROWDING_SHARE_THRESHOLD * 100)}% 이상 차지 추정) - "
               f"크라우더 포함 배치 전체를 개별 재요청 대상으로 편입")
         return list(batch)
     if len(batch_articles) >= MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
-        print(f"[gdelt] 🟡 주의 [GD-13] - 배치 {batch} 결과가 상한 근처까지 참({len(batch_articles)}건) - "
+        print(f"[gdelt] 🟡 주의 [GD-11] - 배치 {batch} 결과가 상한 근처까지 참({len(batch_articles)}건) - "
               f"골고루 밀렸을 위험 있어 배치 전체를 개별 재요청 대상으로 편입")
         return list(batch)
     print(f"[gdelt] 배치 {batch} - 크라우딩/상한 근접 없음, 개별 재요청 없이 결과 확정"
@@ -715,7 +715,7 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
     if batch_round:
         # 배치 요청 자체가 여러 번 계속 실패해 더 이상 배치로 시도할 수단이
         # 없어 마지막 수단으로 키워드 단위로 쪼갬.
-        print(f"[gdelt] 🟡 주의 [GD-10] - 배치 재시도 {OUTER_RETRY_PASSES}회 소진 - 개별 요청 전환: {batch_round}")
+        print(f"[gdelt] 🟡 주의 [GD-12] - 배치 재시도 {OUTER_RETRY_PASSES}회 소진 - 개별 요청 전환: {batch_round}")
         for batch in batch_round:
             pending_individual.extend(batch)
 
@@ -769,7 +769,7 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
 
     if failed_keywords:
         detail = ", ".join(f"{kw} ({failure_reasons.get(kw, '사유 불명')})" for kw in failed_keywords)
-        print(f"[gdelt] 🟡 주의 [GD-11] - 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
+        print(f"[gdelt] 🟡 주의 [GD-13] - 최종 실패 키워드 (총 {OUTER_RETRY_PASSES + 1}회 시도 후에도 실패, "
               f"기사 0건으로 처리됨): {detail}")
 
     if skipped_due_to_budget:
@@ -808,12 +808,3 @@ def _print_distribution(articles: list[dict]) -> None:
     )
     print(f"\n중국/홍콩/대만 관련: {china_related}건 "
           f"({china_related / len(articles) * 100 if articles else 0:.1f}%)")
-
-
-if __name__ == "__main__":
-    articles, timeline = collect()
-    print(f"\n총 {len(articles)}건 기사 수집 완료")
-    for a in articles[:3]:
-        print(a)
-
-    _print_distribution(articles)

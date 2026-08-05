@@ -194,15 +194,9 @@ def stage2_group(
       still_unmatched: 2차에서도 못 잡은 단독 기사
       borderline_pairs: 애매 구간 (기사A, 기사B, 유사도) - 3차 LLM 보조 대상
 
-    임계값 분류는 numpy 벡터 연산으로 처리(2026-07-31) - 예전엔
-    combinations(range(n), 2)로 전체 쌍을 순수 파이썬 for문으로 돌았는데,
-    n=수천이면 쌍의 개수가 수백만~천만 단위라 관련성 필터가 죽어서
-    필터링 안 된 원본이 그대로 들어오는 등의 상황에서 사실상 멈춘 것처럼
-    보일 정도로 느려졌음. sim_matrix에서 threshold/borderline 조건을 만족하는
-    쌍의 인덱스를 numpy 불리언 마스킹으로 먼저 골라내고, union-find처럼
-    본질적으로 순차 처리가 필요한 부분만 그 소수의 후보 쌍에 대해 파이썬
-    루프를 돈다(대부분의 쌍은 threshold 미만이라 이 후보군 자체가 전체 쌍
-    수보다 훨씬 작음).
+    임계값 분류는 numpy 벡터 연산으로 처리 - threshold/borderline 조건을
+    만족하는 쌍을 불리언 마스킹으로 먼저 골라내고, union-find처럼 순차 처리가
+    필요한 부분만 그 소수 후보에 대해 파이썬 루프를 돈다.
     """
     if not articles:
         return [], [], []
@@ -258,9 +252,8 @@ def stage2_group(
 # borderline_pairs만 대상(전수 호출 아님). "같은 사건" 기준: 질병/주제가
 # 같아도 국가·장소·시점이 다르면 별개.
 #
-# LLM_PROVIDER=openrouter(기본, OPENROUTER_API_KEY) - Anthropic은 안 쓰는
-# 걸로 확정(2026-08-03). anthropic으로 명시적으로 넘기면 그 경로도 여전히
-# 동작은 하지만(ANTHROPIC_API_KEY 필요), 운영 환경 기본값은 openrouter.
+# LLM_PROVIDER=openrouter(기본, OPENROUTER_API_KEY) - Anthropic 미사용.
+# anthropic으로 명시 지정하면 그 경로도 동작(ANTHROPIC_API_KEY 필요).
 #
 # 무료 모델 하나를 못 박지 않고 OpenRouter의 자체 무료 라우터(openrouter/free)
 # 를 기본값으로 쓴 이유: 개별 :free 모델은 공급사가 예고 없이 무료 태그를
@@ -302,10 +295,10 @@ if "openrouter/free" not in [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]:
 
 # 순위별 오류 코드(체인 길이 무관하게 역할 고정)
 _LLM_MODEL_ROLE_ERROR_CODE = {
-    "1순위": "IG-07",
-    "2순위": "IG-08",
-    "3순위": "IG-09",
-    "최종 안전망": "IG-10",
+    "1순위": "IG-02",
+    "2순위": "IG-03",
+    "3순위": "IG-04",
+    "최종 안전망": "IG-05",
 }
 
 LLM_MODEL_CHAIN_OPENROUTER = [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]  # 하위호환용
@@ -369,12 +362,10 @@ def _snippet_for_log(text: str, limit: int = 200) -> str:
     return flat[:limit] + ("..." if len(flat) > limit else "")
 
 
-# --- OpenRouter 무료 티어 분당 상한 대응 (2026-08-04) ---
-# $10 결제하면 일일 한도(50->1000회)는 늘어나지만, 분당 상한(20회/분)은
-# 결제 여부와 무관하게 그대로 적용됨(OpenRouter 정책). 배치가 몰리면(특히
-# 재시도 체인으로 한 배치가 최대 4개 모델을 연달아 두드릴 때) 분당 상한을
-# 순식간에 넘겨 429가 대량 발생 - 요청 사이 최소 간격을 강제해서 방지.
-_OPENROUTER_MIN_INTERVAL_SECONDS = 3.5  # 60초/20회=3.0초 + 타이밍 오차 여유
+# --- OpenRouter 무료 티어 분당 상한 대응 ---
+# 분당 20회 상한은 결제 여부와 무관하게 적용됨(OpenRouter 정책) - 요청 사이
+# 최소 간격을 강제해서 429 방지.
+_OPENROUTER_MIN_INTERVAL_SECONDS = 3.5  # 60초/20회=3.0초 + 여유
 _openrouter_last_request_at = 0.0
 
 
@@ -486,7 +477,7 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
     try:
         parsed = _request_llm_text(_LLM_SYSTEM_PROMPT, user_prompt, api_key, session, validate=_validate)
     except Exception as e:
-        print(f"[issue_grouper] 🔴 조치필요 [IG-02] - 3차 LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치({len(pairs)}쌍)는 "
+        print(f"[issue_grouper] 🔴 조치필요 [IG-06] - 3차 LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치({len(pairs)}쌍)는 "
               f"전부 '안 묶음' fallback: {type(e).__name__} - {e!r}")
         return None
 
@@ -508,7 +499,7 @@ def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requ
             results.append(False)
 
     if missing:
-        print(f"[issue_grouper] 🟡 주의 [IG-03] - 3차 LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
+        print(f"[issue_grouper] 🟡 주의 [IG-07] - 3차 LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
               f"(기대 {len(pairs)}쌍 중 {len(missing)}쌍) - 그 쌍들만 '안 묶음' 기본값 처리, "
               f"나머지 {len(pairs) - len(missing)}쌍은 정상 판정 사용")
 
@@ -533,7 +524,7 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]],
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[issue_grouper] 🟡 주의 [IG-04] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - 3차 LLM 보조 생략, "
+        print(f"[issue_grouper] 🟡 주의 [IG-08] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - 3차 LLM 보조 생략, "
               f"애매 구간 {len(borderline_pairs)}쌍 전부 '안 묶음' 기본값 유지")
         return []
 
@@ -546,7 +537,7 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]],
         for i in range(0, len(borderline_pairs), LLM_BATCH_SIZE):
             if deadline is not None and time.monotonic() >= deadline:
                 remaining = len(borderline_pairs) - i
-                print(f"[issue_grouper] 🟡 주의 [IG-14] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                print(f"[issue_grouper] 🟡 주의 [IG-09] - 시간 예산(파이프라인 기준 마감) 소진 - "
                       f"3차 LLM 보조 남은 {remaining}쌍은 '안 묶음' 기본값 유지하고 중단")
                 break
             batch = borderline_pairs[i:i + LLM_BATCH_SIZE]
@@ -581,7 +572,7 @@ def group_issues(articles: list[dict], model=None, deadline: float | None = None
     stage1_grouped, stage1_unmatched = stage1_group(articles)
 
     if model is None:
-        print("[issue_grouper] 🟡 주의 [IG-05] - 임베딩 모델이 없어 2차(임베딩) 매칭 생략 - 1차 결과만 사용")
+        print("[issue_grouper] 🟡 주의 [IG-10] - 임베딩 모델이 없어 2차(임베딩) 매칭 생략 - 1차 결과만 사용")
         singleton = [[a] for a in stage1_unmatched]
         return stage1_grouped + singleton
 
@@ -692,7 +683,7 @@ def _merge_confirmed_components(components: list[list[dict]],
         else:
             recheck_note = ("빠진 쌍을 추가로 재확인했지만 여전히 일부는 직접 확인 안 됨"
                              if extra_confirm is not None else "일부 쌍은 LLM에 직접 확인된 적 없음")
-            print(f"[issue_grouper] 🟡 주의 [IG-06] - 3차 확정 쌍이 사슬로만 연결됨(컴포넌트 "
+            print(f"[issue_grouper] 🟡 주의 [IG-11] - 3차 확정 쌍이 사슬로만 연결됨(컴포넌트 "
                   f"{len(indices)}개 - {recheck_note}) - 연쇄 병합 방지로 안 묶고 개별 유지")
             for idx in indices:
                 merged_components.append(components[idx])
@@ -762,7 +753,7 @@ def _call_stage4_llm_batch(pairs: list[tuple[dict, dict]], api_key: str,
     try:
         parsed = _request_llm_text(_STAGE4_SYSTEM_PROMPT, user_prompt, api_key, session, validate=_validate)
     except Exception as e:
-        print(f"[issue_grouper] 🔴 조치필요 [IG-11] - 4차 재검토 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
+        print(f"[issue_grouper] 🔴 조치필요 [IG-12] - 4차 재검토 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
               f"이 배치({len(pairs)}쌍)는 전부 '병합 안 함' fallback: {type(e).__name__} - {e!r}")
         return None
 
@@ -783,7 +774,7 @@ def _call_stage4_llm_batch(pairs: list[tuple[dict, dict]], api_key: str,
             results.append(False)  # 안전한 기본값 - 병합 안 함
 
     if missing:
-        print(f"[issue_grouper] 🟡 주의 [IG-12] - 4차 재검토 LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
+        print(f"[issue_grouper] 🟡 주의 [IG-13] - 4차 재검토 LLM({LLM_PROVIDER}) 출력에서 id {missing} 누락"
               f"(기대 {len(pairs)}쌍 중 {len(missing)}쌍) - 그 쌍들만 '병합 안 함' 기본값 처리")
 
     return results
@@ -822,7 +813,7 @@ def stage4_dedupe_and_promote(ranked_pool: list[dict], top_n: int, label: str = 
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[issue_grouper] 🟡 주의 [IG-13] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+        print(f"[issue_grouper] 🟡 주의 [IG-14] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"4차 Top N 재검토 생략(기존 순위 그대로 사용)")
         return candidates
 
@@ -877,133 +868,3 @@ def stage4_dedupe_and_promote(ranked_pool: list[dict], top_n: int, label: str = 
         print(f"{prefix}4차 Top N 재검토 완료 - 최종 {len(candidates)}건")
 
     return candidates
-
-
-class _FakeEmbeddingModel:
-    """
-    테스트 전용 가짜 임베딩 모델. 매칭돼야 할 텍스트끼리는 비슷한 벡터,
-    나머지는 서로 직교하는 벡터를 부여해 우연한 유사도 충돌을 방지.
-    model.encode(texts, normalize_embeddings=True) 인터페이스만 흉내냄.
-    """
-
-    def encode(self, texts: list[str], normalize_embeddings: bool = True):
-        import numpy as np
-
-        rng = np.random.default_rng(seed=42)
-        dim = len(texts) + 1
-
-        vectors = []
-        next_free_axis = 1  # 0번 축은 곡물/사료 그룹 전용
-        for text in texts:
-            vec = np.zeros(dim)
-            if "옥수수" in text or "grain" in text.lower() or "feed price" in text.lower():
-                vec[0] = 1.0
-            else:
-                vec[next_free_axis] = 1.0
-                next_free_axis += 1
-            vec += rng.normal(scale=0.02, size=dim)
-            vectors.append(vec)
-        return np.array(vectors)
-
-
-if __name__ == "__main__":
-    # === 1차만 단독 확인 (무거운 설치 없이) ===
-    sample_articles = [
-        {"title": "전북서 고병원성 조류독감 추가 발생", "url": "https://a.com/1"},
-        {"title": "USDA reports new avian flu outbreak in Iowa", "url": "https://b.com/1"},
-        {"title": "구제역 확산에 한우 수출 잠정 중단", "url": "https://a.com/2"},
-        {"title": "Feed prices expected to rise amid grain shortage", "url": "https://b.com/2"},  # 매칭 안 되어야 함
-        {"title": "옥수수 국제가격 상승, 배합사료 원가 부담 커져", "url": "https://a.com/3"},  # 같은 이슈, 2차가 잡아야 함
-    ]
-
-    grouped, unmatched = stage1_group(sample_articles)
-    print(f"=== 1차 매칭으로 묶인 그룹: {len(grouped)}개 ===")
-    for g in grouped:
-        print(f"  - {len(g)}건: {[a['title'] for a in g]}")
-    print(f"\n=== 1차에서 못 잡은 기사(2차로 넘길 대상): {len(unmatched)}건 ===")
-    for a in unmatched:
-        print(f"  - {a['title']}")
-
-    print("\n\n=== group_issues() 전체 실행 (가짜 임베딩 모델) ===")
-    fake_model = _FakeEmbeddingModel()
-    final_groups = group_issues(sample_articles, model=fake_model)
-
-    print(f"\n최종 그룹 수: {len(final_groups)}개")
-    for g in final_groups:
-        titles = [a["title"] for a in g]
-        tag = "그룹" if len(g) >= 2 else "단독"
-        print(f"  [{tag}, {len(g)}건] {titles}")
-
-    merged_ok = any(
-        len(g) == 2 and
-        {"옥수수 국제가격 상승, 배합사료 원가 부담 커져", "Feed prices expected to rise amid grain shortage"}
-        == {a["title"] for a in g}
-        for g in final_groups
-    )
-    print(f"\n[검증] 2차 임베딩으로 사료가격 이슈 그룹핑 성공: {merged_ok}")
-    assert merged_ok, "2차 임베딩 그룹핑 로직에 문제가 있음"
-
-    def _same_group(title_a: str, title_b: str) -> bool:
-        return any({title_a, title_b} <= {a["title"] for a in g} for g in final_groups)
-
-    unrelated_pairs = [
-        ("전북서 고병원성 조류독감 추가 발생", "구제역 확산에 한우 수출 잠정 중단"),
-        ("USDA reports new avian flu outbreak in Iowa", "구제역 확산에 한우 수출 잠정 중단"),
-        ("USDA reports new avian flu outbreak in Iowa", "옥수수 국제가격 상승, 배합사료 원가 부담 커져"),
-    ]
-    for title_a, title_b in unrelated_pairs:
-        wrongly_merged = _same_group(title_a, title_b)
-        print(f"[검증] '{title_a[:20]}...' <-> '{title_b[:20]}...' 안 묶임: {not wrongly_merged}")
-        assert not wrongly_merged, f"무관한 기사가 잘못 묶임: {title_a} <-> {title_b}"
-    print("\n[검증] 무관한 기사 오탐 없음 - 전부 통과")
-
-    print("\n\n=== 3차 LLM 보조 배선 확인 (mock API, 실제 네트워크 호출 없음) ===")
-    import os as _os
-    import requests as _requests
-
-    _mock_calls = []
-
-    def _mock_session_post(self, url, headers=None, json=None, timeout=None):
-        _mock_calls.append(url)
-        user_content = json["messages"][-1]["content"]  # openrouter는 messages[0]=system, [-1]=user
-        pairs_count = user_content.count('A: "')
-        results = [{"id": i, "same_event": True} for i in range(1, pairs_count + 1)]
-        text = __import__("json").dumps(results)
-
-        class _MockResp:
-            status_code = 200
-            def raise_for_status(self): pass
-            def json(self):
-                return {"choices": [{"message": {"content": text}}]}
-        return _MockResp()
-
-    _original_session_post = _requests.Session.post
-    _requests.Session.post = _mock_session_post
-    _os.environ["OPENROUTER_API_KEY"] = "sk-or-smoke-test-dummy-key"
-    try:
-        fake_borderline = [
-            (
-                {"title": "전북 조류독감 추가 확진", "url": "https://smoke/1"},
-                {"title": "Jeonbuk confirms new avian flu case", "url": "https://smoke/2"},
-                0.72,
-            )
-        ]
-        confirmed = stage3_llm_assist(fake_borderline)
-        assert len(confirmed) == 1, "mock 응답이 전부 True인데 confirmed가 1개가 아님 - 배선 문제"
-        assert _mock_calls, "session.post가 한 번도 호출 안 됨 - stage3가 실제로 API를 안 부름"
-        print(f"[검증] stage3_llm_assist 배선 정상 - mock 호출 {len(_mock_calls)}회, "
-              f"confirmed {len(confirmed)}쌍")
-    finally:
-        _requests.Session.post = _original_session_post
-        del _os.environ["OPENROUTER_API_KEY"]
-
-    # 헤더 latin-1 인코딩 검증(한글 섞이면 UnicodeEncodeError)
-    for header_name, header_value in {
-        "Authorization": "Bearer dummy-key-for-header-encoding-check",
-        "content-type": "application/json",
-        "X-Title": _OPENROUTER_X_TITLE,
-    }.items():
-        header_value.encode("latin-1")
-    print(f"[검증] OpenRouter 요청 헤더(X-Title='{_OPENROUTER_X_TITLE}') latin-1 인코딩 가능 확인 - 통과")
-
-    print("\n[issue_grouper] 자체 점검 전체 통과 (1차/2차 그룹핑 + 음성 검증 + 3차 배선 확인 + 헤더 인코딩 확인)")

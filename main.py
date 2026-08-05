@@ -7,20 +7,13 @@ main.py
 (국내/해외 Top N + 카테고리별 Top N, 4차 사후재검토 포함) -> [8]카테고리 집계 ->
 [9]LLM 요약 -> [10]카테고리별 요약 -> [11]저장(storage.py) -> [12]배포(deploy.py, 이메일).
 
-** GitHub Actions 2-job 분리 (2026-08-03) **
-GDELT 429 백오프 등으로 job 1개(하드캡 360분)에 다 넣기 빠듯해질 수 있어,
-job1(수집)과 job2(정규화~배포)로 나눠 각자 360분을 온전히 쓰도록 함
-(run-pipline.yml 참고). 두 job 사이는 파이썬 프로세스가 아예 갈리므로,
-job1이 수집 결과를 JSON 파일로 저장 -> GitHub Actions artifact로 업로드 ->
-job2가 다운로드해서 이어받는 방식. main.py 진입점 3개:
+** GitHub Actions 2-job 분리 **
+job1(수집)과 job2(정규화~배포)로 나눠 각자 360분(job 하드캡)을 씀. job1이
+수집 결과를 JSON으로 저장 -> artifact 업로드 -> job2가 다운로드해서 이어받음.
+진입점 3개:
   run_collect() - job1용. [1] 수집만 하고 결과를 파일로 저장.
   run_process() - job2용. 파일을 읽어 [2]~[12] 나머지 전부 처리.
-  run()         - 단일 실행용(수동 로컬 테스트 등). [1]~[12]를 한 프로세스에서
-                  전부 처리 - 이 경우 GDELT가 오래 걸리면 뒤 단계 체크포인트가
-                  이미 지난 채로 시작될 수 있음(각자 360분씩 못 받고 한
-                  프로세스 안에서 나눠 써야 하므로) - 운영 자동 실행은
-                  run_collect/run_process 조합을 쓰고, run()은 어디까지나
-                  급하게 로컬에서 전체 한 번 돌려볼 때 정도로만 사용할 것.
+  run()         - 단일 실행용(로컬 테스트). [1]~[12]를 한 프로세스에서 전부 처리.
 """
 
 import json
@@ -162,20 +155,13 @@ def score(groups: list[list[dict]], top_n: int = TOP_N,
           stage4_deadline: float | None = None) -> tuple[list[dict], list[dict], dict, dict]:
     """
     이미 그룹핑된 groups(issue_grouper.group_issues 결과)를 국내/해외로 나눠
-    Top N + 카테고리별 Top N을 계산한다.
-
-    ** 그룹핑은 이 함수 밖(run())에서 미리 끝나 있어야 함 (2026-07-31) **
-    예전엔 이 함수 안에서 issue_grouper.group_issues()를 직접 호출했는데,
-    관련성 필터를 "그룹 대표 1건만 판단"하는 방식으로 바꾸면서 그룹핑 자체가
-    관련성 필터보다 먼저 실행돼야 하는 순서가 됐다(run() 참고) - 그래서
-    그룹핑은 run()이 score() 호출 전에 끝내고, 여기서는 이미 필터링까지
-    끝난 groups만 받아 국내/해외 분리·랭킹만 담당한다.
+    Top N + 카테고리별 Top N을 계산한다. 그룹핑은 run()이 미리 끝내서 넘김
+    (관련성 필터가 그룹 대표 1건 판단 방식이라 그룹핑이 먼저 끝나 있어야 함).
 
     국내/해외 양쪽에 걸친 그룹은 각 축에 그 축 기사만 넘기고 반대 축 대표
-    기사 URL을 _cross_axis_partner_url로 상호 표시 - 실제 표시용 제목은
-    아직 안 정함(Top N 확정 전이라 파트너가 실제로 Top N에 들지 모름).
-    main.py의 _resolve_cross_axis_partners()가 4차/요약까지 다 끝난 뒤
-    실제로 이메일에 남은 항목인지 확인해서 제목을 채운다.
+    기사 URL을 _cross_axis_partner_url로 상호 표시(제목은 아직 안 정함 -
+    main.py의 _resolve_cross_axis_partners()가 요약까지 끝난 뒤 실제로
+    이메일에 남은 항목인지 확인해서 채움).
 
     GDELT 소스 중 한국어 기사는 scorer._is_korean_gdelt_article로 국내 재분류.
 
@@ -402,14 +388,12 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
     grouping_deadline = _deadline(pipeline_start, GROUPING_DEADLINE_MINUTES)
 
     print("\n=== [4] 이슈 그룹핑 ===")
-    # 관련성 필터보다 먼저 실행(2026-07-31) - 필터를 "그룹 대표 1건만 판단"
-    # 방식으로 바꾸면서 그룹핑이 먼저 끝나 있어야 함. 필터링 전 원본 전체가
-    # 대상이라 예전보다 입력 규모가 커짐 - stage2_group의 임계값 분류를
-    # numpy로 벡터화해둔 덕에 수천 건이 들어와도 안전하게 처리됨.
+    # 관련성 필터(그룹 대표 1건 판단)보다 먼저 실행 - 필터링 전 원본 전체가
+    # 대상이라 stage2_group의 numpy 벡터화 덕에 대량 입력도 안전하게 처리됨.
     try:
         groups = issue_grouper.group_issues(articles, model=embedding_model, deadline=grouping_deadline)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 [MN-16] - [4] 이슈 그룹핑 단계에서 예상 못 한 오류 발생 - "
+        print(f"[main] 🔴 조치필요 [MN-06] - [4] 이슈 그룹핑 단계에서 예상 못 한 오류 발생 - "
               f"그룹핑 없이(기사 1건 = 그룹 1개) 다음 단계로 진행: {type(e).__name__} - {e!r}")
         groups = scorer.to_singleton_groups(articles)
 
@@ -419,14 +403,14 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
     try:
         groups = relevance_filter.filter_groups(groups, deadline=relevance_deadline)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 [MN-06] - [5] 관련성 필터 단계에서 예상 못 한 오류 발생 - 필터링 없이 다음 단계로 진행: "
+        print(f"[main] 🔴 조치필요 [MN-07] - [5] 관련성 필터 단계에서 예상 못 한 오류 발생 - 필터링 없이 다음 단계로 진행: "
               f"{type(e).__name__} - {e!r}")
 
     print("\n=== [6] 카테고리 재분류 (그룹 대표 1건씩 판단) ===")
     try:
         groups = relevance_filter.recategorize_uncategorized_groups(groups, deadline=relevance_deadline)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 [MN-07] - [6] 카테고리 재분류 단계에서 예상 못 한 오류 발생 - 재분류 없이 다음 단계로 진행: "
+        print(f"[main] 🔴 조치필요 [MN-08] - [6] 카테고리 재분류 단계에서 예상 못 한 오류 발생 - 재분류 없이 다음 단계로 진행: "
               f"{type(e).__name__} - {e!r}")
 
     # 카테고리 집계([8])/raw.json 저장([11])은 개별 기사 단위 리스트가
@@ -445,7 +429,7 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
         scorer.print_category_top_n("국내", domestic_category_ranked, n=CATEGORY_TOP_N)
         scorer.print_category_top_n("해외", international_category_ranked, n=CATEGORY_TOP_N)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 [MN-08] - [7] 스코어링 단계에서 예상 못 한 오류 발생 - 이번 주는 Top N 없이 진행"
+        print(f"[main] 🔴 조치필요 [MN-09] - [7] 스코어링 단계에서 예상 못 한 오류 발생 - 이번 주는 Top N 없이 진행"
               f"(저장 단계에서 raw.json은 그대로 남음): {type(e).__name__} - {e!r}")
         domestic_ranked, international_ranked = [], []
         domestic_category_ranked, international_category_ranked = {}, {}
@@ -457,7 +441,7 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
         category_aggregator.print_aggregate_with_comparison(category_distribution, category_comparison)
         weekly_trend = category_aggregator.load_weekly_trend(category_distribution, weeks=4)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 [MN-09] - [8] 카테고리 집계 단계에서 예상 못 한 오류 발생 - 이번 주는 집계 없이 진행: "
+        print(f"[main] 🔴 조치필요 [MN-10] - [8] 카테고리 집계 단계에서 예상 못 한 오류 발생 - 이번 주는 집계 없이 진행: "
               f"{type(e).__name__} - {e!r}")
         category_distribution, category_comparison, weekly_trend = {}, None, []
 
@@ -470,7 +454,7 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
         llm_summarizer.print_summaries("국내", domestic_summarized)
         llm_summarizer.print_summaries("해외", international_summarized)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 [MN-10] - [9] LLM 요약 단계에서 예상 못 한 오류 발생 - 요약 없이(원문 제목만) 진행: "
+        print(f"[main] 🔴 조치필요 [MN-11] - [9] LLM 요약 단계에서 예상 못 한 오류 발생 - 요약 없이(원문 제목만) 진행: "
               f"{type(e).__name__} - {e!r}")
         domestic_summarized, international_summarized = domestic_ranked, international_ranked
 
@@ -483,21 +467,19 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
         for category, items in international_category_summarized.items():
             llm_summarizer.print_summaries(f"해외-{category}", items)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 [MN-11] - [10] 카테고리별 LLM 요약 단계에서 예상 못 한 오류 발생 - 요약 없이(원문 제목만) 진행: "
+        print(f"[main] 🔴 조치필요 [MN-12] - [10] 카테고리별 LLM 요약 단계에서 예상 못 한 오류 발생 - 요약 없이(원문 제목만) 진행: "
               f"{type(e).__name__} - {e!r}")
         domestic_category_summarized, international_category_summarized = (
             domestic_category_ranked, international_category_ranked)
 
-    # cross_axis_partner 최종 확정 (2026-07-31) - Top N/카테고리별 Top N +
-    # 요약까지 전부 끝난 시점이라야 "반대 축에 실제로 남아있는지"를 정확히
-    # 알 수 있음. [9]/[10]의 콘솔 출력(print_summaries)은 이 호출보다
-    # 앞서 실행되므로 이번 실행에서는 🔗 표시 없이 찍힘(진단용 로그라 감수) -
-    # 실제 산출물인 이메일/summary.md는 이 아래 [11]/[12]에서 만들어지므로 문제 없음.
+    # cross_axis_partner 최종 확정 - 요약까지 끝난 뒤라야 "반대 축에 실제로
+    # 남아있는지" 정확히 알 수 있음. [9]/[10] 콘솔 출력은 이 호출보다 앞서
+    # 실행돼서 🔗 표시 없이 찍힘(진단용 로그라 감수, 실제 산출물엔 반영됨).
     try:
         _resolve_cross_axis_partners(domestic_summarized, international_summarized,
                                       domestic_category_summarized, international_category_summarized)
     except Exception as e:
-        print(f"[main] 🟡 주의 [MN-15] - cross_axis_partner 최종 확정 단계에서 예상 못 한 오류 발생 - "
+        print(f"[main] 🟡 주의 [MN-13] - cross_axis_partner 최종 확정 단계에서 예상 못 한 오류 발생 - "
               f"이번 실행은 🔗 표시 없이 진행(다른 내용엔 영향 없음): {type(e).__name__} - {e!r}")
 
     print("\n=== [11] 저장 ===")
@@ -515,7 +497,7 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
                                            gdelt_timeline, failed_sources, category_distribution,
                                            category_comparison)
         except Exception as e:
-            print(f"[main] 🔴 조치필요 [MN-12] - 저장 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
+            print(f"[main] 🔴 조치필요 [MN-14] - 저장 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
                   f"{type(e).__name__} - {e!r}")
             saved_dir = None
     print("\n=== [12] 배포 ===")
@@ -523,19 +505,19 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
         week_label = os.path.basename(saved_dir) if saved_dir else datetime.now(timezone.utc).strftime("%G-%V")
         # 지금까지([2]~[11]) 찍힌 로그에서 🔴 조치필요 코드만 추출 - 이메일
         # 하단에 코드만 조용히 표시(deploy.py가 PDF에는 안 넣음). 아래
-        # MN-13(배포 실패)은 이 시점 이후 발생이라 이번 이메일 자체엔 반영 안 됨
+        # MN-15(배포 실패)은 이 시점 이후 발생이라 이번 이메일 자체엔 반영 안 됨
         # - 그건 다음 실행 로그를 사람이 직접 봐야 하는 성격의 실패라 괜찮음.
         error_codes = _extract_error_codes("".join(_tee.buffer))
         deploy.send_weekly_email(week_label, domestic_summarized, international_summarized,
                                   domestic_category_summarized, international_category_summarized,
                                   failed_sources, category_comparison, weekly_trend, error_codes)
     except Exception as e:
-        print(f"[main] 🔴 조치필요 [MN-13] - 배포 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
+        print(f"[main] 🔴 조치필요 [MN-15] - 배포 단계에서 예상 못 한 오류 발생(콘솔 로그의 결과는 그대로 유효함): "
               f"{type(e).__name__} - {e!r}")
 
     if failed_sources:
         saved_dir_note = f"{saved_dir}/scored.json에도" if saved_dir else "(data/ 파일에는 안 남았지만)"
-        print(f"\n[main] 🔴 조치필요 [MN-14] - 이번 실행 실패 소스: {failed_sources} "
+        print(f"\n[main] 🔴 조치필요 [MN-16] - 이번 실행 실패 소스: {failed_sources} "
               f"({saved_dir_note} failed_sources로 같이 저장됨)")
 
 

@@ -97,11 +97,8 @@ def _build_user_prompt(item: dict) -> str:
 def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
                          session: requests.Session, model_name: str) -> tuple[str, dict]:
     """반환: (응답 텍스트, 원본 응답 dict).
-    OpenRouter 무료 티어 분당 상한(20회/분, $10 결제해도 그대로) 대응 -
-    issue_grouper의 스로틀 함수를 그대로 재사용(2026-08-04) - 이미 _ig로
-    import해서 쓰고 있는 모듈이라 새로 안 만들고 재사용하면, 3차/4차
-    그룹핑과 요약이 같은 파이프라인 실행 안에서 같은 카운터를 공유해
-    더 정확하게 간격을 지킨다(둘 다 순서대로만 돌아서 문제 없음)."""
+    OpenRouter 무료 티어 분당 상한 대응 - issue_grouper의 스로틀 함수를
+    재사용(그룹핑/요약이 같은 카운터를 공유해 더 정확)."""
     _ig._throttle_openrouter_free_tier()
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -147,13 +144,13 @@ def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, sessi
 def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> str | None:
     """
     issue_grouper의 프로바이더 설정으로 LLM 1회 호출. 실패 시 None.
-    openrouter면 _ig._LLM_MODEL_CHAIN_OPENROUTER_ROLES 순서로 재시도(LS-02~05).
+    openrouter면 _ig._LLM_MODEL_CHAIN_OPENROUTER_ROLES 순서로 재시도(LS-01~05).
     """
     data = None
     try:
         if _ig.LLM_PROVIDER == "openrouter":
             chain = _ig._LLM_MODEL_CHAIN_OPENROUTER_ROLES
-            role_codes = {"1순위": "LS-02", "2순위": "LS-03", "3순위": "LS-04", "최종 안전망": "LS-05"}
+            role_codes = {"1순위": "LS-01", "2순위": "LS-02", "3순위": "LS-03", "최종 안전망": "LS-04"}
             last_error: Exception | None = None
             for idx, (role, model_name) in enumerate(chain):
                 try:
@@ -176,7 +173,7 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: reque
             return text
     except Exception as e:
         snippet = (" ".join(str(data).split())[:200] + "...") if data is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
-        print(f"[llm_summarizer] 🔴 조치필요 [LS-01] - LLM({_ig.LLM_PROVIDER}) 호출 실패: {type(e).__name__} - {e!r} "
+        print(f"[llm_summarizer] 🔴 조치필요 [LS-05] - LLM({_ig.LLM_PROVIDER}) 호출 실패: {type(e).__name__} - {e!r} "
               f"| 실제 응답: {snippet}")
         return None
 
@@ -219,7 +216,7 @@ def _build_final_synthesis_prompt(item: dict, batch_facts: list[str]) -> str:
 def _summarize_large_group(item_for_prompt: dict, api_key: str, session: requests.Session) -> str | None:
     """
     _LARGE_GROUP_THRESHOLD 초과 그룹 전용 2단계 요약: 배치별 사실 추출 후 최종 합성.
-    배치 일부 실패해도 나머지로 진행(LS-07), 전부 실패하면 None(LS-08).
+    배치 일부 실패해도 나머지로 진행(LS-06), 전부 실패하면 None(LS-07).
     """
     articles = item_for_prompt.get("articles", [])
     batches = [articles[i:i + _BATCH_SIZE] for i in range(0, len(articles), _BATCH_SIZE)]
@@ -231,11 +228,11 @@ def _summarize_large_group(item_for_prompt: dict, api_key: str, session: request
         if text:
             batch_facts.append(text)
         else:
-            print(f"[llm_summarizer] 🟡 주의 [LS-07] - 대용량 그룹({len(articles)}건) 배치 {batch_idx}/{len(batches)} "
+            print(f"[llm_summarizer] 🟡 주의 [LS-06] - 대용량 그룹({len(articles)}건) 배치 {batch_idx}/{len(batches)} "
                   f"사실 추출 실패 - 이 배치는 제외하고 나머지로 계속 진행")
 
     if not batch_facts:
-        print(f"[llm_summarizer] 🔴 조치필요 [LS-08] - 대용량 그룹({len(articles)}건) 배치 전부 실패 - 요약 생략")
+        print(f"[llm_summarizer] 🔴 조치필요 [LS-07] - 대용량 그룹({len(articles)}건) 배치 전부 실패 - 요약 생략")
         return None
 
     final_prompt = _build_final_synthesis_prompt(item_for_prompt, batch_facts)
@@ -318,7 +315,7 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
 
     if targets:
         label = "단독 기사" if len(titles) == 1 else f"그룹({len(titles)}건)"
-        print(f"[llm_summarizer] 🟡 주의 [LS-06] - {label} 재료 부족 기사 {len(targets)}건 "
+        print(f"[llm_summarizer] 🟡 주의 [LS-08] - {label} 재료 부족 기사 {len(targets)}건 "
               f"(최대 {_BODY_FETCH_MAX_ARTICLES_PER_GROUP}건 한도) - 본문 추가 수집 시도")
 
         enriched_articles = list(articles)

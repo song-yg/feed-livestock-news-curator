@@ -216,24 +216,3 @@ def print_top_n(label: str, ranked: list[dict], n: int = 5) -> None:
             print(f"   (그룹 내 추가 {len(item['titles']) - 1}건 생략)")
         if item.get("cross_axis_partner"):
             print(f"   🔗 반대 축에서도 다뤄짐: {item['cross_axis_partner']}")
-
-
-if __name__ == "__main__":
-    # 자체 점검용
-    from datetime import timedelta
-
-    now = datetime.now(timezone.utc)
-    sample_articles = [
-        {"title": "구제역 확산", "url": "https://a.com/1", "source": "네이버",
-         "press": "yna.co.kr", "published_at": now.isoformat()},
-        {"title": "구제역 추가 발생", "url": "https://a.com/2", "source": "네이버",
-         "press": "yna.co.kr", "published_at": (now - timedelta(days=1)).isoformat()},
-        {"title": "구제역 3주째", "url": "https://a.com/3", "source": "네이버",
-         "press": "chosun.com", "published_at": (now - timedelta(days=6)).isoformat()},
-    ]
-    group_result = score_group(sample_articles)
-    print(group_result)
-    assert group_result["mention_count"] == 3
-
-    for d in (0, 2, 3, 5, 6, 7, 8, 30):
-        print(f"경과 {d}일 -> weight {recency_weight(d)}")

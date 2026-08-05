@@ -155,10 +155,3 @@ def _strip_html_tags(text: str) -> str:
     text = re.sub(r"<[^>]+>", "", text)
     text = html.unescape(text)
     return text
-
-
-if __name__ == "__main__":
-    results = collect()
-    print(f"\n총 {len(results)}건 수집 완료")
-    for r in results[:3]:
-        print(r)

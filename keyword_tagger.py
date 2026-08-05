@@ -155,28 +155,3 @@ def print_uncategorized_sample(articles: list[dict], sample_size: int = 30) -> N
         print(f"  {i:2d}. [{source}] {title}")
     if total > sample_size:
         print(f"  ... 외 {total - sample_size}건 생략")
-
-
-if __name__ == "__main__":
-    sample_titles = [
-        "전북서 고병원성 조류독감(AI) 추가 발생",
-        "구제역 확산에 한우 수출 잠정 중단",
-        "옥수수 국제가격 상승, 배합사료 원가 부담 커져",
-        "농림축산식품부, 방역대 내 이동제한 조치 연장",
-        "스마트축사 보급 확대... ICT 축산 기술 지원 예산 편성",
-        "오늘의 날씨는 맑음",
-    ]
-    for t in sample_titles:
-        category, matched = tag_title(t)
-        print(f"[{category:15s}] {t}  <- {matched}")
-
-    _, matched_dup = tag_title("Global feed costs surge amid grain shortage")
-    assert not ("feed cost" in matched_dup and "feed costs" in matched_dup), \
-        "feed cost/feed costs가 중복 집계됨 - _dedupe_contained 회귀"
-    print(f"\n[검증] 'feed costs' 제목 매칭 결과 (중복 해소 확인): {matched_dup}")
-
-    _, matched_corn = tag_title("CBOT corn futures rally on export demand")
-    assert "corn" not in matched_corn, "일반형 'corn'이 안 걸러지고 남아있음"
-    print(f"[검증] 'CBOT corn futures' 제목 매칭 결과: {matched_corn}")
-
-    print("\n[keyword_tagger] 자체 점검 통과 (매칭 로직 + 부분문자열 중복 해소 검증)")

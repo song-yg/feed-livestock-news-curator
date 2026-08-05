@@ -37,10 +37,10 @@ if "openrouter/free" not in [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]:
     _LLM_MODEL_CHAIN_OPENROUTER_ROLES.append(("최종 안전망", "openrouter/free"))
 
 _LLM_MODEL_ROLE_ERROR_CODE = {
-    "1순위": "RF-07",
-    "2순위": "RF-08",
-    "3순위": "RF-09",
-    "최종 안전망": "RF-10",
+    "1순위": "RF-01",
+    "2순위": "RF-02",
+    "3순위": "RF-03",
+    "최종 안전망": "RF-04",
 }
 
 LLM_MODEL_CHAIN_OPENROUTER = [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]
@@ -157,12 +157,9 @@ def _snippet_for_log(text: str, limit: int = 200) -> str:
     return flat[:limit] + ("..." if len(flat) > limit else "")
 
 
-# --- OpenRouter 무료 티어 분당 상한 대응 (2026-08-04) ---
-# issue_grouper.py와 동일한 이유/값 - $10 결제해도 분당 상한(20회/분)은
-# 그대로라, 배치가 몰리면 429가 대량 발생. 모듈이 갈려있어 카운터도 각자
-# 따로 둠(관련성 필터/재분류는 issue_grouper의 3차와 같은 프로세스 실행
-# 안에서 순서대로만 돌아서, 모듈 간 카운터를 공유 안 해도 실제로는 문제 없음
-# - 두 모듈이 동시에 요청을 쏘는 상황 자체가 없음).
+# --- OpenRouter 무료 티어 분당 상한 대응 ---
+# issue_grouper.py와 동일(분당 20회 상한 대응). 모듈별 별도 카운터 - 순서대로만
+# 실행돼서 문제없음.
 _OPENROUTER_MIN_INTERVAL_SECONDS = 3.5
 _openrouter_last_request_at = 0.0
 
@@ -224,7 +221,7 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
                        label: str, validate=None):
     """
     LLM_PROVIDER 경로로 텍스트 응답 수신. openrouter면 모델 체인(1~3순위 ->
-    최종 안전망) 순으로 재시도(RF-07~10). validate 콜백 넘기면 형식 이상도
+    최종 안전망) 순으로 재시도(RF-01~10). validate 콜백 넘기면 형식 이상도
     재시도 대상으로 취급.
     """
     if LLM_PROVIDER != "openrouter":
@@ -282,7 +279,7 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
 
         results = [by_id.get(idx, True) for idx in range(1, len(batch) + 1)]
         if missing:
-            print(f"[relevance_filter] 🟡 주의 [RF-02] - 관련성 필터 최종 안전망까지 갔지만 id {missing} "
+            print(f"[relevance_filter] 🟡 주의 [RF-05] - 관련성 필터 최종 안전망까지 갔지만 id {missing} "
                   f"여전히 누락(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 통과 처리, "
                   f"나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
         return results
@@ -290,7 +287,7 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
     try:
         return _request_llm_text(_SYSTEM_PROMPT, user_prompt, api_key, session, "관련성 필터", validate=_validate)
     except Exception as e:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-01] - LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치"
+        print(f"[relevance_filter] 🔴 조치필요 [RF-06] - LLM({LLM_PROVIDER}) 호출/파싱 실패 - 이 배치"
               f"({len(batch)}건) 전부 통과 처리: {type(e).__name__} - {e!r}")
         return None
 
@@ -323,7 +320,7 @@ def filter_articles(articles: list[dict], deadline: float | None = None) -> list
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-03] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+        print(f"[relevance_filter] 🔴 조치필요 [RF-07] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"관련성 필터 생략, {len(llm_target_articles)}건(네이버/GDELT) 전부 통과")
         return articles
 
@@ -340,7 +337,7 @@ def filter_articles(articles: list[dict], deadline: float | None = None) -> list
             if deadline is not None and time.monotonic() >= deadline:
                 remaining = llm_target_articles[i:]
                 kept.extend(remaining)
-                print(f"[relevance_filter] 🟡 주의 [RF-11] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                print(f"[relevance_filter] 🟡 주의 [RF-08] - 시간 예산(파이프라인 기준 마감) 소진 - "
                       f"남은 {len(remaining)}건({total_batches - batch_num + 1}배치)은 "
                       f"필터링 없이 전부 통과 처리하고 중단")
                 break
@@ -447,7 +444,7 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
 
         results = [by_id.get(idx, "기타") for idx in range(1, len(batch) + 1)]
         if missing:
-            print(f"[relevance_filter] 🟡 주의 [RF-05] - 카테고리 재분류 최종 안전망까지 갔지만 id {missing} "
+            print(f"[relevance_filter] 🟡 주의 [RF-09] - 카테고리 재분류 최종 안전망까지 갔지만 id {missing} "
                   f"여전히 누락(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 "
                   f"'기타' 유지, 나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
         return results
@@ -455,7 +452,7 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
     try:
         return _request_llm_text(system_prompt, user_prompt, api_key, session, "카테고리 재분류", validate=_validate)
     except Exception as e:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-04] - 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
+        print(f"[relevance_filter] 🔴 조치필요 [RF-10] - 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
               f"이 배치({len(batch)}건) 전부 '기타' 유지: {type(e).__name__} - {e!r}")
         return None
 
@@ -474,7 +471,7 @@ def recategorize_uncategorized(articles: list[dict], deadline: float | None = No
     key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-06] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+        print(f"[relevance_filter] 🔴 조치필요 [RF-11] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"카테고리 재분류 생략, {len(targets)}건 '기타' 그대로 유지")
         return articles
 
@@ -515,15 +512,10 @@ def recategorize_uncategorized(articles: list[dict], deadline: float | None = No
 
 
 # ---------------------------------------------------------------------------
-# 그룹 단위 버전 (2026-07-31) - 임베딩/그룹핑을 관련성 필터보다 먼저 실행하는
-# 순서로 파이프라인이 바뀌면서 추가. 그룹 대표 기사(group[0]) 1건만 LLM에
-# 판단시키고, 그룹 전체를 하나의 유닛으로 통과/제외한다 - 같은 그룹 안
-# 기사들은 이미 같은 사건을 다루는 것으로 확정된 상태라, 대표 1건의 판정을
-# 나머지 멤버에도 그대로 적용해도 정확도 손실이 크지 않다는 전제. 원본
-# articles 단위 함수(filter_articles/recategorize_uncategorized)보다 LLM
-# 호출량이 "원본 기사 수"가 아니라 "고유 이슈(그룹) 수" 기준으로 줄어드는
-# 게 목적 - 판정 로직(프롬프트, 배치, 부분복구, deadline 처리)은 기존 함수와
-# 동일하게 재사용한다.
+# 그룹 단위 버전 - 그룹 대표 기사(group[0]) 1건만 LLM 판단, 그룹 전체를
+# 유닛으로 통과/제외·재분류. LLM 호출량이 원본 기사 수가 아니라 고유 이슈
+# (그룹) 수 기준으로 줄어듦. 판정 로직(프롬프트, 배치, 부분복구, deadline)은
+# filter_articles/recategorize_uncategorized와 동일하게 재사용.
 # ---------------------------------------------------------------------------
 
 def filter_groups(groups: list[list[dict]], deadline: float | None = None) -> list[list[dict]]:

@@ -175,19 +175,3 @@ def print_aggregate_with_comparison(aggregated: dict[str, Counter],
                 sign = "+" if delta >= 0 else ""
                 line += f" [지난주 {last_count}건, {sign}{delta}]"
             print(line)
-
-
-if __name__ == "__main__":
-    sample_articles = [
-        {"source": "네이버", "category": "질병명"},
-        {"source": "네이버", "category": "질병명"},
-        {"source": "네이버", "category": "시장/가격 용어"},
-        {"source": "WATTAgNet", "category": "질병명"},
-        {"source": "GDELT", "category": "기타"},
-    ]
-    result = aggregate(sample_articles)
-    print_aggregate(result)
-    assert result["국내"]["질병명"] == 2
-    assert result["해외"]["질병명"] == 1
-    assert result["해외"]["기타"] == 1
-    print("\n[category_aggregator] 자체 점검 통과")

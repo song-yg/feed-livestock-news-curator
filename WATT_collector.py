@@ -282,11 +282,3 @@ def _fetch_detail(page, url: str) -> dict | None:
     body = "\n\n".join(paragraphs) if paragraphs else None
 
     return {"published_at": published_at, "body": body}
-
-
-if __name__ == "__main__":
-    results = collect()
-    print(f"\n총 {len(results)}건 수집 완료")
-    for r in results[:3]:
-        preview = (r["body"] or "")[:100]
-        print({**r, "body": preview + "..." if r["body"] else None})

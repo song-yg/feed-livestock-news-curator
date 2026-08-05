@@ -187,15 +187,13 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     matplotlib 렌더링이 중복되지 않게).
 
     embed_images_as: "cid"(기본, 실제 이메일 발송용) 또는 "data_uri"(PDF 변환용).
-    Gmail이 <img src="data:...">(base64 인라인) 이미지를 막아서(2026-08-05 실측
-    확인 - PDF에는 나오는데 실제 수신 메일 본문엔 안 보임) 실제 발송은 "cid"로
-    참조만 걸고, 진짜 이미지 데이터는 send_email()이 Content-ID 붙은 MIME
-    인라인 첨부로 따로 붙여야 함(반환값 inline_images가 그 역할). Playwright는
-    cid: 스킴을 못 읽으므로 PDF 변환 시에는 "data_uri"로 호출해야 함.
+    Gmail이 <img src="data:...">(base64 인라인) 이미지를 막아서 실제 발송은
+    "cid"로 참조만 걸고, 진짜 이미지는 send_email()이 Content-ID 붙은 MIME
+    인라인 첨부로 붙인다(반환값 inline_images). Playwright는 cid: 스킴을
+    못 읽으므로 PDF 변환 시엔 "data_uri"로 호출.
 
-    error_codes: main.py가 이번 실행 로그에서 뽑아낸 🔴 조치필요 코드 목록
-    (2026-08-05 추가). PDF에는 절대 안 넣음(embed_images_as=="cid"일 때만
-    렌더링) - 내용은 안 담고 코드만, 눈에 잘 안 띄게 맨 아래 작게 표시.
+    error_codes: main.py가 로그에서 뽑아낸 🔴 조치필요 코드 목록. PDF에는
+    안 넣음(embed_images_as=="cid"일 때만 렌더링) - 코드만 작게 표시.
 
     반환: (html_content, inline_images) - inline_images는 embed_images_as="cid"일
     때만 채워짐({cid_name: PNG bytes}), "data_uri"면 항상 빈 dict.
@@ -322,7 +320,7 @@ def render_category_trend_chart(trend_entries: list[dict], axis: str) -> bytes |
             fm.fontManager.addfont(_font_path)
             plt.rcParams["font.family"] = fm.FontProperties(fname=_font_path).get_name()
         else:
-            print(f"[deploy] 🟡 주의 [DP-07] - 나눔고딕 폰트 파일 없음({_font_path}) - "
+            print(f"[deploy] 🟡 주의 [DP-01] - 나눔고딕 폰트 파일 없음({_font_path}) - "
                   f"run-pipline.yml의 fonts-nanum 설치 스텝 확인 필요, 이번엔 한글이 깨질 수 있음")
         plt.rcParams["axes.unicode_minus"] = False
 
@@ -356,7 +354,7 @@ def render_category_trend_chart(trend_entries: list[dict], axis: str) -> bytes |
         plt.close(fig)
         return buf.getvalue()
     except Exception as e:
-        print(f"[deploy] 🟡 주의 [DP-06] - {axis} 카테고리 트렌드 그래프 생성 실패 - 이메일에서 이 그래프만 생략: "
+        print(f"[deploy] 🟡 주의 [DP-02] - {axis} 카테고리 트렌드 그래프 생성 실패 - 이메일에서 이 그래프만 생략: "
               f"{type(e).__name__} - {e!r}")
         return None
 
@@ -377,11 +375,8 @@ def render_email_pdf(html_content: str) -> bytes | None:
     링크(원문 등)는 href 그대로 살아서 PDF에서도 클릭 가능(하이퍼링크
     주석으로 보존됨 - 화면에 보이는 글자가 "원문"으로 짧아도 무관).
 
-    여백 없이 최대한 밀착(margin=0) + scale 조정(2026-08-04) - render_email_html()의
-    콘텐츠 폭이 최대 1000px인데, A4 폭(210mm ≈ 793px @96dpi)보다 넓어서 여백만
-    없애면 오른쪽이 페이지 밖으로 잘려나가 "구조가 깨져 보이는" 원인이 됐음.
-    scale로 전체를 A4 폭에 맞게 축소해서 잘림 없이 한 페이지 폭 안에 들어오게 함
-    (793 / 1000 ≈ 0.79).
+    여백 0(margin=0) + scale=0.79로 콘텐츠 폭(1000px)을 A4 폭(≈793px)에 맞춤
+    (여백만 없애면 우측이 페이지 밖으로 잘림).
 
     실패해도 예외를 던지지 않고 None만 반환 - PDF 변환 실패로 이메일 발송
     자체가 막히면 안 됨(HTML 본문 발송이 우선, PDF는 부가 기능).
@@ -403,7 +398,7 @@ def render_email_pdf(html_content: str) -> bytes | None:
                 browser.close()
         return pdf_bytes
     except Exception as e:
-        print(f"[deploy] 🟡 주의 [DP-05] - PDF 변환 실패 - 이메일은 HTML 본문만 발송(첨부 없이): "
+        print(f"[deploy] 🟡 주의 [DP-03] - PDF 변환 실패 - 이메일은 HTML 본문만 발송(첨부 없이): "
               f"{type(e).__name__} - {e!r}")
         return None
 
@@ -415,13 +410,10 @@ def send_email(html_content: str, subject: str, recipients: list[str],
     """
     Gmail SMTP(587, STARTTLS)로 발송. 성공 True, 실패해도 예외 없이 False.
 
-    구조: mixed(PDF 첨부 지원) > related(인라인 이미지 지원) > alternative(HTML 본문).
-    inline_images({cid_name: PNG bytes})를 넘기면 HTML 본문의
-    <img src="cid:cid_name">가 가리키는 실제 이미지를 Content-ID 붙은 MIME
-    파트로 같이 넣는다 - Gmail이 <img src="data:...">(base64 인라인)는 막지만
-    cid: 참조 방식은 정상 지원한다(2026-08-05, render_email_html의
-    embed_images_as="cid" 모드와 반드시 짝을 맞춰 써야 함 - HTML은 cid를
-    참조하는데 여기서 실제 이미지를 안 붙이면 깨진 이미지로 보임).
+    구조: mixed(PDF 첨부) > related(인라인 이미지) > alternative(HTML 본문).
+    inline_images({cid_name: PNG bytes})를 넘기면 HTML의 <img src="cid:cid_name">가
+    가리키는 이미지를 Content-ID 붙은 MIME 파트로 같이 넣는다(render_email_html의
+    embed_images_as="cid" 모드와 짝 맞춰 사용).
     """
     msg = MIMEMultipart("mixed")
     msg["Subject"] = subject
@@ -452,7 +444,7 @@ def send_email(html_content: str, subject: str, recipients: list[str],
             server.login(smtp_user, smtp_app_password)
             server.sendmail(smtp_user, recipients, msg.as_string())
     except (smtplib.SMTPException, OSError) as e:
-        print(f"[deploy] 🔴 조치필요 [DP-01] - 이메일 발송 실패: {type(e).__name__} - {e!r}")
+        print(f"[deploy] 🔴 조치필요 [DP-04] - 이메일 발송 실패: {type(e).__name__} - {e!r}")
         return False
 
     attach_note = f", PDF 첨부 포함({len(pdf_attachment):,} bytes)" if pdf_attachment else " (PDF 첨부 없음)"
@@ -474,15 +466,15 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
     recipients_raw = os.environ.get("EMAIL_RECIPIENTS")
 
     if not smtp_user or not smtp_app_password:
-        print("[deploy] 🔴 조치필요 [DP-02] - SMTP_USER/SMTP_APP_PASSWORD 없음 - 이메일 발송 생략")
+        print("[deploy] 🔴 조치필요 [DP-05] - SMTP_USER/SMTP_APP_PASSWORD 없음 - 이메일 발송 생략")
         return False
     if not recipients_raw:
-        print("[deploy] 🔴 조치필요 [DP-03] - EMAIL_RECIPIENTS 없음 - 이메일 발송 생략")
+        print("[deploy] 🔴 조치필요 [DP-06] - EMAIL_RECIPIENTS 없음 - 이메일 발송 생략")
         return False
 
     recipients = [r.strip() for r in recipients_raw.split(",") if r.strip()]
     if not recipients:
-        print("[deploy] 🔴 조치필요 [DP-04] - EMAIL_RECIPIENTS가 비어있음(콤마만 있거나 공백) - 이메일 발송 생략")
+        print("[deploy] 🔴 조치필요 [DP-07] - EMAIL_RECIPIENTS가 비어있음(콤마만 있거나 공백) - 이메일 발송 생략")
         return False
 
     # 트렌드 차트는 여기서 딱 한 번만 렌더링(matplotlib 호출 비용) - 아래
