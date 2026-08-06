@@ -252,14 +252,11 @@ def stage2_group(
 # borderline_pairs만 대상(전수 호출 아님). "같은 사건" 기준: 질병/주제가
 # 같아도 국가·장소·시점이 다르면 별개.
 #
-# LLM_PROVIDER=openrouter(기본, OPENROUTER_API_KEY) - Anthropic 미사용.
-# anthropic으로 명시 지정하면 그 경로도 동작(ANTHROPIC_API_KEY 필요).
-#
-# 무료 모델 하나를 못 박지 않고 OpenRouter의 자체 무료 라우터(openrouter/free)
-# 를 기본값으로 쓴 이유: 개별 :free 모델은 공급사가 예고 없이 무료 태그를
-# 뗄 수 있어 코드가 조용히 깨질 수 있는데,
-# openrouter/free는 그 라우팅 자체를 OpenRouter가 대신 처리해준다. 특정
-# 모델을 고정하고 싶으면 OPENROUTER_MODEL 환경변수로 덮어쓸 수 있다.
+# OpenRouter만 사용(Anthropic 미사용). 무료 모델 하나를 못 박지 않고
+# openrouter/free를 기본값으로 쓴 이유: 개별 :free 모델은 공급사가 예고
+# 없이 무료 태그를 뗄 수 있어 코드가 조용히 깨질 수 있는데, openrouter/free는
+# 그 라우팅 자체를 OpenRouter가 대신 처리해준다. 특정 모델을 고정하고
+# 싶으면 OPENROUTER_MODEL 환경변수로 덮어쓸 수 있다.
 #
 # ** os.environ.get(key, default) 대신 or를 쓰는 이유 **
 # GitHub Actions에서 리포에 등록 안 된 Variable을 `${{ vars.X }}`로 참조하면
@@ -270,10 +267,7 @@ def stage2_group(
 # Variables에 등록 안 한 상태로 두면 LLM_MODEL_OPENROUTER가 빈 문자열이
 # 되어 OpenRouter API가 "model" 필드 없음으로 400 Bad Request를 던진다.
 # `or` 연산자를 쓰면 빈 문자열도 falsy라 기본값으로 자연스럽게 대체된다.
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER") or "openrouter"
-
-LLM_MODEL_ANTHROPIC = "claude-haiku-4-5-20251001"
-LLM_API_URL_ANTHROPIC = "https://api.anthropic.com/v1/messages"
+LLM_PROVIDER = "openrouter"  # 로그 표시용 고정값(더 이상 스위치 아님)
 
 LLM_MODEL_OPENROUTER = os.environ.get("OPENROUTER_MODEL") or "openrouter/free"
 LLM_API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
@@ -401,39 +395,13 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
     return data["choices"][0]["message"]["content"].strip()
 
 
-def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> str:
-    headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    body = {
-        "model": LLM_MODEL_ANTHROPIC,
-        "max_tokens": 1024,
-        "temperature": 0,
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_prompt}],
-    }
-    resp = session.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
-    return "".join(
-        block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
-    ).strip()
-
-
 def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session,
                        validate=None):
     """
-    LLM_PROVIDER 경로로 텍스트 응답을 받아온다.
-    openrouter면 _LLM_MODEL_CHAIN_OPENROUTER_ROLES를 순서대로 시도, 실패 시
-    다음 후보로 재시도. 최종 안전망까지 실패하면 예외를 그대로 올림.
+    _LLM_MODEL_CHAIN_OPENROUTER_ROLES를 순서대로 시도, 실패 시 다음 후보로
+    재시도. 최종 안전망까지 실패하면 예외를 그대로 올림.
     validate(text, is_final) 콜백을 넘기면 응답 형식 이상도 재시도 대상으로 취급.
     """
-    if LLM_PROVIDER != "openrouter":
-        text = _request_anthropic(system_prompt, user_prompt, api_key, session)
-        return validate(text, True) if validate else text
-
     chain = _LLM_MODEL_CHAIN_OPENROUTER_ROLES
     last_error: Exception | None = None
     for idx, (role, model_name) in enumerate(chain):
@@ -510,7 +478,7 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]],
                        deadline: float | None = None) -> list[tuple[dict, dict, float]]:
     """
     애매 구간 쌍을 LLM에 물어 "같은 사건"으로 확정된 쌍만 반환.
-    LLM_PROVIDER에 따라 ANTHROPIC_API_KEY 또는 OPENROUTER_API_KEY 사용.
+    OPENROUTER_API_KEY 없으면 안 묶음으로 안전하게 fallback.
     키 없거나 전부 실패하면 안 묶음으로 안전하게 fallback.
 
     deadline: time.monotonic() 기준 절대 마감(파이프라인 기준 체크포인트,
@@ -521,14 +489,14 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]],
     if not borderline_pairs:
         return []
 
-    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    key_env_var = "OPENROUTER_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
         print(f"[issue_grouper] 🟡 주의 [IG-08] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - 3차 LLM 보조 생략, "
               f"애매 구간 {len(borderline_pairs)}쌍 전부 '안 묶음' 기본값 유지")
         return []
 
-    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER) if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
+    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER)
     print(f"[issue_grouper] 3차 LLM 보조 시작 - provider={LLM_PROVIDER}, model={model_desc}, "
           f"대상 {len(borderline_pairs)}쌍")
 
@@ -810,7 +778,7 @@ def stage4_dedupe_and_promote(ranked_pool: list[dict], top_n: int, label: str = 
     if len(candidates) < 2:
         return candidates
 
-    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    key_env_var = "OPENROUTER_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
         print(f"[issue_grouper] 🟡 주의 [IG-14] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "

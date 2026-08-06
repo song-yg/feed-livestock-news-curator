@@ -2,7 +2,7 @@
 relevance_filter.py
 관련성 필터 - 정규화 직후, 이슈 그룹핑 전에 실행. 키워드 매칭만으론 못 거르는
 오매칭(동음이의어, 기관명 일부로만 등장, 각주성 언급 등)을 LLM으로 판단.
-issue_grouper.py의 3차 LLM 보조와 같은 패턴(provider 스위치, 배치, 검증, fallback)
+issue_grouper.py의 3차 LLM 보조와 같은 패턴(OpenRouter 모델 체인, 배치, 검증, fallback)
 재사용. 기본값 방향은 반대 - 애매하면 통과(true)가 안전(그룹핑 3차는 안 묶음이 안전).
 WATT는 업계 전문지라 이 필터 없이 자동 통과. 소스별 컨텍스트 양 차이 있음
 (네이버=description, WATT=body, GDELT=제목만).
@@ -14,11 +14,7 @@ import time
 
 import requests
 
-# LLM 프로바이더 설정 - issue_grouper.py와 동일한 스위치 방식.
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER") or "openrouter"
-
-LLM_MODEL_ANTHROPIC = "claude-haiku-4-5-20251001"
-LLM_API_URL_ANTHROPIC = "https://api.anthropic.com/v1/messages"
+LLM_PROVIDER = "openrouter"  # 로그 표시용 고정값(더 이상 스위치 아님, OpenRouter만 사용)
 
 LLM_MODEL_OPENROUTER = os.environ.get("OPENROUTER_MODEL") or "openrouter/free"
 LLM_API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
@@ -196,38 +192,12 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
     return data["choices"][0]["message"]["content"].strip()
 
 
-def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> str:
-    headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    body = {
-        "model": LLM_MODEL_ANTHROPIC,
-        "max_tokens": 1024,
-        "temperature": 0,
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_prompt}],
-    }
-    resp = session.post(LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
-    return "".join(
-        block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
-    ).strip()
-
-
 def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session,
                        label: str, validate=None):
     """
-    LLM_PROVIDER 경로로 텍스트 응답 수신. openrouter면 모델 체인(1~3순위 ->
-    최종 안전망) 순으로 재시도(RF-01~10). validate 콜백 넘기면 형식 이상도
-    재시도 대상으로 취급.
+    모델 체인(1~3순위 -> 최종 안전망) 순으로 재시도(RF-01~10). validate 콜백
+    넘기면 형식 이상도 재시도 대상으로 취급.
     """
-    if LLM_PROVIDER != "openrouter":
-        text = _request_anthropic(system_prompt, user_prompt, api_key, session)
-        return validate(text, True) if validate else text
-
     chain = _LLM_MODEL_CHAIN_OPENROUTER_ROLES
     last_error: Exception | None = None
     for idx, (role, model_name) in enumerate(chain):
@@ -317,14 +287,14 @@ def filter_articles(articles: list[dict], deadline: float | None = None) -> list
     if not llm_target_articles:
         return watt_articles
 
-    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    key_env_var = "OPENROUTER_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
         print(f"[relevance_filter] 🔴 조치필요 [RF-07] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"관련성 필터 생략, {len(llm_target_articles)}건(네이버/GDELT) 전부 통과")
         return articles
 
-    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER) if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
+    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER)
     print(f"[relevance_filter] 관련성 필터 시작 - provider={LLM_PROVIDER}, "
           f"model={model_desc}, 대상 {len(llm_target_articles)}건(네이버/GDELT만, "
           f"WATT {len(watt_articles)}건 제외)")
@@ -468,7 +438,7 @@ def recategorize_uncategorized(articles: list[dict], deadline: float | None = No
     if not targets:
         return articles
 
-    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    key_env_var = "OPENROUTER_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
         print(f"[relevance_filter] 🔴 조치필요 [RF-11] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
@@ -480,7 +450,7 @@ def recategorize_uncategorized(articles: list[dict], deadline: float | None = No
     category_list_text = "\n".join(f"- {c}" for c in category_choices)
     system_prompt = CATEGORY_RECLASSIFY_SYSTEM_PROMPT_TEMPLATE.format(category_list=category_list_text)
 
-    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER) if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
+    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER)
     print(f"[relevance_filter] 카테고리 재분류 시작 - provider={LLM_PROVIDER}, "
           f"model={model_desc}, 대상 {len(targets)}건('기타'로 남았지만 관련성 확인된 기사)")
 
@@ -539,14 +509,14 @@ def filter_groups(groups: list[list[dict]], deadline: float | None = None) -> li
     if not llm_target_groups:
         return watt_groups
 
-    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    key_env_var = "OPENROUTER_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
         print(f"[relevance_filter] 🔴 조치필요 [RF-13] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"관련성 필터 생략, {len(llm_target_groups)}개 그룹(네이버/GDELT 대표) 전부 통과")
         return groups
 
-    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER) if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
+    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER)
     print(f"[relevance_filter] 관련성 필터(그룹 단위) 시작 - provider={LLM_PROVIDER}, "
           f"model={model_desc}, 대상 {len(llm_target_groups)}개 그룹(대표 기사 1건씩, "
           f"WATT 대표 {len(watt_groups)}개 제외)")
@@ -601,7 +571,7 @@ def recategorize_uncategorized_groups(groups: list[list[dict]], deadline: float 
     if not targets:
         return groups
 
-    key_env_var = "OPENROUTER_API_KEY" if LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    key_env_var = "OPENROUTER_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
         print(f"[relevance_filter] 🔴 조치필요 [RF-15] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
@@ -613,7 +583,7 @@ def recategorize_uncategorized_groups(groups: list[list[dict]], deadline: float 
     category_list_text = "\n".join(f"- {c}" for c in category_choices)
     system_prompt = CATEGORY_RECLASSIFY_SYSTEM_PROMPT_TEMPLATE.format(category_list=category_list_text)
 
-    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER) if LLM_PROVIDER == "openrouter" else LLM_MODEL_ANTHROPIC
+    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER)
     print(f"[relevance_filter] 카테고리 재분류(그룹 단위) 시작 - provider={LLM_PROVIDER}, "
           f"model={model_desc}, 대상 {len(targets)}개 그룹(대표 기사가 '기타')")
 

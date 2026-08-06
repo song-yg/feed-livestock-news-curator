@@ -2,7 +2,6 @@
 llm_summarizer.py
 (A) 자체 요약 생성 + (A-1) 얇은 재료 fallback 담당 모듈.
 (B) 그룹핑 보조는 issue_grouper.stage3_llm_assist가 담당.
-프로바이더(anthropic/openrouter 선택) 자체는 issue_grouper.py 설정 재사용하되,
 OpenRouter 모델 체인은 판단형(그룹핑/필터/재분류)과 별개로 요약 전용을 씀
 (판단형은 정해진 JSON만 뱉으면 되고, 요약은 한국어 문장력이 중요해 기준이 다름).
 API 키 없거나 LLM 실패 시 요약 생략, 원문 제목만 노출로 fallback.
@@ -141,61 +140,35 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
     return data["choices"][0]["message"]["content"].strip(), data
 
 
-def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> tuple[str, dict]:
-    headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    body = {
-        "model": _ig.LLM_MODEL_ANTHROPIC,
-        "max_tokens": 300,
-        "temperature": 0.3,
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_prompt}],
-    }
-    resp = session.post(_ig.LLM_API_URL_ANTHROPIC, headers=headers, json=body, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
-    text = "".join(
-        block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
-    ).strip()
-    return text, data
-
-
 def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> str | None:
     """
     요약 전용 모델 체인으로 LLM 1회 호출. 실패 시 None.
-    openrouter면 _LLM_MODEL_CHAIN_SUMMARY_ROLES 순서로 재시도(LS-01~05).
+    _LLM_MODEL_CHAIN_SUMMARY_ROLES 순서로 재시도(LS-01~05).
     """
     data = None
     try:
-        if _ig.LLM_PROVIDER == "openrouter":
-            chain = _LLM_MODEL_CHAIN_SUMMARY_ROLES
-            role_codes = {"1순위": "LS-01", "2순위": "LS-02", "3순위": "LS-03", "최종 안전망": "LS-04"}
-            last_error: Exception | None = None
-            for idx, (role, model_name) in enumerate(chain):
-                try:
-                    if idx > 0:
-                        print(f"[llm_summarizer] 🟡 주의 - 요약 생성 {role} 모델('{model_name}')로 재시도 "
-                              f"({idx + 1}/{len(chain)})")
-                    text, data = _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
-                    return text
-                except Exception as e:
-                    last_error = e
-                    code = role_codes[role]
-                    is_final = idx == len(chain) - 1
-                    level = "🔴 조치필요" if is_final else "🟡 주의"
-                    next_note = "더 시도할 모델 없음" if is_final else "다음 후보 모델로 재시도"
-                    print(f"[llm_summarizer] {level} [{code}] - 요약 생성 {role} 모델('{model_name}') "
-                          f"호출 실패 - {next_note}: {type(e).__name__} - {e!r}")
-            raise last_error
-        else:
-            text, data = _request_anthropic(system_prompt, user_prompt, api_key, session)
-            return text
+        chain = _LLM_MODEL_CHAIN_SUMMARY_ROLES
+        role_codes = {"1순위": "LS-01", "2순위": "LS-02", "3순위": "LS-03", "최종 안전망": "LS-04"}
+        last_error: Exception | None = None
+        for idx, (role, model_name) in enumerate(chain):
+            try:
+                if idx > 0:
+                    print(f"[llm_summarizer] 🟡 주의 - 요약 생성 {role} 모델('{model_name}')로 재시도 "
+                          f"({idx + 1}/{len(chain)})")
+                text, data = _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
+                return text
+            except Exception as e:
+                last_error = e
+                code = role_codes[role]
+                is_final = idx == len(chain) - 1
+                level = "🔴 조치필요" if is_final else "🟡 주의"
+                next_note = "더 시도할 모델 없음" if is_final else "다음 후보 모델로 재시도"
+                print(f"[llm_summarizer] {level} [{code}] - 요약 생성 {role} 모델('{model_name}') "
+                      f"호출 실패 - {next_note}: {type(e).__name__} - {e!r}")
+        raise last_error
     except Exception as e:
         snippet = (" ".join(str(data).split())[:200] + "...") if data is not None else "(응답을 아예 못 받음 - 요청/인증 단계에서 실패)"
-        print(f"[llm_summarizer] 🔴 조치필요 [LS-05] - LLM({_ig.LLM_PROVIDER}) 호출 실패: {type(e).__name__} - {e!r} "
+        print(f"[llm_summarizer] 🔴 조치필요 [LS-05] - LLM 호출 실패: {type(e).__name__} - {e!r} "
               f"| 실제 응답: {snippet}")
         return None
 
@@ -378,7 +351,7 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
             )
 
     # api_key는 (A-1) 스킵 분기에서도 제목 번역에 필요해 미리 조회.
-    key_env_var = "OPENROUTER_API_KEY" if _ig.LLM_PROVIDER == "openrouter" else "ANTHROPIC_API_KEY"
+    key_env_var = "OPENROUTER_API_KEY"
     api_key = os.environ.get(key_env_var)
 
     if len(titles) == 1 and not has_substantial_material:
