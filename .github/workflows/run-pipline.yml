@@ -198,8 +198,7 @@ jobs:
         env:
           # --- [2] 정규화의 카테고리 판정 사전(keyword_source.get_category_keywords) ---
           KEYWORD_SHEET_CSV_URL: ${{ vars.KEYWORD_SHEET_CSV_URL }}
-          # --- LLM 프로바이더(OpenRouter만 사용) ---
-          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+          # --- LLM (OpenRouter만 사용) ---
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           # --- 판단형(issue_grouper 3차/4차, relevance_filter 필터·재분류) ---
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
