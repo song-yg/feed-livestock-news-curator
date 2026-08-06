@@ -47,7 +47,7 @@ LLM_MODEL_CHAIN_OPENROUTER = [m for _, m in _LLM_MODEL_CHAIN_OPENROUTER_ROLES]
 
 _OPENROUTER_X_TITLE = "feed-livestock-news-relevance-filter"
 
-BATCH_SIZE = 20
+BATCH_SIZE = 40
 SNIPPET_MAX_CHARS = 150
 
 

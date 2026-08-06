@@ -54,7 +54,8 @@ COLLECTED_ARTIFACT_PATH = "collected_articles.json"
 # 값 자체는 실측 전 잠정치이니 몇 주 실행 로그 보고 조정할 것.
 GDELT_DEADLINE_MINUTES = 350          # 5:50 - job1: GDELT 수집(WATT/네이버 포함, 남은 10분은 정리+artifact 저장용)
 GROUPING_DEADLINE_MINUTES = 120      # 2:00 - job2: 임베딩 로드 + 이슈 그룹핑(1~3차, 필터링 전 원본 전체 대상)
-RELEVANCE_DEADLINE_MINUTES = 240     # 4:00 - job2: 관련성 필터 + 카테고리 재분류 (그룹 대표 1건씩만 판단)
+RELEVANCE_DEADLINE_MINUTES = 220     # 3:40 - job2: [5] 관련성 필터 (그룹 대표 1건씩만 판단)
+RECATEGORIZE_DEADLINE_MINUTES = 240  # 4:00 - job2: [6] 카테고리 재분류 (별도 체크포인트 - [5]가 늦어도 이 20분은 보장됨)
 STAGE4_DEADLINE_MINUTES = 250        # 4:10 - job2: 4차 Top N 사후 재검토
 SUMMARY_DEADLINE_MINUTES = 350       # 5:50 - job2: LLM 요약 (남은 10분은 저장+PDF변환+이메일발송+git커밋용)
 
@@ -409,9 +410,14 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
         print(f"[main] 🔴 조치필요 [MN-07] - [5] 관련성 필터 단계에서 예상 못 한 오류 발생 - 필터링 없이 다음 단계로 진행: "
               f"{type(e).__name__} - {e!r}")
 
+    # [5]가 자기 몫(relevance_deadline)을 다 써버려도 [6]은 여기서 새로
+    # 계산한 자기만의 체크포인트를 받음 - [5]가 늦었다고 [6]이 통째로
+    # 시간 예산 0으로 시작하는 일이 없게 함.
+    recategorize_deadline = _deadline(pipeline_start, RECATEGORIZE_DEADLINE_MINUTES)
+
     print("\n=== [6] 카테고리 재분류 (그룹 대표 1건씩 판단) ===")
     try:
-        groups = relevance_filter.recategorize_uncategorized_groups(groups, deadline=relevance_deadline)
+        groups = relevance_filter.recategorize_uncategorized_groups(groups, deadline=recategorize_deadline)
     except Exception as e:
         print(f"[main] 🔴 조치필요 [MN-08] - [6] 카테고리 재분류 단계에서 예상 못 한 오류 발생 - 재분류 없이 다음 단계로 진행: "
               f"{type(e).__name__} - {e!r}")
