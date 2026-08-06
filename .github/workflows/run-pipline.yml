@@ -198,13 +198,17 @@ jobs:
         env:
           # --- [2] 정규화의 카테고리 판정 사전(keyword_source.get_category_keywords) ---
           KEYWORD_SHEET_CSV_URL: ${{ vars.KEYWORD_SHEET_CSV_URL }}
-          # --- 3차 LLM 그룹핑 보조 / 관련성 필터·재분류 / LLM 요약 공용 ---
-          # Anthropic은 안 쓰는 걸로 확정(2026-08-03) - OpenRouter만 사용.
+          # --- LLM 프로바이더(OpenRouter만 사용) ---
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          # --- 판단형(issue_grouper 3차/4차, relevance_filter 필터·재분류) ---
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
           OPENROUTER_MODEL_2: ${{ vars.OPENROUTER_MODEL_2 }}
           OPENROUTER_MODEL_3: ${{ vars.OPENROUTER_MODEL_3 }}
+          # --- 생성형(llm_summarizer 요약) - 판단형과 별개 체인 ---
+          OPENROUTER_MODEL_SUMMARY: ${{ vars.OPENROUTER_MODEL_SUMMARY }}
+          OPENROUTER_MODEL_SUMMARY_2: ${{ vars.OPENROUTER_MODEL_SUMMARY_2 }}
+          OPENROUTER_MODEL_SUMMARY_3: ${{ vars.OPENROUTER_MODEL_SUMMARY_3 }}
           # --- Top N / 디버그 옵션(선택, 비우면 코드 기본값 사용) ---
           TOP_N: ${{ vars.TOP_N }}
           CATEGORY_TOP_N: ${{ vars.CATEGORY_TOP_N }}

@@ -48,7 +48,8 @@
 |---|---|---|
 | `KEYWORD_SHEET_CSV_URL` | (없음 → 하드코딩 키워드) | 구글 시트 키워드 목록 CSV 게시 URL |
 | `LLM_PROVIDER` | `openrouter` | LLM 프로바이더 |
-| `OPENROUTER_MODEL` / `_MODEL_2` / `_MODEL_3` | `openrouter/free` | 모델 재시도 체인(1~3순위, 실패 시 순서대로 재시도) |
+| `OPENROUTER_MODEL` / `_MODEL_2` / `_MODEL_3` | `openrouter/free` | **판단형**(그룹핑·관련성 필터·재분류) 모델 재시도 체인 |
+| `OPENROUTER_MODEL_SUMMARY` / `_SUMMARY_2` / `_SUMMARY_3` | `openai/gpt-oss-20b:free` | **생성형**(요약) 모델 재시도 체인 - 판단형과 별개 |
 | `TOP_N` | `3` | 국내/해외 주간 Top N 개수 |
 | `CATEGORY_TOP_N` | `1` | 카테고리별 Top N 개수 |
 | `SIMILARITY_DEBUG_CSV` | 꺼짐 | 이슈 그룹핑 임계값 튜닝용 유사도 CSV 저장 스위치(`1`로 켬) |

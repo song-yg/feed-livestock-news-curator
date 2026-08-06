@@ -2,7 +2,9 @@
 llm_summarizer.py
 (A) 자체 요약 생성 + (A-1) 얇은 재료 fallback 담당 모듈.
 (B) 그룹핑 보조는 issue_grouper.stage3_llm_assist가 담당.
-프로바이더 설정(LLM_PROVIDER/모델명/API URL/X-Title)은 issue_grouper.py 재사용.
+프로바이더(anthropic/openrouter 선택) 자체는 issue_grouper.py 설정 재사용하되,
+OpenRouter 모델 체인은 판단형(그룹핑/필터/재분류)과 별개로 요약 전용을 씀
+(판단형은 정해진 JSON만 뱉으면 되고, 요약은 한국어 문장력이 중요해 기준이 다름).
 API 키 없거나 LLM 실패 시 요약 생략, 원문 제목만 노출로 fallback.
 """
 
@@ -15,6 +17,26 @@ import trafilatura
 from trafilatura.settings import use_config as _trafilatura_use_config
 
 import issue_grouper as _ig
+
+
+# --- 요약 전용 OpenRouter 모델 체인 ---
+# issue_grouper의 OPENROUTER_MODEL(판단형 - 그룹핑/필터/재분류용)과는 별개.
+# 기본값은 openai/gpt-oss-20b:free - 한국어 문장 생성 품질 기준으로 선정.
+LLM_MODEL_OPENROUTER_SUMMARY = os.environ.get("OPENROUTER_MODEL_SUMMARY") or "openai/gpt-oss-20b:free"
+LLM_MODEL_OPENROUTER_SUMMARY_2 = os.environ.get("OPENROUTER_MODEL_SUMMARY_2") or ""
+LLM_MODEL_OPENROUTER_SUMMARY_3 = os.environ.get("OPENROUTER_MODEL_SUMMARY_3") or ""
+
+_LLM_MODEL_CHAIN_SUMMARY_ROLES: list[tuple[str, str]] = []
+if LLM_MODEL_OPENROUTER_SUMMARY:
+    _LLM_MODEL_CHAIN_SUMMARY_ROLES.append(("1순위", LLM_MODEL_OPENROUTER_SUMMARY))
+if LLM_MODEL_OPENROUTER_SUMMARY_2:
+    _LLM_MODEL_CHAIN_SUMMARY_ROLES.append(("2순위", LLM_MODEL_OPENROUTER_SUMMARY_2))
+if LLM_MODEL_OPENROUTER_SUMMARY_3:
+    _LLM_MODEL_CHAIN_SUMMARY_ROLES.append(("3순위", LLM_MODEL_OPENROUTER_SUMMARY_3))
+if "openrouter/free" not in [m for _, m in _LLM_MODEL_CHAIN_SUMMARY_ROLES]:
+    _LLM_MODEL_CHAIN_SUMMARY_ROLES.append(("최종 안전망", "openrouter/free"))
+
+LLM_MODEL_CHAIN_OPENROUTER_SUMMARY = [m for _, m in _LLM_MODEL_CHAIN_SUMMARY_ROLES]  # 하위호환/로그 표시용
 
 
 _SYSTEM_PROMPT = (
@@ -143,13 +165,13 @@ def _request_anthropic(system_prompt: str, user_prompt: str, api_key: str, sessi
 
 def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session) -> str | None:
     """
-    issue_grouper의 프로바이더 설정으로 LLM 1회 호출. 실패 시 None.
-    openrouter면 _ig._LLM_MODEL_CHAIN_OPENROUTER_ROLES 순서로 재시도(LS-01~05).
+    요약 전용 모델 체인으로 LLM 1회 호출. 실패 시 None.
+    openrouter면 _LLM_MODEL_CHAIN_SUMMARY_ROLES 순서로 재시도(LS-01~05).
     """
     data = None
     try:
         if _ig.LLM_PROVIDER == "openrouter":
-            chain = _ig._LLM_MODEL_CHAIN_OPENROUTER_ROLES
+            chain = _LLM_MODEL_CHAIN_SUMMARY_ROLES
             role_codes = {"1순위": "LS-01", "2순위": "LS-02", "3순위": "LS-03", "최종 안전망": "LS-04"}
             last_error: Exception | None = None
             for idx, (role, model_name) in enumerate(chain):
