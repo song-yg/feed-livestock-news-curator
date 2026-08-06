@@ -1,6 +1,6 @@
 {
   "bird flu": {
-    "crowd_count": 1,
+    "crowd_count": 2,
     "last_seen": "2026-07-30T07:58:03.249574+00:00"
   },
   "biosecurity": {
@@ -13,6 +13,10 @@
   },
   "emergency response": {
     "crowd_count": 1,
+    "last_seen": "2026-07-30T07:58:03.249574+00:00"
+  },
+  "animal feed": {
+    "crowd_count": 2,
     "last_seen": "2026-07-30T07:58:03.249574+00:00"
   }
 }
