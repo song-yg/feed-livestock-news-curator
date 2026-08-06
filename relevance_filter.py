@@ -160,7 +160,7 @@ def _snippet_for_log(text: str, limit: int = 200) -> str:
 # --- OpenRouter 무료 티어 분당 상한 대응 ---
 # issue_grouper.py와 동일(분당 20회 상한 대응). 모듈별 별도 카운터 - 순서대로만
 # 실행돼서 문제없음.
-_OPENROUTER_MIN_INTERVAL_SECONDS = 3.5
+_OPENROUTER_MIN_INTERVAL_SECONDS = 1.5  # 분당 20회 상한(3.0초 간격) 기준보다 빠름 - 담당자 요청으로 하향
 _openrouter_last_request_at = 0.0
 
 

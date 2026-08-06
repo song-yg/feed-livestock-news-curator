@@ -365,7 +365,7 @@ def _snippet_for_log(text: str, limit: int = 200) -> str:
 # --- OpenRouter 무료 티어 분당 상한 대응 ---
 # 분당 20회 상한은 결제 여부와 무관하게 적용됨(OpenRouter 정책) - 요청 사이
 # 최소 간격을 강제해서 429 방지.
-_OPENROUTER_MIN_INTERVAL_SECONDS = 3.5  # 60초/20회=3.0초 + 여유
+_OPENROUTER_MIN_INTERVAL_SECONDS = 1.5  # 분당 20회 상한(3.0초 간격) 기준보다 빠름 - 담당자 요청으로 하향
 _openrouter_last_request_at = 0.0
 
 
