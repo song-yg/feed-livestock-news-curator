@@ -1,12 +1,8 @@
 """
 gdelt_collector.py
-GDELT DOC 2.0 API(gdeltdoc)로 해외 언급 데이터 수집. naver/watt와 달리
-tuple(articles, timeline) 반환 - timeline은 시계열 수집 제거로 항상 빈 dict
-(하위호환용으로 반환 형태만 유지, articles는 공통 스키마 그대로 정규화/그룹핑으로 감).
-
-GDELT 429가 구조적으로 심해 여러 완화책 적용: 전역 공유 쿨다운 백오프, 키워드
-단위 외부 재시도(OUTER_RETRY_PASSES), User-Agent 헤더 주입(gdeltdoc 이슈#22
-참고), 키워드 OR 결합 요청(요청 횟수 자체를 줄임).
+GDELT DOC 2.0 API(gdeltdoc)로 해외 언급 데이터 수집. tuple(articles, timeline)
+반환 - timeline은 시계열 수집 제거로 항상 빈 dict.
+GDELT 429 대응: 전역 쿨다운, 키워드 단위 외부 재시도, UA 헤더 주입, OR 결합 요청.
 """
 
 import json
@@ -25,10 +21,7 @@ import keyword_source
 from gdeltdoc import GdeltDoc, Filters
 from gdeltdoc.errors import RateLimitError
 
-# User-Agent 미기재 시 429가 잦다는 gdeltdoc 이슈(#22) 보고 대응 -
-# requests 기본 헤더를 프로세스 전역으로 오버라이드(WATT_collector와 동일 UA 재사용).
-# 주의: 이 모듈 import 시점에 프로세스 전역 requests 기본 헤더가 바뀜(다른 모듈의
-# requests 호출에도 UA가 섞여 들어감 - 인증에는 영향 없음).
+# UA 미기재 시 429 잦음(gdeltdoc 이슈#22) - requests 기본 헤더 전역 오버라이드.
 _GDELT_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
@@ -47,7 +40,7 @@ if not getattr(requests.utils, "_gdelt_ua_patched", False):
     requests.utils._gdelt_ua_patched = True
 
 
-# fallback 키워드(영문). 구글 시트 우선, 실패 시 이 리스트. 시트 변경 시 수동 동기화 필요.
+# fallback 키워드(영문). 구글 시트 우선.
 KEYWORDS_EN = [
     "foot-and-mouth disease",
     "feed price",
@@ -61,12 +54,7 @@ KEYWORDS_EN = [
     "smart livestock barn",
 ]
 
-# --- 학습형 스킵 목록 ---
-# 같은 키워드에서 ValueError(쿼리 자체 거부, 예: "phrase too short")가 누적
-# SKIP_STATE_FAILURE_THRESHOLD회 발생하면 자동으로 다음 실행부터 스킵.
-# state/에 저장(data/는 주차별 아카이브라 성격이 다름), git commit은 워크플로 책임.
-# 카운팅 기준은 실행 횟수가 아니라 이번 실행 안에서 실제 발생한 ValueError 횟수
-# (외부 재시도 라운드에서 반복 실패하면 한 실행만으로도 임계값 도달 가능).
+# --- 학습형 스킵 목록: ValueError 누적 시 다음 실행부터 자동 스킵 ---
 SKIP_STATE_PATH = "state/gdelt_skip_keywords.json"
 SKIP_STATE_FAILURE_THRESHOLD = 2
 
@@ -131,9 +119,7 @@ def _update_skip_state_after_run() -> None:
     _save_skip_state(state)
 
 
-# --- 학습형 크라우딩 목록 ---
-# 개별 요청 결과가 상한 근처였던 키워드를 학습해, 다음 실행부터 배치 없이
-# 바로 개별 요청으로 처리(배치->크라우딩 감지->개별 재요청 낭비 방지).
+# --- 학습형 크라우딩 목록: 상한 근처였던 키워드는 다음부터 배치 없이 개별 요청 ---
 CROWDING_STATE_PATH = "state/gdelt_crowding_keywords.json"
 CROWDING_STATE_LEARN_THRESHOLD = 2
 
@@ -190,16 +176,12 @@ def _update_crowding_state_after_run() -> None:
 
     _save_crowding_state(state)
 
-# --- 키워드 오매칭(false positive) 필터 ---
-# GDELT article_search는 부분 문자열 포함 매칭이라 오탐 가능(예: "foot and
-# mouth disease" 검색에 "hand, foot and mouth disease"(수족구병)가 매칭됨).
-# 실제 확인된 오매칭만 명시적으로 등록. 키는 시트 키워드 문자열과 정확히 일치해야 함.
+# --- 키워드 오매칭(false positive) 필터 - 실제 확인된 것만 등록 ---
 FALSE_POSITIVE_FILTERS = {
     "foot-and-mouth disease": ["hand, foot and mouth", "hand foot and mouth"],
 }
 
-# GDELT 제목은 구두점 앞에도 공백이 들어간 토크나이즈 형식이라(예: "hand ,
-# foot") 비교 전 정규화 필요.
+# GDELT 제목은 구두점 앞에도 공백이 들어감(예: "hand , foot") - 비교 전 정규화 필요.
 _SPACE_BEFORE_PUNCT = _re.compile(r"\s+([,.;:!?])")
 
 
@@ -219,45 +201,30 @@ def _is_false_positive(keyword: str, title: str) -> bool:
 DAYS_BACK = 7
 TIMESPAN = f"{DAYS_BACK}d"
 
-# 시계열 전용 기간(article_search와 분리, 현재 시계열 수집 자체는 제거된 상태).
-# GDELT는 기간이 1주일 초과면 일 단위 해상도로 전환 - 이 프로젝트는 시간 단위
-# 디테일이 불필요해 8일로 설정.
-TIMELINE_TIMESPAN = "8d"
+TIMELINE_TIMESPAN = "8d"  # 시계열 전용 기간(현재 시계열 수집 자체는 제거된 상태, 사용 안 함)
 
 MAX_RECORDS = 250  # article_search 1회 호출 최대 반환 건수(API 자체 한계)
 
-# GDELT 수집 시간 예산(GitHub 러너 job 전체 360분 제한 안에서 다른 단계에도
-# 시간을 남기기 위함). 초과분 키워드는 이번 실행 건너뜀(다음 실행에서 재시도).
-TIME_BUDGET_SECONDS = 4 * 60 * 60  # 4시간 (파이프라인 시작 기준 체크포인트 - deadline 인자로 안 넘어오면 이 값을 자기 시작부터 씀, 하위호환/단독 실행용)
+TIME_BUDGET_SECONDS = 4 * 60 * 60  # 4시간 - deadline 인자 없으면 자기 시작부터 이 값 적용(하위호환/단독 실행용)
 
-# --- 적응형 배치 수집 ---
-# 키워드를 작게 묶어(BATCH_SIZE) OR 요청 후, 상한 근처까지 찼는데 특정
-# 키워드가 결과 대부분을 차지하면("크라우딩") 크라우더를 포함한 배치
-# 전체를 개별 재요청.
+# --- 적응형 배치 수집: 상한 근처면 크라우더 포함 배치 전체를 개별 재요청 ---
 BATCH_SIZE = 5  # 잠정값
-CROWDING_CAP_TRIGGER_RATIO = 1.0  # 정확히 상한(250)에 도달했을 때만 크라우딩 검사(그 미만은 API가 있는 그대로 다 준 것)
+CROWDING_CAP_TRIGGER_RATIO = 1.0  # 정확히 상한(250)일 때만 크라우딩 검사
 CROWDING_SHARE_THRESHOLD = 0.4  # 한 키워드가 이 비율 이상 차지하면 크라우딩 판정
 
-REQUEST_INTERVAL = 15.0  # 키워드/배치 사이 요청 간격(초, 경험적 조정값)
+REQUEST_INTERVAL = 15.0  # 키워드/배치 사이 요청 간격(초)
 
-# RateLimitError(429) 재시도: 60->120->240->480초(누적 900초=15분).
-MAX_RETRIES = 4
+MAX_RETRIES = 4  # 429 재시도: 60->120->240->480초(누적 900초)
 BACKOFF_BASE_SECONDS = 60
 
-# 일시적 네트워크 에러(ConnectTimeout 등)는 429보다 짧게 재시도.
-NETWORK_ERROR_MAX_RETRIES = 2
+NETWORK_ERROR_MAX_RETRIES = 2  # 네트워크 에러는 429보다 짧게 재시도
 NETWORK_ERROR_WAIT_SECONDS = 10
 
-# --- 키워드 단위 외부 재시도 ---
-# 한 라운드(전체 키워드 순회) 끝난 뒤 최종 실패 키워드만 모아 별도 라운드로
-# 재시도(최대 OUTER_RETRY_PASSES회). 총 시도 = 1(최초) + OUTER_RETRY_PASSES.
-OUTER_RETRY_PASSES = 2
+OUTER_RETRY_PASSES = 2  # 키워드 단위 외부 재시도 라운드 수(총 시도 = 1+이 값)
 OUTER_RETRY_WAIT_SECONDS = 90
 
 
-# --- 전역(프로세스 공유) 쿨다운 ---
-# 429를 만나면 이후 모든 호출(다른 키워드/엔드포인트 포함)이 같은 차단
-# 구간을 공유해서 기다림(호출마다 독립적으로 재시도하는 낭비 방지).
+# --- 전역(프로세스 공유) 쿨다운: 429 시 이후 모든 호출이 같은 차단 구간 공유 ---
 _cooldown_until = 0.0
 _cooldown_lock = threading.Lock()
 
@@ -473,8 +440,7 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
         print(f"[gdelt] '{label}' article_search -> 최근 {DAYS_BACK}일 이내 "
               f"{len(combined_articles)}건 수집 완료{fp_note}")
 
-        # 키워드별 매칭 현황(제목 기준 근사치 - 본문 매칭은 집계 안 됨, 하나의
-        # 기사가 여러 키워드에 매칭될 수 있어 합계가 전체 건수와 다를 수 있음).
+        # 키워드별 매칭 현황(제목 기준 근사치, 본문 매칭은 집계 안 됨)
         print(f"[gdelt] 키워드별 매칭 현황(제목 기준 근사치 - 본문에만 있는 매칭은 " 
               f"집계 안 됨, 하나의 기사가 여러 키워드에 동시 매칭될 수 있어 합계가 "
               f"전체 건수와 다를 수 있음):")
@@ -516,9 +482,7 @@ def _detect_crowded_keywords(articles: list[dict], keywords: list[str]) -> list[
     """
     배치(OR 결합) 결과에서 특정 키워드가 과도하게 차지해 다른 키워드가
     상한에 밀렸을 가능성을 감지. 반환: 크라우딩 원인 키워드 목록(비어있지
-    않으면 호출부 _handle_batch_crowding이 크라우더를 포함한 배치 전체를
-    개별 재요청 대상으로 삼음). 제목 기준 근사치라 과소 탐지 쪽으로 편향
-    (안전한 방향 - 불필요한 추가 요청은 안 만듦).
+    않으면 호출부가 크라우더 포함 배치 전체를 개별 재요청 대상으로 삼음).
     """
     total = len(articles)
     if total < MAX_RECORDS * CROWDING_CAP_TRIGGER_RATIO:
@@ -535,18 +499,10 @@ def _detect_crowded_keywords(articles: list[dict], keywords: list[str]) -> list[
 
 def _handle_batch_crowding(batch: list[str], batch_articles: list[dict]) -> list[str]:
     """
-    배치 결과의 크라우딩 여부를 판단하고, 트리거 여부와 무관하게 항상 판정
-    결과를 한 줄로 로그에 남긴다(예전엔 트리거 안 되면 아무 로그도 없어서
-    "이 배치가 개별 재요청으로 넘어갔는지"를 확인하기 어려웠음).
-    반환: 개별 재요청 대상으로 넘길 키워드 리스트(없으면 빈 리스트).
-
-    크라우딩이 감지되면(즉 250건 상한을 특정 키워드가 과점) 그 키워드
-    (크라우더) 자신도 나머지와 함께 배치 전체를 개별 재요청 대상으로
-    편입한다 - 크라우더가 배치 결과의 상당 비율을 차지했다는 건 크라우더
-    자신도 250건 한도를 다른 키워드와 나눠 쓰느라 잘렸을 가능성이 크다는
-    뜻이지, "이미 충분히 챙겼다"는 뜻이 아니다(학습형 크라우딩 목록도 같은
-    전제로 동작함 - 혼자 요청했을 때도 상한 근처면 그 키워드 자체가
-    물량이 많다고 보고 다음 실행부터 배치 없이 개별 처리).
+    배치 결과의 크라우딩 여부를 판단, 트리거 여부와 무관하게 항상 판정
+    결과를 로그로 남긴다. 크라우더 자신도 나머지와 함께 배치 전체를 개별
+    재요청 대상으로 편입(250건 상한을 다른 키워드와 나눠 쓰다 잘렸을 수
+    있으므로). 반환: 개별 재요청 대상 키워드 리스트(없으면 빈 리스트).
     """
     crowders = _detect_crowded_keywords(batch_articles, batch)
     if crowders:
@@ -564,11 +520,7 @@ def _handle_batch_crowding(batch: list[str], batch_articles: list[dict]) -> list
 
 
 def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
-    """
-    키워드 1개 timelinevol/timelinevolraw 수집. 실패 시 None.
-    ** collect()에서 더 이상 호출 안 함(시계열 수집 완전 제거, 429 불안정성
-    때문 - 함수는 향후 복원 가능성 위해 코드에 남겨둠) **
-    """
+    """키워드 1개 timelinevol/timelinevolraw 수집. collect()에서 더 이상 호출 안 함(시계열 수집 제거됨)."""
     f = Filters(keyword=keyword, timespan=TIMELINE_TIMESPAN, num_records=MAX_RECORDS)
     try:
         vol_df = _call_with_retry(gd.timeline_search, "timelinevol", f,
@@ -589,16 +541,15 @@ def _collect_timeline_for_keyword(gd: "GdeltDoc", keyword: str) -> dict | None:
 def collect(keywords: list[str] | None = None, deadline: float | None = None) -> tuple[list[dict], dict]:
     """
     KEYWORDS_EN(또는 인자로 넘긴 keywords)을 대상으로 GDELT에서 기사 수집. 진입점.
-    timeline은 시계열 수집 제거로 항상 빈 dict(main.py 언패킹 호환 유지 목적).
+    timeline은 시계열 수집 제거로 항상 빈 dict.
 
-    deadline: time.monotonic() 기준 절대 마감 시각(파이프라인 시작 기준 체크포인트,
-    main.py가 계산해서 넘김). None이면(단독 실행/테스트 등) 지금부터 TIME_BUDGET_SECONDS
-    후로 자체 계산해 하위호환 유지.
+    deadline: time.monotonic() 기준 절대 마감(파이프라인 시작 기준 체크포인트).
+    None이면 지금부터 TIME_BUDGET_SECONDS 후로 자체 계산(단독 실행용).
 
-    적응형 배치 수집: ① 활성 키워드를 BATCH_SIZE씩 묶어 OR 결합 요청 ②
-    크라우딩 감지되면 크라우더를 포함한 배치 전체를 개별 재요청 대상으로 표시
-    ③ 배치 요청 자체 실패(429 등)는 같은 배치로 외부 재시도, 최종 실패해야
-    개별 전환. deadline 초과 시 남은 키워드는 이번 실행 건너뜀(다음 실행에서 처음부터 재시도).
+    적응형 배치 수집: ① BATCH_SIZE씩 묶어 OR 결합 요청 ② 크라우딩 감지되면
+    크라우더 포함 배치 전체를 개별 재요청 ③ 배치 요청 자체 실패(429 등)는
+    같은 배치로 외부 재시도, 최종 실패해야 개별 전환. deadline 초과 시 남은
+    키워드는 이번 실행 건너뜀.
     """
     if deadline is None:
         deadline = time.monotonic() + TIME_BUDGET_SECONDS
@@ -661,8 +612,7 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
 
         success, batch_articles = _collect_articles_for_keywords(gd, batch)
         if not success:
-            # 429는 요청 빈도 문제로 추정 - 실패했다고 개별 전환(요청 5배)하면
-            # 악화시킬 뿐이라, 같은 배치로 재시도(pending_batches).
+            # 실패했다고 개별 전환(요청 5배)하면 429를 악화시키므로 같은 배치로 재시도
             print(f"[gdelt] 배치 {batch} 요청 실패 - 같은 배치로 재시도 예정 "
                   f"(개별 전환 아님)")
             pending_batches.append(batch)
@@ -713,8 +663,7 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
         batch_round = still_failed_batches
 
     if batch_round:
-        # 배치 요청 자체가 여러 번 계속 실패해 더 이상 배치로 시도할 수단이
-        # 없어 마지막 수단으로 키워드 단위로 쪼갬.
+        # 배치로 더 시도할 수단이 없어 키워드 단위로 쪼갬
         print(f"[gdelt] 🟡 주의 [GD-12] - 배치 재시도 {OUTER_RETRY_PASSES}회 소진 - 개별 요청 전환: {batch_round}")
         for batch in batch_round:
             pending_individual.extend(batch)
@@ -782,29 +731,3 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
     _update_crowding_state_after_run()
 
     return all_articles, timeline_by_keyword
-
-
-def _print_distribution(articles: list[dict]) -> None:
-    """진단용 - 영어 키워드로 실제 언어/국가 분포가 어떻게 잡히는지 확인."""
-    from collections import Counter
-
-    lang_counter = Counter(a["language"] or "(미상)" for a in articles)
-    country_counter = Counter(a["sourcecountry"] or "(미상)" for a in articles)
-
-    print(f"\n=== 언어 분포 (전체 {len(articles)}건) ===")
-    for lang, count in lang_counter.most_common():
-        pct = count / len(articles) * 100 if articles else 0
-        print(f"  {lang:20s} {count:4d}건 ({pct:.1f}%)")
-
-    print(f"\n=== 국가 분포 (전체 {len(articles)}건) ===")
-    for country, count in country_counter.most_common(15):
-        pct = count / len(articles) * 100 if articles else 0
-        print(f"  {country:20s} {count:4d}건 ({pct:.1f}%)")
-
-    china_related = sum(
-        1 for a in articles
-        if a["sourcecountry"] in ("China", "Hong Kong", "Taiwan")
-        or a["language"] in ("chi", "zh", "zh-cn", "zh-tw")
-    )
-    print(f"\n중국/홍콩/대만 관련: {china_related}건 "
-          f"({china_related / len(articles) * 100 if articles else 0:.1f}%)")

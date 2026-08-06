@@ -102,11 +102,12 @@ def _axis_label_html(title: str, accent: str) -> str:
 
 
 def _format_category_comparison_axis_html(axis_data: dict[str, dict] | None, accent: str) -> str:
-    """카테고리별 지난주 대비 증감 표(축 하나 분량). 2단 레이아웃에서 좌우 배치용."""
+    """카테고리별 지난주 대비 증감 표(축 하나 분량). 2단 레이아웃에서 좌우 배치용. 가나다순("기타"만 맨 뒤)."""
     if not axis_data:
         return '<p style="font-size:13px; color:#999; margin:4px 0;">(비교할 지난주 데이터 없음)</p>'
     rows = []
-    for category, values in axis_data.items():
+    for category in sorted(axis_data.keys(), key=lambda c: (c == "기타", c)):
+        values = axis_data[category]
         delta = values["delta"]
         sign = "+" if delta >= 0 else ""
         color = "#1a7f37" if delta > 0 else ("#c0392b" if delta < 0 else "#888")
@@ -175,14 +176,12 @@ def _format_category_html_aligned(domestic_by_category: dict[str, list[dict]],
     _format_category_html의 좌우 정렬 버전 - 같은 카테고리가 국내/해외
     양쪽에서 같은 행에 오도록 카테고리 단위로 행을 맞춘다(한쪽에만 있는
     카테고리도 반대쪽에 빈 칸으로 자리를 잡아줘서, 그 아래 다른 카테고리들의
-    높이가 밀리지 않게 함). 카테고리 순서는 keyword_tagger.CATEGORY_KEYWORDS
-    순서 고정(이메일마다 카테고리 위치가 안 바뀌게).
+    높이가 밀리지 않게 함). 카테고리 순서는 가나다순 고정("기타"만 예외로 맨 뒤).
     """
-    from keyword_tagger import CATEGORY_KEYWORDS
-
-    canonical_order = list(CATEGORY_KEYWORDS.keys())
     seen = set(domestic_by_category) | set(international_by_category)
-    categories = [c for c in canonical_order if c in seen] + [c for c in seen if c not in canonical_order]
+    categories = sorted(c for c in seen if c != "기타")
+    if "기타" in seen:
+        categories.append("기타")
 
     if not categories:
         return ""
@@ -351,9 +350,8 @@ def render_category_trend_chart(trend_entries: list[dict], axis: str) -> bytes |
     """
     category_aggregator.load_weekly_trend() 결과로 카테고리별 최근 N주 추이
     선그래프 PNG 생성. "기타"는 항상 압도적으로 커서 나머지 카테고리 흐름이
-    안 보이게 되므로 그래프에서는 제외(scorer.score_by_category의 "기타"
-    제외 관례와 같은 방향). 카테고리 순서/색은 keyword_tagger.CATEGORY_KEYWORDS
-    순서로 고정 - 국내/해외 두 그래프에서 같은 카테고리가 항상 같은 색이 되게 함.
+    안 보이게 되므로 그래프에서는 제외. 카테고리 순서는 가나다순 고정 -
+    국내/해외 두 그래프에서 같은 카테고리가 항상 같은 색이 되게 함.
 
     데이터가 2주 미만이면(추이라고 부를 게 없음) None. 폰트/matplotlib 관련
     실패도 예외 없이 None만 반환 - 그래프 하나 없다고 이메일 발송 전체가
@@ -386,7 +384,7 @@ def render_category_trend_chart(trend_entries: list[dict], axis: str) -> bytes |
                   f"run-pipline.yml의 fonts-nanum 설치 스텝 확인 필요, 이번엔 한글이 깨질 수 있음")
         plt.rcParams["axes.unicode_minus"] = False
 
-        categories = list(CATEGORY_KEYWORDS.keys())
+        categories = sorted(CATEGORY_KEYWORDS.keys())
         week_labels = [e["week_label"] for e in trend_entries]
         colors = plt.cm.tab10.colors
 
