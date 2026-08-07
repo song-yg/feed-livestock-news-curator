@@ -48,8 +48,11 @@ def _phrase_present(article: dict, keyword: str) -> bool:
 
 def collect() -> list[dict]:
     """KEYWORDS(또는 시트 활성 키워드)를 돌며 네이버 뉴스 전체 수집. 진입점."""
-    client_id = os.environ["NAVER_CLIENT_ID"]
-    client_secret = os.environ["NAVER_CLIENT_SECRET"]
+    client_id = os.environ.get("NAVER_CLIENT_ID")
+    client_secret = os.environ.get("NAVER_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        print("[naver] 🔴 조치필요 [NV-01] - NAVER_CLIENT_ID/NAVER_CLIENT_SECRET 없음 - 네이버 수집 불가")
+        raise RuntimeError("NAVER_CLIENT_ID/NAVER_CLIENT_SECRET 없음")
 
     target_keywords = keyword_source.get_keywords("ko", KEYWORDS)
 
@@ -83,7 +86,7 @@ def collect() -> list[dict]:
                     start += 100
                     time.sleep(0.2)
             except requests.exceptions.RequestException as e:
-                print(f"[naver] 🔴 조치필요 [NV-01] - '{keyword}' 수집 중 오류 발생(지금까지 모은 "
+                print(f"[naver] 🔴 조치필요 [NV-02] - '{keyword}' 수집 중 오류 발생(지금까지 모은 "
                       f"{len(keyword_results)}건은 보존하고 다음 키워드로 진행): {type(e).__name__} - {e!r}")
 
             all_results.extend(keyword_results)
