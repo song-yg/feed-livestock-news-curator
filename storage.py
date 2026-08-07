@@ -1,9 +1,7 @@
 """
-storage.py - 5단계 저장 레이어.
-data/YYYY-WW/ 아래 raw.json/scored.json/summary.md 저장(main.py run()에서 save_week() 호출).
-repo 커밋 방식 사용(지난주 대비 증감 비교용 데이터가 다음 실행에도 checkout 상태로
-남아있어야 해서 - Actions 아티팩트는 보존기간 후 사라져 부적합). git commit/push는
-run-pipline.yml 책임, 이 모듈은 파일 생성까지만.
+storage.py - 저장 레이어. data/YYYY-WW/ 아래 raw.json/scored.json/summary.md
+저장(main.py가 save_week() 호출). git commit/push는 run-pipline.yml 책임,
+이 모듈은 파일 생성까지만.
 
 raw.json은 body 필드 제외(WATT 본문 저작권), scored.json은 articles 필드 제외
 (raw.json과 중복 방지).

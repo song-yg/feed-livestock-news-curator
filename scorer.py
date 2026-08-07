@@ -67,15 +67,9 @@ def score_group(group: list[dict], reference: datetime | None = None) -> dict:
       raw_mention_count: dedup 이전 원본 건수
       titles/urls: 그룹 내 전체 제목/링크
       press_list: 참여 언론사 목록
-      cross_axis_partner_url: 국내/해외 교차 매칭 시 반대 축 그룹의 대표 기사
-        URL(없으면 None). article dict의 "_cross_axis_partner_url"(내부용)을
-        정식 필드로 승격 - 이 시점(Top N 확정 전)엔 아직 반대 축 대표 제목이
-        뭐가 될지(요약 생성 전) 모르므로 URL만 들고 다니고, 실제 표시용
-        cross_axis_partner(제목)는 main.py가 4차/요약까지 다 끝난 뒤
-        _resolve_cross_axis_partners()에서 이 URL로 반대 축 최종 결과물을
-        역참조해서 채운다. 여기서는 항상 None으로 초기화만 해둔다 - 최종
-        결과물에 실제로 없으면 None으로 남아 이메일/summary.md에서
-        자동으로 안 보인다(기존 falsy 체크 그대로 재사용).
+      cross_axis_partner_url: 국내/해외 교차 매칭 시 반대 축 대표 기사 URL
+        (없으면 None). 표시용 제목은 main.py가 요약까지 끝난 뒤 이 URL로
+        역참조해서 채움(여기서는 항상 None으로 초기화).
     """
     raw_mention_count = len(group)
     deduped = dedup_group_by_press(group)
@@ -161,12 +155,9 @@ def score_by_category(groups: list[list[dict]], top_n: int,
                        dedupe_fn=None) -> dict[str, list[dict]]:
     """
     카테고리별 Top N. 국내/해외 축과 독립적, "기타"는 기본 제외.
-    이슈 없는 카테고리는 결과 dict에 키 자체가 안 남음.
-
-    dedupe_fn: 넘기면 카테고리별 전체 순위 풀을 dedupe_fn(전체_풀, top_n, category)에
-    태워 그 결과를 씀(issue_grouper.stage4_dedupe_and_promote 용도). scorer.py는
-    issue_grouper를 import 안 하므로(순환 참조) 콜백 방식. None이면 기존처럼
-    score_and_rank(top_n=top_n)로 바로 자름.
+    dedupe_fn 넘기면 카테고리별 전체 풀을 dedupe_fn(풀, top_n, category)에
+    태워 결과를 씀(issue_grouper.stage4_dedupe_and_promote 용도) - scorer.py는
+    순환참조 방지로 issue_grouper를 직접 import 안 해서 콜백 방식.
     """
     by_category: dict[str, list[list[dict]]] = defaultdict(list)
     for group in groups:

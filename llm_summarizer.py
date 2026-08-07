@@ -281,10 +281,9 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     반환값 추가 필드:
       summary: LLM 생성 요약, 또는 None(생략 시)
       summary_skipped_reason: 생략 사유(정상 요약 시 None)
-      generated_title: 요약 성공 시 새 헤드라인. 실패/생략 시 None(deploy.py가
-        titles[0]로 fallback). 단독 기사가 재료 부족으로 요약이 생략된 경우에도
-        _translate_title_only로 제목만 번역돼 채워지는 경우가 있음(이때도
-        summary/summary_skipped_reason은 "생략" 상태 유지).
+      generated_title: 요약 성공 시 새 헤드라인, 실패/생략 시 None(deploy.py가
+        titles[0]로 fallback). 재료 부족으로 요약이 생략돼도 제목만은
+        _translate_title_only로 번역돼 채워지는 경우가 있음.
     """
     result = dict(item)
     result["generated_title"] = None
@@ -292,9 +291,9 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     articles = item.get("articles", [])
     item_for_prompt = item
 
-    # (A-1) 단독 기사(그룹 크기 1)면서 재료가 얇으면 요약 생략. 그룹은 재료가
-    # 얇아도 있는 재료로 요약 시도(스킵 안 함). 네이버는 body만 재료로 인정
-    # (description은 "주요 문장" 특성상 짧아도 50자를 넘기기 쉬워 기준에서 제외).
+    # (A-1) 단독 기사(그룹 크기 1)면서 재료가 얇으면 요약 생략. 그룹은 있는
+    # 재료로 요약 시도(스킵 안 함). 네이버는 body만 재료로 인정(description은
+    # 짧아도 기준을 넘기기 쉬워 제외).
     def _article_has_substantial_material(article: dict) -> bool:
         if len(article.get("body") or "") >= _BODY_FETCH_MIN_LENGTH:
             return True
@@ -423,12 +422,9 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
 def summarize_top_issues(ranked_items: list[dict], label: str = "",
                           deadline: float | None = None) -> list[dict]:
     """
-    ranked_items 전체에 summarize_issue 적용. 항목마다 즉시 로그 출력(진행 상황 확인용).
-
-    deadline: time.monotonic() 기준 절대 마감(파이프라인 기준 체크포인트).
-    넘기면 남은 항목은 summarize_issue를 아예 안 부르고 "시간 예산 초과로
-    요약 생략" 사유로 채워서 반환 - 기존 summary_skipped_reason 경로와
-    동일하게 흡수되므로 저장/배포 쪽 코드 변경 없이 그대로 동작한다.
+    ranked_items 전체에 summarize_issue 적용. 항목마다 즉시 로그 출력.
+    deadline 넘으면 남은 항목은 "시간 예산 초과" 사유로 채워서 반환(기존
+    summary_skipped_reason 경로로 그대로 흡수).
     """
     results = []
     total = len(ranked_items)

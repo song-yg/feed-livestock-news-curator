@@ -70,12 +70,8 @@ _FLAT_INDEX = _build_flat_index(_active_category_keywords)
 
 
 def set_category_keywords(category_keywords: dict[str, dict[str, list[str]]]) -> None:
-    """
-    카테고리 판정 사전을 교체(구글 시트에서 불러온 것으로). main.py가 [2]
-    정규화 시작 전에 1회 호출 - keyword_source.get_category_keywords()가
-    시트 로드 실패 시 이미 CATEGORY_KEYWORDS로 fallback해서 반환하므로,
-    이 함수 자체는 실패 처리를 따로 안 함(항상 유효한 사전을 받는다는 전제).
-    """
+    """카테고리 판정 사전을 교체(구글 시트에서 불러온 것으로). main.py가 [2]
+    정규화 시작 전에 1회 호출."""
     global _active_category_keywords, _FLAT_INDEX
     _active_category_keywords = category_keywords
     _FLAT_INDEX = _build_flat_index(_active_category_keywords)

@@ -45,11 +45,8 @@ ORDINAL_PATTERN = re.compile(r"(\d+)(st|nd|rd|th)")  # "Jul 1st" -> "Jul 1"
 
 
 def _parse_published_time(raw: str) -> datetime:
-    """
-    article:published_time 메타 태그 값을 datetime으로 변환.
-    실제 형식은 "Jul 13th, 2026"(시:분:초 없음, 날짜만) - scorer.py가 일 단위
-    경과일만 쓰므로 정밀도 문제 없음. ISO 8601 분기는 안전망(실측에서 미확인).
-    """
+    """article:published_time 메타 태그 값을 datetime으로 변환.
+    실제 형식은 "Jul 13th, 2026"(날짜만, 시:분:초 없음). ISO 8601 분기는 안전망."""
     raw = raw.strip()
 
     try:
@@ -61,8 +58,7 @@ def _parse_published_time(raw: str) -> datetime:
     cleaned = ORDINAL_PATTERN.sub(r"\1", raw)
     try:
         dt = datetime.strptime(cleaned, "%b %d, %Y")
-        # WATT 본사 시간대(America/Chicago) 자정으로 해석 후 UTC 환산.
-        # 국내(네이버)는 KST 그대로, 해외(GDELT/WATT)는 UTC로 통일하는 원칙.
+        # 본사 시간대(America/Chicago) 자정으로 해석 후 UTC 환산
         dt_chicago = dt.replace(tzinfo=WATT_SOURCE_TIMEZONE)
         return dt_chicago.astimezone(timezone.utc)
     except ValueError:

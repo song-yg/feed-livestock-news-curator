@@ -36,11 +36,8 @@ MAX_START = 1000  # 네이버 API가 허용하는 start 최댓값
 
 
 def _phrase_present(article: dict, keyword: str) -> bool:
-    """
-    네이버 API는 공백 구분 검색어를 단어별 AND로 처리해 오탐 가능(예: "축산물 수급"
-    -> 무관한 기사에 "축산물"/"수급"이 각각 다른 맥락으로 등장해도 매칭). 여러
-    단어 키워드는 문구가 실제로 인접해 등장하는지 재확인. 단어 1개 키워드는 항상 통과.
-    """
+    """네이버 API는 공백 구분 검색어를 단어별 AND로 처리해 오탐 가능 - 여러
+    단어 키워드는 문구 인접 여부 재확인. 단어 1개는 항상 통과."""
     if " " not in keyword.strip():
         return True
     combined = f"{article.get('title', '')} {article.get('description', '')}"

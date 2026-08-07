@@ -105,14 +105,9 @@ def load_weekly_trend(current_distribution: dict[str, Counter], weeks: int = 4,
                        base_dir: str = "data", reference: datetime | None = None,
                        max_lookback: int | None = None) -> list[dict]:
     """
-    이번 주(메모리에 이미 있는 current_distribution) + 지난 주들(디스크의
-    scored.json)을 합쳐 최근 weeks주치 카테고리 집계를 오래된 순으로 반환.
-    반환 형태: [{"week_label": "2026-25", "국내": {카테고리: 건수}, "해외": {...}}, ...]
-
-    중간에 특정 주 데이터가 없어도(수동 실행이라 저장을 건너뛴 주 등) 목표
-    개수(weeks)를 최대한 채우려고 max_lookback(기본 weeks*2)주 전까지 계속
-    더 과거를 찾는다 - 그래도 못 채우면(그만큼 실행 이력 자체가 없음) 있는
-    만큼만 반환(연속성보다 "최근 weeks건"을 우선하는 방향).
+    이번 주(current_distribution) + 지난 주들(scored.json)을 합쳐 최근 weeks주치
+    카테고리 집계를 오래된 순으로 반환. 특정 주 데이터가 없으면 max_lookback
+    (기본 weeks*2)주 전까지 더 찾아서 목표 개수를 최대한 채움.
     """
     if max_lookback is None:
         max_lookback = weeks * 2

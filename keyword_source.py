@@ -129,14 +129,8 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
 def get_category_keywords(fallback: dict[str, dict[str, list[str]]]) -> dict[str, dict[str, list[str]]]:
     """
     시트의 category 컬럼으로 카테고리 판정 사전(keyword_tagger.CATEGORY_KEYWORDS와
-    같은 형식: {카테고리: {"kr": [...], "en": [...]}})을 만든다.
-
-    get_keywords()(수집용)와 달리 active 컬럼은 무시하고 전체 행을 다 쓴다 -
-    active=FALSE는 "검색 중복이라 껐다"는 뜻이지 "판정에도 못 쓴다"는 뜻이
-    아니고, 판정 사전은 오히려 동의어가 많을수록 유리하다.
-
-    시트 URL 없음/읽기 실패/유효한 행이 하나도 없음 등 어떤 이유로든 못
-    만들면 fallback(keyword_tagger.CATEGORY_KEYWORDS)을 그대로 반환.
+    같은 형식)을 만든다. get_keywords()와 달리 active 컬럼은 무시하고 전체
+    행을 다 씀(판정 사전은 동의어가 많을수록 유리). 못 만들면 fallback 반환.
     """
     csv_url = os.environ.get("KEYWORD_SHEET_CSV_URL")
     if not csv_url:
