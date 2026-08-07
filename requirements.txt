@@ -1,21 +1,8 @@
-# 사료축산뉴스 파이프라인 의존성
-# main.py 실행(수집 -> 정규화/태깅 -> 스코어링 -> 카테고리 집계)에 필요한
-# 패키지 + calibrate_issue_grouper.py(issue_grouper 재검증용)에 필요한
-# sentence-transformers. issue_grouper.py 자체는 아직 main.py에 연결
-# 안 됐지만, 재검증 스크립트가 BGE-M3를 직접 로드해서 써야 해서 포함함.
-
 requests
 python-dotenv
 beautifulsoup4
 playwright
 gdeltdoc
 sentence-transformers
-# llm_summarizer.py의 단독 기사 본문 추가 수집용(2026-07-28 추가) - 네이버/
-# GDELT처럼 본문을 못 가져오는 소스라도, 순위권(Top N)에 든 단독 기사는
-# 원문 URL에서 범용으로 본문 추출을 한 번 더 시도해본다. lxml/courlan 등
-# 하위 의존 패키지는 pip가 자동으로 같이 설치해줘서 따로 안 적어도 됨.
 trafilatura
-# 카테고리별 최근 4주 추이 선그래프(deploy.py render_category_trend_chart,
-# 2026-08-04 추가) 렌더링용. 한글 폰트는 별도로 필요 - run-pipline.yml이
-# fonts-nanum을 apt로 설치해줌(pip 패키지가 아니라 시스템 폰트라 여기 안 적음).
 matplotlib
