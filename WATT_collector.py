@@ -1,8 +1,7 @@
 """
 watt_collector.py
 WATT Global Media 계열 사이트(feedstrategy.com) 뉴스 수집 모듈.
-requests+BeautifulSoup은 403으로 막혀 Playwright 사용. WATTAgNet은 Cloudflare
-봇 차단으로 영구 제외(SITES 참고).
+requests+BeautifulSoup은 403으로 막혀 Playwright 사용. WATTAgNet은 Cloudflare 봇 차단으로 영구 제외(SITES 참고).
 body(본문 전문)는 메모리에서만 쓰고 repo 저장(raw.json)에는 제외(저장 레이어 책임).
 """
 

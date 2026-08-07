@@ -262,79 +262,6 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
         return None
 
 
-def filter_articles(articles: list[dict], deadline: float | None = None) -> list[dict]:
-    """
-    정규화+태깅 완료된 articles 중 LLM이 "관련 없다"고 확정한 것만 제외.
-    API 키 없거나 전부 실패하면 원본 그대로 반환(안전 기본값).
-    WATT 소스는 LLM 호출 없이 자동 통과(업계 전문지라 이 필터가 잡는
-    오매칭 유형이 구조적으로 없음).
-
-    deadline: time.monotonic() 기준 절대 마감 시각(파이프라인 시작 기준
-    체크포인트, main.py가 계산해서 넘김). None이면 시간 제한 없이 끝까지 처리
-    (단독 실행/테스트용 하위호환). 마감을 넘기면 남은 배치는 "애매하면
-    통과"와 같은 방향으로 전부 통과 처리하고 중단.
-    """
-    if not articles:
-        return articles
-
-    watt_articles = [a for a in articles if a.get("source") not in ("네이버", "GDELT")]
-    llm_target_articles = [a for a in articles if a.get("source") in ("네이버", "GDELT")]
-
-    if watt_articles:
-        print(f"[relevance_filter] WATT 소스 {len(watt_articles)}건은 업계 전문지 특성상 "
-              f"LLM 호출 없이 자동 통과")
-
-    if not llm_target_articles:
-        return watt_articles
-
-    key_env_var = "OPENROUTER_API_KEY"
-    api_key = os.environ.get(key_env_var)
-    if not api_key:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-07] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
-              f"관련성 필터 생략, {len(llm_target_articles)}건(네이버/GDELT) 전부 통과")
-        return articles
-
-    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER)
-    print(f"[relevance_filter] 관련성 필터 시작 - provider={LLM_PROVIDER}, "
-          f"model={model_desc}, 대상 {len(llm_target_articles)}건(네이버/GDELT만, "
-          f"WATT {len(watt_articles)}건 제외)")
-
-    kept = list(watt_articles)
-    dropped_samples = []
-    total_batches = (len(llm_target_articles) + BATCH_SIZE - 1) // BATCH_SIZE
-    with requests.Session() as session:
-        for batch_num, i in enumerate(range(0, len(llm_target_articles), BATCH_SIZE), start=1):
-            if deadline is not None and time.monotonic() >= deadline:
-                remaining = llm_target_articles[i:]
-                kept.extend(remaining)
-                print(f"[relevance_filter] 🟡 주의 [RF-08] - 시간 예산(파이프라인 기준 마감) 소진 - "
-                      f"남은 {len(remaining)}건({total_batches - batch_num + 1}배치)은 "
-                      f"필터링 없이 전부 통과 처리하고 중단")
-                break
-            batch = llm_target_articles[i:i + BATCH_SIZE]
-            print(f"[relevance_filter] 배치 {batch_num}/{total_batches} 처리 중 ({len(batch)}건)")
-            results = _call_llm(batch, api_key, session)
-            if results is None:
-                kept.extend(batch)
-                continue
-            for article, relevant in zip(batch, results):
-                if relevant:
-                    kept.append(article)
-                else:
-                    dropped_samples.append(article.get("title", ""))
-
-    dropped_count = len(articles) - len(kept)
-    print(f"[relevance_filter] 관련성 필터 완료 - 전체 {len(articles)}건(WATT 자동통과 "
-          f"{len(watt_articles)}건 포함) 중 {dropped_count}건 제외, {len(kept)}건 유지")
-    if dropped_samples:
-        sample_n = min(10, len(dropped_samples))
-        print(f"[relevance_filter] 제외된 기사 샘플 (최대 {sample_n}건):")
-        for title in dropped_samples[:sample_n]:
-            print(f"   - {title}")
-
-    return kept
-
-
 # ---------------------------------------------------------------------------
 # 카테고리 재분류
 # ---------------------------------------------------------------------------
@@ -414,7 +341,7 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
 
         results = [by_id.get(idx, "기타") for idx in range(1, len(batch) + 1)]
         if missing:
-            print(f"[relevance_filter] 🟡 주의 [RF-09] - 카테고리 재분류 최종 안전망까지 갔지만 id {missing} "
+            print(f"[relevance_filter] 🟡 주의 [RF-07] - 카테고리 재분류 최종 안전망까지 갔지만 id {missing} "
                   f"여전히 누락(기대 {len(batch)}건 중 {len(missing)}건) - 그 항목들만 "
                   f"'기타' 유지, 나머지 {len(batch) - len(missing)}건은 정상 판정 사용")
         return results
@@ -422,70 +349,15 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
     try:
         return _request_llm_text(system_prompt, user_prompt, api_key, session, "카테고리 재분류", validate=_validate)
     except Exception as e:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-10] - 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
+        print(f"[relevance_filter] 🔴 조치필요 [RF-08] - 카테고리 재분류 LLM({LLM_PROVIDER}) 호출/파싱 실패 - "
               f"이 배치({len(batch)}건) 전부 '기타' 유지: {type(e).__name__} - {e!r}")
         return None
 
 
-def recategorize_uncategorized(articles: list[dict], deadline: float | None = None) -> list[dict]:
-    """filter_articles() 통과했지만 category="기타"인 기사를 LLM으로 재분류.
-    API 키 없거나 전부 실패해도 원본 그대로 반환.
-
-    deadline: filter_articles와 동일한 파이프라인 기준 절대 마감. 넘기면
-    남은 배치는 재분류 없이 "기타" 그대로 두고 중단(원래도 이 기사들 기본값이
-    "기타"라 손실 없음)."""
-    targets = [a for a in articles if a.get("category") == "기타"]
-    if not targets:
-        return articles
-
-    key_env_var = "OPENROUTER_API_KEY"
-    api_key = os.environ.get(key_env_var)
-    if not api_key:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-11] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
-              f"카테고리 재분류 생략, {len(targets)}건 '기타' 그대로 유지")
-        return articles
-
-    import keyword_tagger
-    category_choices = list(keyword_tagger.CATEGORY_KEYWORDS.keys())
-    category_list_text = "\n".join(f"- {c}" for c in category_choices)
-    system_prompt = CATEGORY_RECLASSIFY_SYSTEM_PROMPT_TEMPLATE.format(category_list=category_list_text)
-
-    model_desc = " -> ".join(LLM_MODEL_CHAIN_OPENROUTER)
-    print(f"[relevance_filter] 카테고리 재분류 시작 - provider={LLM_PROVIDER}, "
-          f"model={model_desc}, 대상 {len(targets)}건('기타'로 남았지만 관련성 확인된 기사)")
-
-    reclassified_count = 0
-    total_batches = (len(targets) + BATCH_SIZE - 1) // BATCH_SIZE
-    with requests.Session() as session:
-        for batch_num, i in enumerate(range(0, len(targets), BATCH_SIZE), start=1):
-            if deadline is not None and time.monotonic() >= deadline:
-                remaining = len(targets) - i
-                print(f"[relevance_filter] 🟡 주의 [RF-12] - 시간 예산(파이프라인 기준 마감) 소진 - "
-                      f"남은 {remaining}건({total_batches - batch_num + 1}배치)은 "
-                      f"재분류 없이 '기타' 유지하고 중단")
-                break
-            batch = targets[i:i + BATCH_SIZE]
-            print(f"[relevance_filter] 카테고리 재분류 배치 {batch_num}/{total_batches} "
-                  f"처리 중 ({len(batch)}건)")
-            results = _call_category_llm(batch, api_key, session, category_choices, system_prompt)
-            if results is None:
-                continue
-            for article, new_category in zip(batch, results):
-                if new_category != "기타":
-                    article["category"] = new_category
-                    reclassified_count += 1
-
-    print(f"[relevance_filter] 카테고리 재분류 완료 - {len(targets)}건 중 "
-          f"{reclassified_count}건 재분류됨, {len(targets) - reclassified_count}건 '기타' 유지")
-
-    return articles
-
-
 # ---------------------------------------------------------------------------
-# 그룹 단위 버전 - 그룹 대표 기사(group[0]) 1건만 LLM 판단, 그룹 전체를
-# 유닛으로 통과/제외·재분류. LLM 호출량이 원본 기사 수가 아니라 고유 이슈
-# (그룹) 수 기준으로 줄어듦. 판정 로직(프롬프트, 배치, 부분복구, deadline)은
-# filter_articles/recategorize_uncategorized와 동일하게 재사용.
+# 그룹 단위 - 그룹 대표 기사(group[0]) 1건만 LLM 판단, 그룹 전체를 유닛으로
+# 통과/제외·재분류. LLM 호출량이 원본 기사 수가 아니라 고유 이슈(그룹) 수
+# 기준으로 줄어듦.
 # ---------------------------------------------------------------------------
 
 def filter_groups(groups: list[list[dict]], deadline: float | None = None) -> list[list[dict]]:
@@ -512,7 +384,7 @@ def filter_groups(groups: list[list[dict]], deadline: float | None = None) -> li
     key_env_var = "OPENROUTER_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-13] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+        print(f"[relevance_filter] 🔴 조치필요 [RF-09] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"관련성 필터 생략, {len(llm_target_groups)}개 그룹(네이버/GDELT 대표) 전부 통과")
         return groups
 
@@ -529,7 +401,7 @@ def filter_groups(groups: list[list[dict]], deadline: float | None = None) -> li
             if deadline is not None and time.monotonic() >= deadline:
                 remaining = llm_target_groups[i:]
                 kept.extend(remaining)
-                print(f"[relevance_filter] 🟡 주의 [RF-14] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                print(f"[relevance_filter] 🟡 주의 [RF-10] - 시간 예산(파이프라인 기준 마감) 소진 - "
                       f"남은 {len(remaining)}개 그룹은 필터링 없이 전부 통과 처리하고 중단")
                 break
             batch_groups = llm_target_groups[i:i + BATCH_SIZE]
@@ -559,9 +431,8 @@ def filter_groups(groups: list[list[dict]], deadline: float | None = None) -> li
 
 def recategorize_uncategorized_groups(groups: list[list[dict]], deadline: float | None = None) -> list[list[dict]]:
     """
-    filter_groups() 통과했지만 대표 기사 category가 "기타"인 그룹만 골라
-    대표 기사로 LLM 재분류. 재분류되면(기타가 아닌 카테고리로 확정되면) 그
-    그룹 안에서 category가 "기타"인 멤버 전원에게 같은 카테고리를 적용한다 -
+    filter_groups() 통과했지만 대표 기사 category가 "기타"인 그룹만 골라 대표 기사로 LLM 재분류.
+    재분류되면(기타가 아닌 카테고리로 확정되면) 그 그룹 안에서 category가 "기타"인 멤버 전원에게 같은 카테고리를 적용한다.    
     이미 사전 매칭으로 다른 카테고리가 붙은 멤버는 그 신호를 존중해 안 건드림.
     API 키 없거나 전부 실패해도 원본 그대로 반환.
 
@@ -574,7 +445,7 @@ def recategorize_uncategorized_groups(groups: list[list[dict]], deadline: float 
     key_env_var = "OPENROUTER_API_KEY"
     api_key = os.environ.get(key_env_var)
     if not api_key:
-        print(f"[relevance_filter] 🔴 조치필요 [RF-15] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
+        print(f"[relevance_filter] 🔴 조치필요 [RF-11] - {key_env_var} 없음(LLM_PROVIDER={LLM_PROVIDER}) - "
               f"카테고리 재분류 생략, {len(targets)}개 그룹 '기타' 그대로 유지")
         return groups
 
@@ -593,7 +464,7 @@ def recategorize_uncategorized_groups(groups: list[list[dict]], deadline: float 
         for batch_num, i in enumerate(range(0, len(targets), BATCH_SIZE), start=1):
             if deadline is not None and time.monotonic() >= deadline:
                 remaining = len(targets) - i
-                print(f"[relevance_filter] 🟡 주의 [RF-16] - 시간 예산(파이프라인 기준 마감) 소진 - "
+                print(f"[relevance_filter] 🟡 주의 [RF-12] - 시간 예산(파이프라인 기준 마감) 소진 - "
                       f"남은 {remaining}개 그룹은 재분류 없이 '기타' 유지하고 중단")
                 break
             batch_groups = targets[i:i + BATCH_SIZE]

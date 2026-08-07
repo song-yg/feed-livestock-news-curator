@@ -90,9 +90,9 @@ def _dedupe_contained(terms: list[str]) -> list[str]:
 
 def tag_title(title: str) -> tuple[str, list[str]]:
     """
-    제목 하나를 카테고리에 매칭(대소문자 무시 부분 문자열). 카테고리별 매칭
-    개수가 가장 많은 쪽 채택, 동점이면 CATEGORY_KEYWORDS 사전 순서상 먼저
-    나오는 쪽. _dedupe_contained로 포함 관계 매칭 중복 집계 방지.
+    제목 하나를 카테고리에 매칭(대소문자 무시 부분 문자열).
+    카테고리별 매칭 개수가 가장 많은 쪽 채택, 동점이면 CATEGORY_KEYWORDS 사전 순서상 먼저 나오는 쪽.
+    _dedupe_contained로 포함 관계 매칭 중복 집계 방지.
     반환: (category, matched_terms). 안 걸리면 ("기타", []).
     """
     if not title:

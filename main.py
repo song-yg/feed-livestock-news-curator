@@ -47,11 +47,8 @@ CATEGORY_TOP_N = int(os.environ.get("CATEGORY_TOP_N") or 1)
 COLLECTED_ARTIFACT_PATH = "collected_articles.json"
 
 # --- 파이프라인 시간 예산 체크포인트 (각 진입점 자기 시작 기준 절대 분) ---
-# job1/job2로 나뉜 뒤로는 각 진입점이 자기 몫의 360분을 온전히 쓸 수 있어서
-# 예전(단일 job으로 다 몰아넣던 시절)보다 훨씬 여유 있게 잡음. run_collect()는
-# GDELT_DEADLINE_MINUTES만 쓰고, run_process()는 나머지 넷을 씀 - 둘 다
-# 자기 진입점의 pipeline_start(=자기 job이 시작된 시각)를 기준으로 계산.
-# 값 자체는 실측 전 잠정치이니 몇 주 실행 로그 보고 조정할 것.
+# run_collect()는 GDELT_DEADLINE_MINUTES만, run_process()는 나머지 넷을 씀 -
+# 둘 다 자기 진입점의 pipeline_start 기준. 값은 실측 보고 조정할 것.
 GDELT_DEADLINE_MINUTES = 350          # 5:50 - job1: GDELT 수집(WATT/네이버 포함, 남은 10분은 정리+artifact 저장용)
 GROUPING_DEADLINE_MINUTES = 120      # 2:00 - job2: 임베딩 로드 + 이슈 그룹핑(1~3차, 필터링 전 원본 전체 대상)
 RELEVANCE_DEADLINE_MINUTES = 230     # 3:50 - job2: [5] 관련성 필터 (그룹 대표 1건씩만 판단)
@@ -84,7 +81,7 @@ def _load_collected(path: str = COLLECTED_ARTIFACT_PATH) -> tuple[list[dict], di
 
 
 # ---------------------------------------------------------------------------
-# 1) 수집 레이어
+# [1] 수집
 # ---------------------------------------------------------------------------
 
 def run_collectors(pipeline_start: float) -> tuple[list[dict], dict, list[str]]:
@@ -127,7 +124,7 @@ def run_collectors(pipeline_start: float) -> tuple[list[dict], dict, list[str]]:
 
 
 # ---------------------------------------------------------------------------
-# 2) 정규화 레이어 - 완전 동일 기사 제거
+# [2] 정규화 - 완전 동일 기사 제거
 # ---------------------------------------------------------------------------
 
 def normalize(articles: list[dict]) -> list[dict]:
@@ -150,7 +147,7 @@ def normalize(articles: list[dict]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# 3) 스코어링
+# [7] 스코어링
 # ---------------------------------------------------------------------------
 
 def score(groups: list[list[dict]], top_n: int = TOP_N,
@@ -218,7 +215,7 @@ def score(groups: list[list[dict]], top_n: int = TOP_N,
 
 
 # ---------------------------------------------------------------------------
-# 2.1 이슈 그룹핑용 임베딩 모델 로드
+# [3] 임베딩 모델 로드
 # ---------------------------------------------------------------------------
 
 def _load_embedding_model():
@@ -235,7 +232,7 @@ def _load_embedding_model():
 
 
 # ---------------------------------------------------------------------------
-# 4) LLM 요약
+# [9]/[10] LLM 요약
 # ---------------------------------------------------------------------------
 
 def _regroup_by_category(items: list[dict]) -> dict[str, list[dict]]:
@@ -284,15 +281,10 @@ def _resolve_cross_axis_partners(domestic_summarized: list[dict], international_
                                   domestic_category_summarized: dict[str, list[dict]],
                                   international_category_summarized: dict[str, list[dict]]) -> None:
     """
-    score()의 group()에서 미리 붙여둔 cross_axis_partner_url을, [9]/[10]
-    요약까지 전부 끝나 최종 확정된 시점에 실제로 반대 축 결과물(Top N +
-    카테고리별 Top N)에 남아있는지 재검증한다. 있으면 그 항목의 최종 표시용
-    제목(generated_title 우선, 없으면 titles[0])으로 cross_axis_partner를
-    채우고, 없으면(Top N/카테고리 Top N 어디에도 안 남았으면) None으로 둬서
-    이메일/summary.md에서 자동으로 안 보이게 한다.
-
-    in-place로 각 항목의 "cross_axis_partner" 필드를 채운다(반환값 없음) -
-    네 개 리스트/딕셔너리 전부 main.py 안에서만 도는 참조라 안전.
+    score()에서 미리 붙여둔 cross_axis_partner_url을, [9]/[10] 요약까지 끝난
+    시점에 실제로 반대 축 결과물(Top N + 카테고리별 Top N)에 남아있는지
+    재검증한다. 있으면 최종 표시용 제목으로 cross_axis_partner를 채우고,
+    없으면 None(이메일/summary.md에서 자동으로 안 보임). in-place로 채움.
     """
     def _rep_title(item: dict) -> str | None:
         return item.get("generated_title") or (item["titles"][0] if item.get("titles") else None)
@@ -326,10 +318,9 @@ def _resolve_cross_axis_partners(domestic_summarized: list[dict], international_
 
 class _ErrorCodeTee:
     """
-    sys.stdout을 감싸서 원래대로 화면/로그에는 그대로 출력하면서, 동시에
-    내용을 버퍼에 모아둔다. 흩어진 print("...🔴 조치필요 [XX-NN]...") 수십
-    곳을 일일이 고치는 대신, 실행 로그 전체를 사후에 정규식으로 훑어서
-    발생한 오류 코드만 뽑아내는 방식 - _extract_error_codes()가 사용.
+    sys.stdout을 감싸서 화면/로그 출력은 그대로 유지하며 내용을 버퍼에도
+    모아둔다. 흩어진 print("...🔴 조치필요 [XX-NN]...")를 실행 로그 전체에서
+    사후에 정규식으로 훑어 오류 코드만 뽑아내는 용도(_extract_error_codes).
     """
 
     def __init__(self, real_stream):
@@ -355,15 +346,12 @@ def _extract_error_codes(text: str) -> list[str]:
 def _process_and_deploy(articles: list[dict], gdelt_timeline: dict, failed_sources: list[str],
                          pipeline_start: float) -> None:
     """
-    [2] 정규화 ~ [12] 배포 전체. run_process()(job2 진입점)와 run()(단일 실행,
-    로컬 테스트용)이 공유하는 본체 - pipeline_start만 호출부가 정해서 넘겨준다
-    (run_process()는 자기 job이 시작된 시각, run()은 [1] 수집이 시작된 시각).
+    [2] 정규화 ~ [12] 배포 전체. run_process()와 run()이 공유하는 본체 -
+    pipeline_start만 호출부가 정해서 넘겨준다.
 
-    이 함수 실행 동안의 stdout을 _ErrorCodeTee로 감싸서, [2]~[11] 사이 어디서든
-    찍힌 🔴 조치필요 코드를 모아뒀다가 [12] 배포 시 이메일 하단에 코드만
-    조용히 표시한다(deploy.py가 PDF에는 안 넣음). job1(수집) 쪽 실패는 이미
-    failed_sources로 별도 표시되고 있어 이 수집 대상에서 제외해도 무방 -
-    애초에 job1은 별도 프로세스라 이 tee로는 안 잡힘.
+    stdout을 _ErrorCodeTee로 감싸서 [2]~[11] 사이 🔴 조치필요 코드를 모아뒀다가
+    [12] 배포 시 이메일 하단에 코드만 표시(PDF에는 안 넣음). job1 쪽 실패는
+    별도 프로세스라 이 tee로는 안 잡히는데, failed_sources로 이미 표시됨.
     """
     tee = _ErrorCodeTee(sys.stdout)
     sys.stdout = tee

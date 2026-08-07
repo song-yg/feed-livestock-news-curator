@@ -1,8 +1,7 @@
 """
-deploy.py - 6단계 배포 레이어.
-Gmail SMTP로 주간 큐레이션 결과를 HTML 이메일 발송(main.py [6]단계에서 send_weekly_email 호출).
+deploy.py - 배포 레이어([12]단계).
+Gmail SMTP로 주간 큐레이션 결과를 HTML 이메일(+PDF 첨부) 발송.
 인증정보는 GitHub Secrets(SMTP_USER/SMTP_APP_PASSWORD/EMAIL_RECIPIENTS)에서 읽음.
-storage.py가 만든 domestic/international summarized+by_category 데이터를 그대로 렌더링.
 발송 실패해도 예외 안 던지고 로그만 남기고 조용히 실패(파이프라인 안 죽음).
 """
 
@@ -94,9 +93,7 @@ def _format_issue_html(item: dict, rank: int | None = None, accent: str = ACCENT
 
 
 def _axis_label_html(title: str, accent: str) -> str:
-    """국내/해외 컬러바 라벨(_format_section_html과 동일 스타일) - 좌우 2단 배치 시
-    "왼쪽=국내, 오른쪽=해외"가 표 형태만으론 안 드러나는 섹션(증감 표, 트렌드
-    그래프)에 명시적으로 붙인다."""
+    """국내/해외 컬러바 라벨. 좌우 2단 배치에서 "왼쪽=국내, 오른쪽=해외"를 명시."""
     return (f'<h3 style="font-size:16px; color:#222; margin:20px 0 10px 0; '
             f'padding-left:10px; border-left:4px solid {accent};">{_escape(title)}</h3>')
 
@@ -139,9 +136,8 @@ def _format_section_html_aligned(left_label: str, left_items: list[dict],
                                   right_label: str, right_items: list[dict],
                                   left_accent: str = ACCENT_DOMESTIC, right_accent: str = ACCENT_INTL) -> str:
     """
-    _format_section_html의 좌우 정렬 버전 - 국내 1위와 해외 1위가 같은 행에
-    오도록 표 자체를 하나로 합침(한쪽이 짧아도 그쪽 칸만 비고, 반대쪽까지
-    위로 쏠리지 않음). 한쪽이 아예 0건이면 그 칸에 "이번 주 이슈 없음" 1줄만.
+    국내/해외를 순위별로 같은 행에 정렬(한쪽이 짧아도 그쪽 칸만 비고 반대쪽까지
+    위로 안 쏠림). 한쪽이 0건이면 "이번 주 이슈 없음" 1줄만 표시.
     """
     left_header = _axis_label_html(left_label, left_accent)
     right_header = _axis_label_html(right_label, right_accent)
@@ -173,10 +169,9 @@ def _format_category_html_aligned(domestic_by_category: dict[str, list[dict]],
                                    left_accent: str = ACCENT_DOMESTIC, right_accent: str = ACCENT_INTL,
                                    left_tint: str = ACCENT_DOMESTIC_TINT, right_tint: str = ACCENT_INTL_TINT) -> str:
     """
-    _format_category_html의 좌우 정렬 버전 - 같은 카테고리가 국내/해외
-    양쪽에서 같은 행에 오도록 카테고리 단위로 행을 맞춘다(한쪽에만 있는
-    카테고리도 반대쪽에 빈 칸으로 자리를 잡아줘서, 그 아래 다른 카테고리들의
-    높이가 밀리지 않게 함). 카테고리 순서는 가나다순 고정("기타"만 예외로 맨 뒤).
+    같은 카테고리가 국내/해외 양쪽에서 같은 행에 오도록 카테고리 단위로 행을
+    맞춤(한쪽에만 있는 카테고리도 반대쪽에 빈 칸으로 자리 유지). 가나다순 고정
+    ("기타"만 예외로 맨 뒤).
     """
     seen = set(domestic_by_category) | set(international_by_category)
     categories = sorted(c for c in seen if c != "기타")
@@ -242,15 +237,14 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     흰색 콘텐츠 카드, 국내/해외 좌우 2단 레이아웃.
 
     trend_chart_pngs: {"국내": PNG bytes|None, "해외": PNG bytes|None} -
-    render_category_trend_chart()로 호출부(send_weekly_email)가 미리 만들어서
-    넘김(이 함수 안에서 다시 그리지 않음 - PDF용/이메일용 두 번 호출해도
-    matplotlib 렌더링이 중복되지 않게).
+    render_category_trend_chart()로 호출부가 미리 만들어서 넘김(PDF용/이메일용
+    두 번 호출해도 matplotlib 렌더링이 중복 안 되게).
 
     embed_images_as: "cid"(기본, 실제 이메일 발송용) 또는 "data_uri"(PDF 변환용).
-    Gmail이 <img src="data:...">(base64 인라인) 이미지를 막아서 실제 발송은
-    "cid"로 참조만 걸고, 진짜 이미지는 send_email()이 Content-ID 붙은 MIME
-    인라인 첨부로 붙인다(반환값 inline_images). Playwright는 cid: 스킴을
-    못 읽으므로 PDF 변환 시엔 "data_uri"로 호출.
+    Gmail이 base64 인라인 이미지를 막아서 실제 발송은 "cid"로 참조만 걸고,
+    진짜 이미지는 send_email()이 Content-ID 붙은 MIME 인라인 첨부로 붙인다
+    (반환값 inline_images). Playwright는 cid: 스킴을 못 읽으므로 PDF 변환
+    시엔 "data_uri"로 호출.
 
     error_codes: main.py가 로그에서 뽑아낸 🔴 조치필요 코드 목록. PDF에는
     안 넣음(embed_images_as=="cid"일 때만 렌더링) - 코드만 작게 표시.
@@ -331,10 +325,7 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
     )
 
     if error_codes and embed_images_as == "cid":
-        # PDF(data_uri 렌더링)에는 절대 안 넣음 - 실제 이메일에만, 그것도
-        # 내용 없이 코드만 아주 작고 흐리게(기본 안내문보다도 더 눈에 안
-        # 띄게) - 운영자가 훑어보다 걸리면 로그에서 그 코드로 바로 찾아볼
-        # 용도지, 수신자가 굳이 눈여겨볼 내용은 아님.
+        # PDF에는 안 넣음(실제 이메일에만). 코드만, 안내문보다 더 흐리게.
         parts.append(
             f'<p style="margin-top:6px; font-size:9px; color:#ccc; text-align:center;">'
             f'{_escape(", ".join(error_codes))}</p>'
@@ -368,13 +359,8 @@ def render_category_trend_chart(trend_entries: list[dict], axis: str) -> bytes |
         import matplotlib.font_manager as fm
         from keyword_tagger import CATEGORY_KEYWORDS
 
-        # run-pipline.yml이 fonts-nanum을 apt로 설치해둠 - 이름만 지정하면
-        # (rcParams["font.family"]="NanumGothic") matplotlib이 자기 폰트
-        # 캐시를 이미 만든 상태에서 방금 설치된 시스템 폰트를 못 찾아 조용히
-        # 무시하고 기본 폰트(한글 미지원)로 떨어지는 경우가 실측 확인됨(한글
-        # 카테고리명이 네모(tofu)로 깨짐). 폰트 파일 경로를 직접
-        # fontManager.addfont()로 등록하면 캐시 상태와 무관하게 항상 인식됨 -
-        # 훨씬 안정적.
+        # 이름만 지정(rcParams["font.family"]="NanumGothic")하면 matplotlib
+        # 폰트 캐시 타이밍 문제로 못 찾을 수 있어 파일 경로로 직접 등록.
         _font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
         if os.path.exists(_font_path):
             fm.fontManager.addfont(_font_path)
@@ -428,18 +414,12 @@ def _png_to_data_uri(png_bytes: bytes) -> str:
 
 def render_email_pdf(html_content: str) -> bytes | None:
     """
-    render_email_html()이 만든 HTML을 PDF로 변환. Playwright/Chromium 사용 -
-    WATT_collector.py가 이미 같은 브라우저를 쓰고 있어서(워크플로에도 이미
-    설치돼 있음) requirements.txt/워크플로에 새 의존성을 추가할 필요가 없음.
+    render_email_html()이 만든 HTML을 PDF로 변환. Playwright/Chromium 사용
+    (WATT_collector.py와 같은 브라우저, 별도 의존성 불필요).
 
-    링크(원문 등)는 href 그대로 살아서 PDF에서도 클릭 가능(하이퍼링크
-    주석으로 보존됨 - 화면에 보이는 글자가 "원문"으로 짧아도 무관).
-
-    여백 0(margin=0) + scale=0.79로 콘텐츠 폭(1000px)을 A4 폭(≈793px)에 맞춤
-    (여백만 없애면 우측이 페이지 밖으로 잘림).
-
-    실패해도 예외를 던지지 않고 None만 반환 - PDF 변환 실패로 이메일 발송
-    자체가 막히면 안 됨(HTML 본문 발송이 우선, PDF는 부가 기능).
+    링크는 href 그대로 살아서 PDF에서도 클릭 가능. 여백 0 + scale=0.79로
+    콘텐츠 폭(1000px)을 A4 폭(≈793px)에 맞춤(여백만 없애면 우측이 잘림).
+    실패해도 예외 없이 None만 반환 - HTML 본문 발송이 우선, PDF는 부가 기능.
     """
     try:
         from playwright.sync_api import sync_playwright

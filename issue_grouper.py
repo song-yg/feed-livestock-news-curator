@@ -249,24 +249,12 @@ def stage2_group(
 # ---------------------------------------------------------------------------
 # 3차: LLM 그룹핑 보조 (임계값 애매 구간)
 # ---------------------------------------------------------------------------
-# borderline_pairs만 대상(전수 호출 아님). "같은 사건" 기준: 질병/주제가
-# 같아도 국가·장소·시점이 다르면 별개.
+# OpenRouter만 사용(Anthropic 미사용). borderline_pairs만 대상(전수 호출 아님).
+# "같은 사건" 기준: 질병/주제가 같아도 국가·장소·시점이 다르면 별개.
 #
-# OpenRouter만 사용(Anthropic 미사용). 무료 모델 하나를 못 박지 않고
-# openrouter/free를 기본값으로 쓴 이유: 개별 :free 모델은 공급사가 예고
-# 없이 무료 태그를 뗄 수 있어 코드가 조용히 깨질 수 있는데, openrouter/free는
-# 그 라우팅 자체를 OpenRouter가 대신 처리해준다. 특정 모델을 고정하고
-# 싶으면 OPENROUTER_MODEL 환경변수로 덮어쓸 수 있다.
-#
-# ** os.environ.get(key, default) 대신 or를 쓰는 이유 **
-# GitHub Actions에서 리포에 등록 안 된 Variable을 `${{ vars.X }}`로 참조하면
-# "아예 안 넘어옴"이 아니라 "빈 문자열로 채워진 환경변수"가 된다(GitHub 공식
-# 문서: "설정 안 된 configuration variable을 참조하면 빈 문자열로 평가됨").
-# `os.environ.get(key, default)`의 default는 키가 "아예 없을 때"만 적용되고
-# 빈 문자열이 있으면 그 빈 문자열을 그대로 돌려주므로, OPENROUTER_MODEL을
-# Variables에 등록 안 한 상태로 두면 LLM_MODEL_OPENROUTER가 빈 문자열이
-# 되어 OpenRouter API가 "model" 필드 없음으로 400 Bad Request를 던진다.
-# `or` 연산자를 쓰면 빈 문자열도 falsy라 기본값으로 자연스럽게 대체된다.
+# os.environ.get(key, default) 대신 or 사용: GitHub Actions에서 미등록
+# Variable을 참조하면 빈 문자열이 되는데(에러 아님), default는 키가 아예
+# 없을 때만 적용돼 빈 문자열을 못 잡음 - or는 빈 문자열도 falsy라 잡아줌.
 LLM_PROVIDER = "openrouter"  # 로그 표시용 고정값(더 이상 스위치 아님)
 
 LLM_MODEL_OPENROUTER = os.environ.get("OPENROUTER_MODEL") or "openrouter/free"
@@ -478,13 +466,10 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]],
                        deadline: float | None = None) -> list[tuple[dict, dict, float]]:
     """
     애매 구간 쌍을 LLM에 물어 "같은 사건"으로 확정된 쌍만 반환.
-    OPENROUTER_API_KEY 없으면 안 묶음으로 안전하게 fallback.
     키 없거나 전부 실패하면 안 묶음으로 안전하게 fallback.
 
-    deadline: time.monotonic() 기준 절대 마감(파이프라인 기준 체크포인트,
-    main.py가 계산해서 넘김). None이면 시간 제한 없음. 넘기면 남은 배치는
-    "안 묶음" 기본값 그대로 두고 중단(원래도 이 쌍들 기본값이 "안 묶음"이라
-    손실 없음 - 다음 실행에서 다시 애매 구간으로 잡히면 재확인됨).
+    deadline: 파이프라인 기준 절대 마감(None이면 무제한). 넘기면 남은 배치는
+    "안 묶음" 기본값 유지하고 중단(다음 실행에서 재확인됨).
     """
     if not borderline_pairs:
         return []
@@ -527,15 +512,14 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]],
 
 def group_issues(articles: list[dict], model=None, deadline: float | None = None) -> list[list[dict]]:
     """
-    1~3차를 순서대로 실행해 최종 이슈 그룹 리스트 반환(main.py의 score()가 호출).
+    1~3차를 순서대로 실행해 최종 이슈 그룹 리스트 반환(main.py가 [4]단계에서 직접 호출).
 
-    3차 병합: stage2_grouped/still_unmatched를 "구성요소"로 보고, 확정된
-    쌍만 구성요소 단위로 union. 연쇄 병합 방지 - 3개 이상 연결된 컴포넌트는
-    모든 쌍이 실제로 LLM에 직접 확인됐는지(클리크인지) 검증하고, 아니면
-    빠진 쌍만 추가로 재확인한 뒤에도 안 되면 개별 유지.
+    3차 병합: 확정된 쌍만 구성요소 단위로 union. 연쇄 병합 방지 - 3개 이상
+    연결된 컴포넌트는 모든 쌍이 실제로 LLM에 직접 확인됐는지(클리크인지)
+    검증하고, 아니면 빠진 쌍만 추가로 재확인한 뒤에도 안 되면 개별 유지.
 
-    deadline: time.monotonic() 기준 절대 마감(파이프라인 기준 체크포인트).
-    stage3_llm_assist와 재확인 라운드(extra_confirm) 양쪽에 그대로 전파.
+    deadline: 파이프라인 기준 절대 마감. stage3_llm_assist와 재확인 라운드
+    (extra_confirm) 양쪽에 그대로 전파.
     """
     stage1_grouped, stage1_unmatched = stage1_group(articles)
 
@@ -764,11 +748,9 @@ def stage4_dedupe_and_promote(ranked_pool: list[dict], top_n: int, label: str = 
     ranked_pool(top_n 제한 없는 전체 순위 풀) 상위 top_n을 후보로 삼아 같은
     사건 쌍을 LLM으로 재확인, 병합하고 빈 자리는 다음 순위로 채운다.
     회차당 병합 1건만 적용 후 재판단, 최대 3회. API 키 없으면 기존 순위 그대로 반환.
-    반환값은 scorer.score_and_rank(top_n=N)과 동일한 형태.
 
-    deadline: time.monotonic() 기준 절대 마감. 넘기면 그 시점까지의 candidates를
-    그대로 반환하고 남은 회차는 생략(이미 반영된 병합/승격은 유지, 못 다 본
-    나머지는 다음 실행에서 다시 확인됨).
+    deadline: 파이프라인 기준 절대 마감. 넘기면 그 시점까지의 candidates를
+    그대로 반환하고 남은 회차는 생략(다음 실행에서 다시 확인됨).
     """
     if top_n is None:
         top_n = len(ranked_pool)

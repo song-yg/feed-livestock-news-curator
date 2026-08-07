@@ -1,7 +1,6 @@
 """
-category_aggregator.py
-카테고리 전체 집계 모듈. keyword_tagger.CATEGORY_KEYWORDS 기준 category 필드로
-"이 카테고리가 이번 주 몇 건 다뤄졌는지" 집계하는 거친 보조 지표 (이슈 그룹핑과 별개).
+category_aggregator.py - 카테고리 전체 집계 모듈.
+keyword_tagger.CATEGORY_KEYWORDS 기준 category 필드로 "이 카테고리가 이번 주 몇 건 다뤄졌는지" 집계하는 거친 보조 지표 (이슈 그룹핑과 별개).
 집계는 단순 건수(recency_weight 미적용), 국내/해외 축 분리, 지난주 대비 증감 지원.
 """
 
@@ -105,9 +104,8 @@ def load_weekly_trend(current_distribution: dict[str, Counter], weeks: int = 4,
                        base_dir: str = "data", reference: datetime | None = None,
                        max_lookback: int | None = None) -> list[dict]:
     """
-    이번 주(current_distribution) + 지난 주들(scored.json)을 합쳐 최근 weeks주치
-    카테고리 집계를 오래된 순으로 반환. 특정 주 데이터가 없으면 max_lookback
-    (기본 weeks*2)주 전까지 더 찾아서 목표 개수를 최대한 채움.
+    이번 주(current_distribution) + 지난 주들(scored.json)을 합쳐 최근 weeks주치 카테고리 집계를 오래된 순으로 반환.
+    특정 주 데이터가 없으면 max_lookback(기본 weeks*2)주 전까지 더 찾아서 목표 개수를 최대한 채움.
     """
     if max_lookback is None:
         max_lookback = weeks * 2

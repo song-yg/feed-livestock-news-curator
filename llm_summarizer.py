@@ -2,8 +2,8 @@
 llm_summarizer.py
 (A) 자체 요약 생성 + (A-1) 얇은 재료 fallback 담당 모듈.
 (B) 그룹핑 보조는 issue_grouper.stage3_llm_assist가 담당.
-OpenRouter 모델 체인은 판단형(그룹핑/필터/재분류)과 별개로 요약 전용을 씀
-(판단형은 정해진 JSON만 뱉으면 되고, 요약은 한국어 문장력이 중요해 기준이 다름).
+OpenRouter 모델 체인은 판단형(그룹핑/필터/재분류)과 별개로 요약 전용을 씀.
+(판단형은 정해진 JSON만 뱉으면 되고, 요약은 한국어 문장력이 중요해 기준이 다름)
 API 키 없거나 LLM 실패 시 요약 생략, 원문 제목만 노출로 fallback.
 """
 
@@ -118,8 +118,8 @@ def _build_user_prompt(item: dict) -> str:
 def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
                          session: requests.Session, model_name: str) -> tuple[str, dict]:
     """반환: (응답 텍스트, 원본 응답 dict).
-    OpenRouter 무료 티어 분당 상한 대응 - issue_grouper의 스로틀 함수를
-    재사용(그룹핑/요약이 같은 카운터를 공유해 더 정확)."""
+    OpenRouter 무료 티어 분당 상한 대응
+    issue_grouper의 스로틀 함수를 재사용(그룹핑/요약이 같은 카운터를 공유해 더 정확)."""
     _ig._throttle_openrouter_free_tier()
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -291,9 +291,9 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     articles = item.get("articles", [])
     item_for_prompt = item
 
-    # (A-1) 단독 기사(그룹 크기 1)면서 재료가 얇으면 요약 생략. 그룹은 있는
-    # 재료로 요약 시도(스킵 안 함). 네이버는 body만 재료로 인정(description은
-    # 짧아도 기준을 넘기기 쉬워 제외).
+    # (A-1) 단독 기사(그룹 크기 1)면서 재료가 얇으면 요약 생략.
+    # 그룹은 있는# 재료로 요약 시도(스킵 안 함).
+    # 네이버는 body만 재료로 인정(description은 짧아도 기준을 넘기기 쉬워 제외).
     def _article_has_substantial_material(article: dict) -> bool:
         if len(article.get("body") or "") >= _BODY_FETCH_MIN_LENGTH:
             return True
@@ -423,8 +423,7 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "",
                           deadline: float | None = None) -> list[dict]:
     """
     ranked_items 전체에 summarize_issue 적용. 항목마다 즉시 로그 출력.
-    deadline 넘으면 남은 항목은 "시간 예산 초과" 사유로 채워서 반환(기존
-    summary_skipped_reason 경로로 그대로 흡수).
+    deadline 넘으면 남은 항목은 "시간 예산 초과" 사유로 채워서 반환(기존 summary_skipped_reason 경로로 그대로 흡수).
     """
     results = []
     total = len(ranked_items)
