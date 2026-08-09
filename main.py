@@ -51,10 +51,10 @@ COLLECTED_ARTIFACT_PATH = "collected_articles.json"
 # 둘 다 자기 진입점의 pipeline_start 기준. 값은 실측 보고 조정할 것.
 GDELT_DEADLINE_MINUTES = 350          # 5:50 - job1: GDELT 수집(WATT/네이버 포함, 남은 10분은 정리+artifact 저장용)
 GROUPING_DEADLINE_MINUTES = 120      # 2:00 - job2: 임베딩 로드 + 이슈 그룹핑(1~3차, 필터링 전 원본 전체 대상)
-RELEVANCE_DEADLINE_MINUTES = 230     # 3:50 - job2: [5] 관련성 필터 (그룹 대표 1건씩만 판단)
-RECATEGORIZE_DEADLINE_MINUTES = 250  # 4:10 - job2: [6] 카테고리 재분류 (별도 체크포인트 - [5]가 늦어도 20분은 보장됨)
-STAGE4_DEADLINE_MINUTES = 260        # 4:20 - job2: 4차 Top N 사후 재검토
-SUMMARY_DEADLINE_MINUTES = 350       # 5:50 - job2: LLM 요약 (남은 10분은 저장+PDF변환+이메일발송+git커밋용)
+RELEVANCE_DEADLINE_MINUTES = 220      # 3:40 - job2: [5] 관련성 필터 (그룹 대표 1건씩만 판단)
+RECATEGORIZE_DEADLINE_MINUTES = 240   # 4:00 - job2: [6] 카테고리 재분류 (별도 체크포인트 - [5]가 늦어도 20분은 보장됨)
+STAGE4_DEADLINE_MINUTES = 250         # 4:10 - job2: 4차 Top N 사후 재검토
+SUMMARY_DEADLINE_MINUTES = 350        # 5:50 - job2: LLM 요약 (남은 10분은 저장+PDF변환+이메일발송+git커밋용)
 
 
 def _deadline(pipeline_start: float, minutes: int) -> float:
