@@ -10,36 +10,60 @@ KEYWORD_SHEET_CSV_URL 미설정, 네트워크 실패, 형식 이상, 활성 키�
 import csv
 import io
 import os
+import time
 
 import requests
 
 # 프로세스 내 캐시(성공/실패 둘 다) - 같은 실행 안에서 ko/en 두 번 호출돼도 재요청 안 함.
 _cache: dict[str, list[dict] | None] = {}
 
+_FETCH_TIMEOUT_SECONDS = 45  # 기존 30초에서 상향
+_FETCH_MAX_RETRIES = 2  # 최초 시도 포함 총 3회
+_FETCH_RETRY_WAIT_SECONDS = 5
+
 
 def _fetch_csv_rows(csv_url: str) -> list[dict] | None:
-    """CSV URL을 가져와 dict 리스트로 파싱. 실패 시 None(호출부 fallback). 프로세스 내 캐시."""
+    """
+    CSV URL을 가져와 dict 리스트로 파싱. 프로세스 내 캐시.
+    네트워크 오류(타임아웃 등)는 최대 _FETCH_MAX_RETRIES회 재시도 - 일시적
+    문제일 가능성이 높아 재시도로 대부분 해결됨. 그래도 실패하거나 CSV 형식
+    자체가 이상하면(재시도해도 의미 없음) None(호출부 fallback).
+    """
     if csv_url in _cache:
         cached = _cache[csv_url]
         print(f"[keyword_source] 캐시된 CSV 재사용 (이번 실행에서 이미 가져온 적 있음)")
         return cached
 
-    try:
-        resp = requests.get(csv_url, timeout=30)
-        resp.raise_for_status()
-        text = resp.content.decode("utf-8-sig")
-        reader = csv.DictReader(io.StringIO(text))
-        rows = list(reader)
-        if not rows:
-            print("[keyword_source] 🔴 조치필요 [KS-01] - 시트가 비어있음(CSV 대신 엉뚱한 내용이 왔을 가능성) - fallback 사용")
+    last_error: Exception | None = None
+    for attempt in range(1, _FETCH_MAX_RETRIES + 2):
+        try:
+            resp = requests.get(csv_url, timeout=_FETCH_TIMEOUT_SECONDS)
+            resp.raise_for_status()
+            text = resp.content.decode("utf-8-sig")
+            reader = csv.DictReader(io.StringIO(text))
+            rows = list(reader)
+            if not rows:
+                print("[keyword_source] 🔴 조치필요 [KS-01] - 시트가 비어있음(CSV 대신 엉뚱한 내용이 왔을 가능성) - fallback 사용")
+                _cache[csv_url] = None
+                return None
+            _cache[csv_url] = rows
+            return rows
+        except requests.exceptions.RequestException as e:
+            last_error = e
+            if attempt <= _FETCH_MAX_RETRIES:
+                print(f"[keyword_source] 🟡 주의 - 시트 읽기 실패({attempt}/{_FETCH_MAX_RETRIES + 1}회차) - "
+                      f"{_FETCH_RETRY_WAIT_SECONDS}초 후 재시도: {type(e).__name__} - {e!r}")
+                time.sleep(_FETCH_RETRY_WAIT_SECONDS)
+        except Exception as e:
+            # 파싱 등 네트워크 외 문제는 재시도해도 의미 없어 바로 fallback
+            print(f"[keyword_source] 🔴 조치필요 [KS-02] - 시트 읽기 실패: {type(e).__name__} - {e!r} - fallback 사용")
             _cache[csv_url] = None
             return None
-        _cache[csv_url] = rows
-        return rows
-    except Exception as e:
-        print(f"[keyword_source] 🔴 조치필요 [KS-02] - 시트 읽기 실패: {type(e).__name__} - {e!r} - fallback 사용")
-        _cache[csv_url] = None
-        return None
+
+    print(f"[keyword_source] 🔴 조치필요 [KS-02] - 시트 읽기 최종 실패({_FETCH_MAX_RETRIES + 1}회 시도 후): "
+          f"{type(last_error).__name__} - {last_error!r} - fallback 사용")
+    _cache[csv_url] = None
+    return None
 
 
 def _is_active(row: dict) -> bool:
