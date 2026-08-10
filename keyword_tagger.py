@@ -10,46 +10,46 @@ from collections import Counter
 
 CATEGORY_KEYWORDS = {
     "질병명": {
-        "kr": ['조류독감', 'AI', '구제역', '아프리카돼지열병', '돼지열병', '럼피스킨병', '브루셀라병', '우결핵', '돼지유행성설사병', '돼지생식기호흡기증후군', '뉴캣슬병', '광우병', '살처분'],
-        "en": ['avian influenza', 'avian flu', 'bird flu', 'HPAI', 'LPAI', 'foot-and-mouth disease', 'FMD', 'FMD outbreak', 'African swine fever', 'ASF', 'ASF outbreak', 'classical swine fever', 'hog cholera', 'CSF', 'lumpy skin disease', 'LSD', 'brucellosis', 'bovine tuberculosis', 'bTB', 'porcine epidemic diarrhea', 'PED', 'PEDv', 'porcine reproductive and respiratory syndrome', 'PRRS', 'PRRS virus', 'Newcastle disease', 'ND', 'bovine spongiform encephalopathy', 'BSE', 'mad cow disease', 'culling', 'stamping out', 'depopulation', 'mass depopulation'],
+        "kr": ['광우병', '구제역', '뉴캣슬병', '돼지생식기호흡기증후군', '돼지열병', '돼지유행성설사병', '럼피스킨병', '브루셀라병', '아프리카돼지열병', '우결핵', '조류독감'],
+        "en": ['African swine fever', 'ASF', 'avian influenza', 'bird flu', 'bovine spongiform encephalopathy', 'bovine tuberculosis', 'brucellosis', 'BSE', 'classical swine fever', 'FMD', 'foot-and-mouth disease', 'lumpy skin disease', 'Newcastle disease', 'PED', 'porcine epidemic diarrhea', 'porcine reproductive and respiratory syndrome'],
     },
     "시장/가격 용어": {
-        "kr": ['사료가격', '사료값', '배합사료', '곡물가격', '국제곡물가', '옥수수', '대두박', '소맥', '사료 원료', '축산물 수급', '산지가격', '도매가격', '소비자가격', '사료자급률', '곡물자급률', '축산물 수출입'],
-        "en": ['feed price', 'feed cost', 'feed costs', 'compound feed', 'mixed feed', 'formula feed', 'grain price', 'global grain market', 'international grain market', 'corn', 'maize', 'corn futures', 'CBOT corn', 'soybean meal', 'SBM', 'soybean futures', 'wheat', 'wheat futures', 'feed ingredients', 'livestock supply and demand', 'farm-gate price', 'wholesale price', 'retail price', 'consumer price', 'feed self-sufficiency rate', 'grain self-sufficiency rate', 'livestock exports', 'livestock imports', 'livestock trade'],
+        "kr": ['곡물가격', '곡물자급률', '국제곡물가', '대두박', '배합사료', '사료 원료', '사료가격', '사료값', '사료자급률', '산지가격', '축산물 수출입'],
+        "en": ['compound feed', 'corn futures', 'farm-gate price', 'feed cost', 'feed ingredients', 'feed price', 'feed self-sufficiency rate', 'formula feed', 'global grain market', 'grain price', 'grain self-sufficiency rate', 'livestock exports', 'livestock imports', 'livestock supply and demand', 'mixed feed', 'SBM', 'soybean futures', 'soybean meal', 'wheat futures'],
     },
     "정부·제도 용어": {
-        "kr": ['농림축산식품부', '농림축산검역본부', '가축전염병예방법', '방역', '방역대', '이동제한', '축산물 이력제', '무항생제 축산물', '동물복지 인증', '가축분뇨', '예찰', '감시', '발생조사', '긴급대응'],
-        "en": ['Ministry of Agriculture, Food and Rural Affairs', 'MAFRA', 'Animal and Plant Quarantine Agency', 'APQA', 'Act on the Prevention of Contagious Animal Diseases', 'biosecurity', 'quarantine', 'disease control', 'Protection Zone', 'Surveillance Zone', 'movement restriction', 'standstill order', 'movement ban', 'livestock traceability system', 'antibiotic-free livestock products', 'animal welfare certification', 'livestock manure', 'surveillance', 'disease surveillance', 'outbreak investigation', 'emergency response'],
+        "kr": ['가축 이동제한', '가축분뇨', '가축전염병예방법', '농림축산검역본부', '동물복지 인증', '무항생제 축산물', '방역대', '축산물 이력제'],
+        "en": ['Animal and Plant Quarantine Agency', 'animal welfare certification', 'antibiotic-free livestock products', 'biosecurity', 'disease control', 'disease surveillance', 'livestock manure', 'livestock movement restriction', 'livestock traceability system', 'Ministry of Agriculture, Food and Rural Affairs', 'Protection Zone', 'quarantine', 'standstill order', 'Surveillance Zone'],
     },
     "축종별 용어": {
-        "kr": ['한우', '육우', '젖소', '낙농', '양돈', '산란계', '육계', '오리', '계란 수급', '가금 전반', '축산업 전반'],
-        "en": ['Korean native cattle', 'Hanwoo', 'beef cattle', 'dairy cattle', 'dairy farming', 'hog farming', 'pig farming', 'swine industry', 'swine sector', 'laying hens', 'layers', 'broiler', 'broiler chicken', 'broiler industry', 'duck', 'egg supply', 'poultry sector', 'poultry industry', 'livestock sector', 'livestock industry'],
+        "kr": ['가금 전반', '계란 수급', '낙농', '산란계', '양돈', '육계', '육우', '젖소', '축산업 전반'],
+        "en": ['beef cattle', 'broiler', 'dairy cattle', 'dairy farming', 'egg supply', 'Korean native cattle', 'laying hens', 'livestock industry', 'pig farming', 'poultry industry', 'swine industry'],
     },
     "사료업계 특화 용어": {
-        "kr": ['배합사료업체', '사료공장', '조사료', 'TMR', '곡물엘리베이터', '사료', '프리믹스', '영양첨가업체'],
-        "en": ['feed manufacturer', 'feed mill', 'feed producer', 'roughage', 'forage', 'Total Mixed Ration', 'TMR', 'grain elevator', 'animal feed', 'livestock feed', 'premix', 'premix manufacturer', 'nutrition company'],
+        "kr": ['곡물엘리베이터', '배합사료업체', '사료공장', '영양첨가업체', '조사료', '프리믹스'],
+        "en": ['animal feed', 'feed manufacturer', 'feed mill', 'feed producer', 'grain elevator', 'livestock feed', 'nutrition company', 'premix', 'roughage', 'Total Mixed Ration'],
     },
     "사료첨가제/항생제 규제": {
-        "kr": ['사료첨가제', '항생제 성장촉진제', '항생제 내성', '동물용의약품', '항생제 사용 저감', '무항생제 사료', '사료관리법', '사료효소', '프로바이오틱스', '아미노산', '사료보충제', '피타아제'],
-        "en": ['feed additive', 'antibiotic growth promoter', 'AGP', 'antimicrobial resistance', 'AMR', 'veterinary medicinal products', 'veterinary drugs', 'reduction of antibiotic use', 'antibiotic-free feed', 'Control of Livestock and Fish Feed Act', 'feed enzyme', 'probiotics', 'amino acid', 'lysine', 'methionine', 'feed supplement', 'phytase'],
+        "kr": ['동물용의약품', '무항생제 사료', '사료관리법', '사료보충제', '사료첨가제', '사료효소', '피타아제', '항생제 사용 저감', '항생제 성장촉진제'],
+        "en": ['AMR', 'antibiotic growth promoter', 'antibiotic-free feed', 'antimicrobial resistance', 'Control of Livestock and Fish Feed Act', 'feed additive', 'feed enzyme', 'feed supplement', 'methionine', 'phytase', 'reduction of antibiotic use', 'veterinary drugs'],
     },
     "무역/관세 이슈": {
-        "kr": ['수입관세', '할당관세', '저율관세할당', '자유무역협정', '세이프가드', '원산지 표시', '검역협상', '무역분쟁', '수출금지', '수입금지', '시장접근', '교역제한'],
-        "en": ['import tariff', 'tariff-rate quota', 'TRQ', 'Free Trade Agreement', 'FTA', 'safeguard measures', 'country-of-origin labeling', 'quarantine negotiations', 'trade dispute', 'export ban', 'import ban', 'market access', 'trade restriction'],
+        "kr": ['축산물 할당관세'],
+        "en": ['livestock import tariff'],
     },
     "가금 계열화/수직계열화": {
-        "kr": ['계열화', '계열화사업법', '계열주체', '계약사육', '계열화 기업', '생산비 보장'],
-        "en": ['vertical integration', 'Act on Livestock Farm Alliance Systems', 'vertical integrator', 'integrator', 'contract farmer', 'farmer raising livestock under contract', 'contract grower', 'integrated poultry company', 'guarantee of production cost', 'production cost compensation'],
+        "kr": ['계약사육', '계열주체', '계열화 기업', '계열화사업법', '생산비 보장', '축산업 계열화'],
+        "en": ['contract farmer', 'contract grower', 'guarantee of production cost', 'poultry vertical integration', 'vertical integrator'],
     },
     "스마트팜/축산 기술": {
-        "kr": ['정밀축산', '스마트축사', 'ICT 축산', '자동급이시스템', '축산 빅데이터', '축산 자동화', '센서기술'],
-        "en": ['precision livestock farming', 'PLF', 'precision farming', 'precision feeding', 'smart livestock barn', 'smart farming', 'ICT-based livestock farming', 'digital agriculture', 'agtech', 'automatic feeding system', 'automated feeding system', 'livestock big data', 'data analytics in livestock', 'livestock automation', 'sensor technology', 'livestock monitoring', 'digital livestock'],
+        "kr": ['스마트축사', '자동급여시스템', '정밀축산', '축산 빅데이터', '축산 자동화'],
+        "en": ['livestock automation', 'livestock big data', 'precision livestock farming', 'smart farming'],
     },
 }
 
-# 매칭 제외 토큰. "AI"는 조류독감 약어지만 인공지능 의미로 더 흔히 쓰여 오매칭 위험,
-# "ND"도 흔한 2글자 조합이라 오매칭 위험 - 둘 다 런타임에서만 제외(사전 자체는 유지).
-EXCLUDED_TERMS = {"AI", "ND"}
+# 매칭 제외 토큰 - 짧은 약어라 다른 의미로 오매칭될 위험이 있는 키워드용
+# 안전장치(현재 목록엔 해당 사례 없어서 비어있음, 필요 시 추가).
+EXCLUDED_TERMS = set()
 
 
 def _build_flat_index(category_keywords: dict[str, dict[str, list[str]]]):
@@ -90,9 +90,9 @@ def _dedupe_contained(terms: list[str]) -> list[str]:
 
 def tag_title(title: str) -> tuple[str, list[str]]:
     """
-    제목 하나를 카테고리에 매칭(대소문자 무시 부분 문자열).
-    카테고리별 매칭 개수가 가장 많은 쪽 채택, 동점이면 CATEGORY_KEYWORDS 사전 순서상 먼저 나오는 쪽.
-    _dedupe_contained로 포함 관계 매칭 중복 집계 방지.
+    제목 하나를 카테고리에 매칭(대소문자 무시 부분 문자열). 카테고리별 매칭
+    개수가 가장 많은 쪽 채택, 동점이면 CATEGORY_KEYWORDS 사전 순서상 먼저
+    나오는 쪽. _dedupe_contained로 포함 관계 매칭 중복 집계 방지.
     반환: (category, matched_terms). 안 걸리면 ("기타", []).
     """
     if not title:
