@@ -16,8 +16,7 @@ on:
         required: false
         default: '수동 실행 메모 없음'
   schedule:
-    # ** 임시 테스트 스케줄 - 테스트 끝나면 원래대로(일요일 22:01 KST) 되돌릴 것 **
-    - cron: "25 1 * * 1"  # 매주 월요일 10:19 KST = 월요일 01:19 UTC
+    - cron: "1 13 * * 0"  # 매주 일요일 22:01 KST = 일요일 13:01 UTC
 
 concurrency:
   group: ${{ github.workflow }}
