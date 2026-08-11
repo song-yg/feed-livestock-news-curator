@@ -181,6 +181,8 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
     body = {
         "model": model_name,
         "temperature": 0,
+        "reasoning": {"exclude": True},  # 추론형 모델의 "생각 과정"이 content에 섞여
+                                          # JSON 파싱을 깨는 것 방지(OpenRouter 공식 옵션, 전 모델 지원)
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -431,8 +433,9 @@ def filter_groups(groups: list[list[dict]], deadline: float | None = None) -> li
 
 def recategorize_uncategorized_groups(groups: list[list[dict]], deadline: float | None = None) -> list[list[dict]]:
     """
-    filter_groups() 통과했지만 대표 기사 category가 "기타"인 그룹만 골라 대표 기사로 LLM 재분류.
-    재분류되면(기타가 아닌 카테고리로 확정되면) 그 그룹 안에서 category가 "기타"인 멤버 전원에게 같은 카테고리를 적용한다.    
+    filter_groups() 통과했지만 대표 기사 category가 "기타"인 그룹만 골라
+    대표 기사로 LLM 재분류. 재분류되면(기타가 아닌 카테고리로 확정되면) 그
+    그룹 안에서 category가 "기타"인 멤버 전원에게 같은 카테고리를 적용한다 -
     이미 사전 매칭으로 다른 카테고리가 붙은 멤버는 그 신호를 존중해 안 건드림.
     API 키 없거나 전부 실패해도 원본 그대로 반환.
 

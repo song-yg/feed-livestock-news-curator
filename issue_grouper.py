@@ -372,6 +372,8 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
     body = {
         "model": model_name,
         "temperature": 0,
+        "reasoning": {"exclude": True},  # 추론형 모델의 "생각 과정"이 content에 섞여
+                                          # JSON 파싱을 깨는 것 방지(OpenRouter 공식 옵션, 전 모델 지원)
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -386,8 +388,8 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
 def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session,
                        validate=None):
     """
-    _LLM_MODEL_CHAIN_OPENROUTER_ROLES를 순서대로 시도, 실패 시 다음 후보로 재시도.
-    최종 안전망까지 실패하면 예외를 그대로 올림.
+    _LLM_MODEL_CHAIN_OPENROUTER_ROLES를 순서대로 시도, 실패 시 다음 후보로
+    재시도. 최종 안전망까지 실패하면 예외를 그대로 올림.
     validate(text, is_final) 콜백을 넘기면 응답 형식 이상도 재시도 대상으로 취급.
     """
     chain = _LLM_MODEL_CHAIN_OPENROUTER_ROLES
@@ -413,7 +415,8 @@ def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, sessio
 def _call_llm(pairs: list[tuple[dict, dict, float]], api_key: str, session: requests.Session) -> list[bool] | None:
     """
     LLM 1회 호출로 pairs 각각의 same_event 판정을 받는다.
-    입출력 개수 불일치/파싱 실패/API 에러 등 신뢰 불가 응답이면 None 반환(fallback은 stage3_llm_assist에서 "안 묶음" 처리).
+    입출력 개수 불일치/파싱 실패/API 에러 등 신뢰 불가 응답이면 None 반환
+    (fallback은 stage3_llm_assist에서 "안 묶음" 처리).
     """
     user_prompt = _build_llm_user_prompt(pairs)
 
@@ -467,8 +470,8 @@ def stage3_llm_assist(borderline_pairs: list[tuple[dict, dict, float]],
     애매 구간 쌍을 LLM에 물어 "같은 사건"으로 확정된 쌍만 반환.
     키 없거나 전부 실패하면 안 묶음으로 안전하게 fallback.
 
-    deadline: 파이프라인 기준 절대 마감(None이면 무제한).
-    넘기면 남은 배치는 "안 묶음" 기본값 유지하고 중단(다음 실행에서 재확인됨).
+    deadline: 파이프라인 기준 절대 마감(None이면 무제한). 넘기면 남은 배치는
+    "안 묶음" 기본값 유지하고 중단(다음 실행에서 재확인됨).
     """
     if not borderline_pairs:
         return []
@@ -513,11 +516,12 @@ def group_issues(articles: list[dict], model=None, deadline: float | None = None
     """
     1~3차를 순서대로 실행해 최종 이슈 그룹 리스트 반환(main.py가 [4]단계에서 직접 호출).
 
-    3차 병합: 확정된 쌍만 구성요소 단위로 union.
-    연쇄 병합 방지 - 3개 이상 연결된 컴포넌트는 모든 쌍이 실제로 LLM에 직접 확인됐는지(클리크인지) 검증하고, 아니면 빠진 쌍만 추가로 재확인한 뒤에도 안 되면 개별 유지.
+    3차 병합: 확정된 쌍만 구성요소 단위로 union. 연쇄 병합 방지 - 3개 이상
+    연결된 컴포넌트는 모든 쌍이 실제로 LLM에 직접 확인됐는지(클리크인지)
+    검증하고, 아니면 빠진 쌍만 추가로 재확인한 뒤에도 안 되면 개별 유지.
 
-    deadline: 파이프라인 기준 절대 마감.
-    stage3_llm_assist와 재확인 라운드(extra_confirm) 양쪽에 그대로 전파.
+    deadline: 파이프라인 기준 절대 마감. stage3_llm_assist와 재확인 라운드
+    (extra_confirm) 양쪽에 그대로 전파.
     """
     stage1_grouped, stage1_unmatched = stage1_group(articles)
 
@@ -545,13 +549,14 @@ def _merge_confirmed_components(components: list[list[dict]],
                                  confirmed_pairs: list[tuple[dict, dict, float]],
                                  extra_confirm=None) -> list[list[dict]]:
     """
-    확정된 쌍으로 components를 추가 병합.
-    단순 Union-Find는 "A~B, B~C 확정"만으로 A~C를 직접 확인한 적 없이 A+B+C를 묶는 연쇄 문제가 있어, 3개 이상 연결된 컴포넌트는 모든 쌍이 직접 확정됐는지(클리크) 검증한다.
+    확정된 쌍으로 components를 추가 병합. 단순 Union-Find는 "A~B, B~C 확정"만으로
+    A~C를 직접 확인한 적 없이 A+B+C를 묶는 연쇄 문제가 있어, 3개 이상 연결된
+    컴포넌트는 모든 쌍이 직접 확정됐는지(클리크) 검증한다.
       - 클리크면 병합
       - 아니면 빠진 쌍만 대표 기사로 extra_confirm에 재확인, 그래도 안 되면 개별 유지
 
-    extra_confirm: callable(pairs) -> confirmed pairs. group_issues가 stage3_llm_assist를 넘김.
-    None이면 재확인 없이 바로 개별 유지.
+    extra_confirm: callable(pairs) -> confirmed pairs. group_issues가 stage3_llm_assist를
+    넘김. None이면 재확인 없이 바로 개별 유지.
     """
     if not confirmed_pairs:
         return components
@@ -742,11 +747,12 @@ def _call_stage4_llm(pairs: list[tuple[dict, dict]], api_key: str, session: requ
 def stage4_dedupe_and_promote(ranked_pool: list[dict], top_n: int, label: str = "",
                                deadline: float | None = None) -> list[dict]:
     """
-    ranked_pool(top_n 제한 없는 전체 순위 풀) 상위 top_n을 후보로 삼아 같은 사건 쌍을 LLM으로 재확인, 병합하고 빈 자리는 다음 순위로 채운다.
+    ranked_pool(top_n 제한 없는 전체 순위 풀) 상위 top_n을 후보로 삼아 같은
+    사건 쌍을 LLM으로 재확인, 병합하고 빈 자리는 다음 순위로 채운다.
     회차당 병합 1건만 적용 후 재판단, 최대 3회. API 키 없으면 기존 순위 그대로 반환.
 
-    deadline: 파이프라인 기준 절대 마감.
-    넘기면 그 시점까지의 candidates를 그대로 반환하고 남은 회차는 생략(다음 실행에서 다시 확인됨).
+    deadline: 파이프라인 기준 절대 마감. 넘기면 그 시점까지의 candidates를
+    그대로 반환하고 남은 회차는 생략(다음 실행에서 다시 확인됨).
     """
     if top_n is None:
         top_n = len(ranked_pool)

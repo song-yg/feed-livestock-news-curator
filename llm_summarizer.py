@@ -129,6 +129,8 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
     body = {
         "model": model_name,
         "temperature": 0.3,
+        "reasoning": {"exclude": True},  # 추론형 모델의 "생각 과정"이 content에 섞여
+                                          # 요약 대신 혼잣말이 나오는 것 방지(OpenRouter 공식 옵션)
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -156,6 +158,8 @@ def _call_llm(system_prompt: str, user_prompt: str, api_key: str, session: reque
                     print(f"[llm_summarizer] 🟡 주의 - 요약 생성 {role} 모델('{model_name}')로 재시도 "
                           f"({idx + 1}/{len(chain)})")
                 text, data = _request_openrouter(system_prompt, user_prompt, api_key, session, model_name)
+                if _is_suspicious_summary(text):
+                    raise ValueError(f"응답이 요약이 아니라 안전성 판정/추론 과정으로 의심됨: {text[:80]!r}...")
                 return text
             except Exception as e:
                 last_error = e
@@ -253,9 +257,28 @@ def _translate_title_only(title: str, api_key: str, session: requests.Session) -
     return text.strip() or None
 
 
+_REASONING_LEAK_MARKERS = (
+    "user safety",
+    "let me think", "let's think", "i need to", "i should",
+    "okay, so", "first, i", "the user wants", "i'll",
+)
+
+
 def _is_suspicious_summary(text: str) -> bool:
-    """openrouter/free 라우팅 시 콘텐츠 안전성 판정 텍스트가 요약 대신 오는 경우 감지."""
-    return "user safety" in text.lower()
+    """
+    요약이 아니라 안전성 판정 텍스트나 추론형 모델의 "생각 과정"이 온 것으로
+    의심되는 경우 감지. reasoning: exclude=true로 대부분 막히지만, 일부
+    모델은 이 옵션을 완벽히 안 지킬 수 있어 최소한의 안전장치로 둠.
+    """
+    lower = text.lower()
+    if any(marker in lower for marker in _REASONING_LEAK_MARKERS):
+        return True
+    # 정상 요약은 한국어인데, 추론문은 대개 영어라 한글 비율이 지나치게 낮으면 의심
+    if len(text) >= 40:
+        hangul_count = sum(1 for ch in text if "\uac00" <= ch <= "\ud7a3")
+        if hangul_count / len(text) < 0.2:
+            return True
+    return False
 
 
 def _fetch_body_via_trafilatura(url: str) -> str | None:
@@ -399,11 +422,6 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
         return result
 
     generated_title, summary_text = _split_generated_title(summary_text)
-
-    if _is_suspicious_summary(summary_text):
-        result["summary"] = None
-        result["summary_skipped_reason"] = "요약 생성 실패"
-        return result
 
     result["summary"] = summary_text
     result["summary_skipped_reason"] = None
