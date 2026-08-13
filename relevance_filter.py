@@ -188,8 +188,7 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
 def _request_llm_text(system_prompt: str, user_prompt: str, api_key: str, session: requests.Session,
                        label: str, validate=None):
     """
-    모델 체인(1~3순위 -> 최종 안전망) 순으로 재시도(RF-01~10). validate 콜백
-    넘기면 형식 이상도 재시도 대상으로 취급.
+    모델 체인(1~3순위 -> 최종 안전망) 순으로 재시도(RF-01~10). validate 콜백 넘기면 형식 이상도 재시도 대상으로 취급.
     """
     chain = _LLM_MODEL_CHAIN_OPENROUTER_ROLES
     last_error: Exception | None = None
@@ -298,8 +297,7 @@ def _build_category_user_prompt(batch: list[dict]) -> str:
 def _call_category_llm(batch: list[dict], api_key: str, session: requests.Session,
                         category_choices: list[str], system_prompt: str) -> list[str] | None:
     """
-    _call_llm과 같은 패턴의 재분류용 버전. 응답은 category_choices 중 하나(또는
-    "기타") 문자열이어야 하며, 목록에 없는 값은 무시(기타 유지).
+    _call_llm과 같은 패턴의 재분류용 버전. 응답은 category_choices 중 하나(또는 "기타") 문자열이어야 하며, 목록에 없는 값은 무시(기타 유지).
     """
     user_prompt = _build_category_user_prompt(batch)
     valid_choices = set(category_choices) | {"기타"}

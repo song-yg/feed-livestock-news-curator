@@ -339,13 +339,11 @@ def render_email_html(week_label: str, domestic_summarized: list[dict], internat
 
 def render_category_trend_chart(trend_entries: list[dict], axis: str) -> bytes | None:
     """
-    category_aggregator.load_weekly_trend() 결과로 카테고리별 최근 N주 추이
-    선그래프 PNG 생성. "기타"는 항상 압도적으로 커서 나머지 카테고리 흐름이
-    안 보이게 되므로 그래프에서는 제외. 카테고리 순서는 가나다순 고정 -
-    국내/해외 두 그래프에서 같은 카테고리가 항상 같은 색이 되게 함.
+    category_aggregator.load_weekly_trend() 결과로 카테고리별 최근 N주 추이 선그래프 PNG 생성.
+    "기타"는 항상 압도적으로 커서 나머지 카테고리 흐름이 안 보이게 되므로 그래프에서는 제외.
+    카테고리 순서는 가나다순 고정 - 국내/해외 두 그래프에서 같은 카테고리가 항상 같은 색이 되게 함.
 
-    데이터가 2주 미만이면(추이라고 부를 게 없음) None. 폰트/matplotlib 관련
-    실패도 예외 없이 None만 반환 - 그래프 하나 없다고 이메일 발송 전체가
+    데이터가 2주 미만이면(추이라고 부를 게 없음) None. 폰트/matplotlib 관련 실패도 예외 없이 None만 반환 - 그래프 하나 없다고 이메일 발송 전체가
     막히면 안 됨.
     """
     if not trend_entries or len(trend_entries) < 2:
@@ -359,8 +357,7 @@ def render_category_trend_chart(trend_entries: list[dict], axis: str) -> bytes |
         import matplotlib.font_manager as fm
         from keyword_tagger import CATEGORY_KEYWORDS
 
-        # 이름만 지정(rcParams["font.family"]="NanumGothic")하면 matplotlib
-        # 폰트 캐시 타이밍 문제로 못 찾을 수 있어 파일 경로로 직접 등록.
+        # 이름만 지정(rcParams["font.family"]="NanumGothic")하면 matplotlib 폰트 캐시 타이밍 문제로 못 찾을 수 있어 파일 경로로 직접 등록.
         _font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
         if os.path.exists(_font_path):
             fm.fontManager.addfont(_font_path)
@@ -414,11 +411,9 @@ def _png_to_data_uri(png_bytes: bytes) -> str:
 
 def render_email_pdf(html_content: str) -> bytes | None:
     """
-    render_email_html()이 만든 HTML을 PDF로 변환. Playwright/Chromium 사용
-    (WATT_collector.py와 같은 브라우저, 별도 의존성 불필요).
+    render_email_html()이 만든 HTML을 PDF로 변환. Playwright/Chromium 사용(WATT_collector.py와 같은 브라우저, 별도 의존성 불필요).
 
-    링크는 href 그대로 살아서 PDF에서도 클릭 가능. 여백 0 + scale=0.79로
-    콘텐츠 폭(1000px)을 A4 폭(≈793px)에 맞춤(여백만 없애면 우측이 잘림).
+    링크는 href 그대로 살아서 PDF에서도 클릭 가능. 여백 0 + scale=0.79로 콘텐츠 폭(1000px)을 A4 폭(≈793px)에 맞춤(여백만 없애면 우측이 잘림).
     실패해도 예외 없이 None만 반환 - HTML 본문 발송이 우선, PDF는 부가 기능.
     """
     try:
@@ -451,9 +446,7 @@ def send_email(html_content: str, subject: str, recipients: list[str],
     Gmail SMTP(587, STARTTLS)로 발송. 성공 True, 실패해도 예외 없이 False.
 
     구조: mixed(PDF 첨부) > related(인라인 이미지) > alternative(HTML 본문).
-    inline_images({cid_name: PNG bytes})를 넘기면 HTML의 <img src="cid:cid_name">가
-    가리키는 이미지를 Content-ID 붙은 MIME 파트로 같이 넣는다(render_email_html의
-    embed_images_as="cid" 모드와 짝 맞춰 사용).
+    inline_images({cid_name: PNG bytes})를 넘기면 HTML의 <img src="cid:cid_name">가 가리키는 이미지를 Content-ID 붙은 MIME 파트로 같이 넣는다(render_email_html의 embed_images_as="cid" 모드와 짝 맞춰 사용).
     """
     msg = MIMEMultipart("mixed")
     msg["Subject"] = subject
@@ -517,8 +510,7 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
         print("[deploy] 🔴 조치필요 [DP-07] - EMAIL_RECIPIENTS가 비어있음(콤마만 있거나 공백) - 이메일 발송 생략")
         return False
 
-    # 트렌드 차트는 여기서 딱 한 번만 렌더링(matplotlib 호출 비용) - 아래
-    # cid용/data_uri용 두 HTML이 같은 PNG bytes를 재사용한다.
+    # 트렌드 차트는 여기서 딱 한 번만 렌더링(matplotlib 호출 비용) - 아래 cid용/data_uri용 두 HTML이 같은 PNG bytes를 재사용한다.
     trend_chart_pngs = None
     if weekly_trend and len(weekly_trend) >= 2:
         trend_chart_pngs = {
@@ -534,8 +526,7 @@ def send_weekly_email(week_label: str, domestic_summarized: list[dict], internat
 
     subject = f"[사료·축산뉴스] {_format_week_label_kr(week_label)} 주간 큐레이션"
 
-    # PDF는 Playwright(Chromium)가 렌더링하는데 cid: 스킴을 못 읽으므로
-    # data_uri 버전을 따로 만들어서 넘김 - 실제 발송 본문(cid)과는 별개 HTML.
+    # PDF는 Playwright(Chromium)가 렌더링하는데 cid: 스킴을 못 읽으므로 data_uri 버전을 따로 만들어서 넘김 - 실제 발송 본문(cid)과는 별개 HTML.
     pdf_html_content, _ = render_email_html(
         week_label, domestic_summarized, international_summarized,
         domestic_by_category, international_by_category, failed_sources,

@@ -1,8 +1,7 @@
 """
 issue_grouper.py
-이슈 그룹핑 모듈. 1차(사전 매칭) -> 2차(임베딩) -> 3차(LLM 보조) -> 4차(Top N 재검토)
-순서로 group_issues()가 실행. 1차는 ISSUE_SYNONYM_GROUPS가 비어있어 항상 no-op,
-2차(BGE-M3 임베딩)에만 의존.
+이슈 그룹핑 모듈. 1차(사전 매칭) -> 2차(임베딩) -> 3차(LLM 보조) -> 4차(Top N 재검토) 순서로 group_issues()가 실행.
+1차는 ISSUE_SYNONYM_GROUPS가 비어있어 항상 no-op, 2차(BGE-M3 임베딩)에만 의존.
 """
 
 import csv
@@ -21,8 +20,7 @@ from keyword_tagger import EXCLUDED_TERMS  # 1차 매칭 제외어, keyword_tagg
 # ---------------------------------------------------------------------------
 # 1차: KR<->EN 키워드 사전 매칭
 # ---------------------------------------------------------------------------
-# 완전 동일 사건 매칭용 사전. 국가/지역 구분이 안 돼 항상 빈 리스트로 둠 -
-# 실질적으로 모든 기사가 2차(임베딩)로 넘어감. 인프라만 보존.
+# 완전 동일 사건 매칭용 사전. 국가/지역 구분이 안 돼 항상 빈 리스트로 둠 - 실질적으로 모든 기사가 2차(임베딩)로 넘어감. 인프라만 보존.
 ISSUE_SYNONYM_GROUPS: list[set[str]] = []
 
 
@@ -194,9 +192,7 @@ def stage2_group(
       still_unmatched: 2차에서도 못 잡은 단독 기사
       borderline_pairs: 애매 구간 (기사A, 기사B, 유사도) - 3차 LLM 보조 대상
 
-    임계값 분류는 numpy 벡터 연산으로 처리 - threshold/borderline 조건을
-    만족하는 쌍을 불리언 마스킹으로 먼저 골라내고, union-find처럼 순차 처리가
-    필요한 부분만 그 소수 후보에 대해 파이썬 루프를 돈다.
+    임계값 분류는 numpy 벡터 연산으로 처리 - threshold/borderline 조건을 만족하는 쌍을 불리언 마스킹으로 먼저 골라내고, union-find처럼 순차 처리가 필요한 부분만 그 소수 후보에 대해 파이썬 루프를 돈다.
     """
     if not articles:
         return [], [], []
@@ -213,13 +209,11 @@ def stage2_group(
     n = len(articles)
     uf = UnionFind(n)
 
-    # 상삼각(i<j) 쌍만 필요하므로 triu_indices로 한 번에 추출 - 대칭 행렬의
-    # 절반(대각 제외)만 보면 되고, 이 인덱싱/비교 자체가 전부 numpy 벡터 연산.
+    # 상삼각(i<j) 쌍만 필요하므로 triu_indices로 한 번에 추출 - 대칭 행렬의 절반(대각 제외)만 보면 되고, 이 인덱싱/비교 자체가 전부 numpy 벡터 연산.
     iu = np.triu_indices(n, k=1)
     sims = sim_matrix[iu]
 
-    # 2-pass: union 먼저 전부 확정한 뒤 borderline 후보를 걸러야, 간접
-    # 연결로 이미 확정된 쌍이 borderline에 중복 기록되지 않음.
+    # 2-pass: union 먼저 전부 확정한 뒤 borderline 후보를 걸러야, 간접 연결로 이미 확정된 쌍이 borderline에 중복 기록되지 않음.
     above_mask = sims >= threshold
     for i, j in zip(iu[0][above_mask].tolist(), iu[1][above_mask].tolist()):
         uf.union(i, j)

@@ -367,8 +367,7 @@ def _parse_retry_after(response) -> float | None:
 def _call_with_retry(func, *args, label: str = "", **kwargs):
     """
     RateLimitError(길게)와 네트워크 에러(짧게)를 다른 정책으로 재시도.
-    429는 전역 쿨다운을 걸어 이후 모든 호출이 공유. Retry-After 헤더 있으면
-    그 값 우선, 없으면 지수 백오프.
+    429는 전역 쿨다운을 걸어 이후 모든 호출이 공유. Retry-After 헤더 있으면 그 값 우선, 없으면 지수 백오프.
     """
     rate_limit_attempt = 0
     network_attempt = 0
