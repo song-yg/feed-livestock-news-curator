@@ -3,8 +3,7 @@ keyword_source.py
 구글 시트("웹에 게시 -> CSV")에서 키워드 목록을 읽어오는 공용 모듈.
 
 시트 컬럼: keyword / lang(ko,en) / active(TRUE,FALSE) / note(자유 메모).
-KEYWORD_SHEET_CSV_URL 미설정, 네트워크 실패, 형식 이상, 활성 키워드 0건 등
-어떤 이유로든 못 읽으면 호출부가 넘긴 fallback으로 안전하게 대체.
+KEYWORD_SHEET_CSV_URL 미설정, 네트워크 실패, 형식 이상, 활성 키워드 0건 등 어떤 이유로든 못 읽으면 호출부가 넘긴 fallback으로 안전하게 대체.
 """
 
 import csv
@@ -25,9 +24,8 @@ _FETCH_RETRY_WAIT_SECONDS = 5
 def _fetch_csv_rows(csv_url: str) -> list[dict] | None:
     """
     CSV URL을 가져와 dict 리스트로 파싱. 프로세스 내 캐시.
-    네트워크 오류(타임아웃 등)는 최대 _FETCH_MAX_RETRIES회 재시도 - 일시적
-    문제일 가능성이 높아 재시도로 대부분 해결됨. 그래도 실패하거나 CSV 형식
-    자체가 이상하면(재시도해도 의미 없음) None(호출부 fallback).
+    네트워크 오류(타임아웃 등)는 최대 _FETCH_MAX_RETRIES회 재시도 - 일시적 문제일 가능성이 높아 재시도로 대부분 해결됨.
+    그래도 실패하거나 CSV 형식 자체가 이상하면(재시도해도 의미 없음) None(호출부 fallback).
     """
     if csv_url in _cache:
         cached = _cache[csv_url]
@@ -85,9 +83,9 @@ def _is_valid_keyword(keyword: str) -> bool:
 
 def get_keywords(lang: str, fallback: list[str]) -> list[str]:
     """
-    lang("ko"/"en")의 활성 키워드를 시트에서 읽음. 시트 lang 컬럼 대신
-    _detect_keyword_lang으로 재판별해 사용(불일치 시 로그). 못 읽으면
-    fallback 반환 - 예외를 던지지 않음.
+    lang("ko"/"en")의 활성 키워드를 시트에서 읽음.
+    시트 lang 컬럼 대신 _detect_keyword_lang으로 재판별해 사용(불일치 시 로그).
+    못 읽으면 fallback 반환 - 예외를 던지지 않음.
     """
     csv_url = os.environ.get("KEYWORD_SHEET_CSV_URL")
     if not csv_url:
@@ -152,9 +150,8 @@ def get_keywords(lang: str, fallback: list[str]) -> list[str]:
 
 def get_category_keywords(fallback: dict[str, dict[str, list[str]]]) -> dict[str, dict[str, list[str]]]:
     """
-    시트의 category 컬럼으로 카테고리 판정 사전(keyword_tagger.CATEGORY_KEYWORDS와
-    같은 형식)을 만든다. get_keywords()와 달리 active 컬럼은 무시하고 전체
-    행을 다 씀(판정 사전은 동의어가 많을수록 유리). 못 만들면 fallback 반환.
+    시트의 category 컬럼으로 카테고리 판정 사전(keyword_tagger.CATEGORY_KEYWORDS와 같은 형식)을 만든다.
+    get_keywords()와 달리 active 컬럼은 무시하고 전체 행을 다 씀(판정 사전은 동의어가 많을수록 유리). 못 만들면 fallback 반환.
     """
     csv_url = os.environ.get("KEYWORD_SHEET_CSV_URL")
     if not csv_url:

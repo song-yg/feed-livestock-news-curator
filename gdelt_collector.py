@@ -1,7 +1,7 @@
 """
 gdelt_collector.py
-GDELT DOC 2.0 API(gdeltdoc)로 해외 언급 데이터 수집. tuple(articles, timeline)
-반환 - timeline은 시계열 수집 제거로 항상 빈 dict.
+GDELT DOC 2.0 API(gdeltdoc)로 해외 언급 데이터 수집.
+tuple(articles, timeline)반환 - timeline은 시계열 수집 제거로 항상 빈 dict.
 GDELT 429 대응: 전역 쿨다운, 키워드 단위 외부 재시도, UA 헤더 주입, OR 결합 요청.
 """
 
@@ -41,15 +41,108 @@ if not getattr(requests.utils, "_gdelt_ua_patched", False):
 
 
 # fallback 키워드(영문). 구글 시트 우선.
+# keyword_tagger.py의 CATEGORY_KEYWORDS "en" 항목 전체를 카테고리별로 반영.
 KEYWORDS_EN = [
+    # 질병명
+    "African swine fever",
+    "ASF",
+    "avian influenza",
+    "bird flu",
+    "bovine spongiform encephalopathy",
+    "bovine tuberculosis",
+    "brucellosis",
+    "BSE",
+    "classical swine fever",
+    "FMD",
     "foot-and-mouth disease",
+    "lumpy skin disease",
+    "Newcastle disease",
+    "PED",
+    "porcine epidemic diarrhea",
+    "porcine reproductive and respiratory syndrome",
+    # 시장/가격 용어
+    "compound feed",
+    "corn futures",
+    "farm-gate price",
+    "feed cost",
+    "feed ingredients",
     "feed price",
+    "feed self-sufficiency rate",
+    "formula feed",
+    "global grain market",
+    "grain price",
+    "grain self-sufficiency rate",
+    "livestock exports",
+    "livestock imports",
+    "livestock supply and demand",
+    "mixed feed",
+    "SBM",
+    "soybean futures",
+    "soybean meal",
+    "wheat futures",
+    # 정부·제도 용어
+    "Animal and Plant Quarantine Agency",
+    "animal welfare certification",
+    "antibiotic-free livestock products",
+    "biosecurity",
+    "disease control",
+    "disease surveillance",
+    "livestock manure",
     "livestock movement restriction",
+    "livestock traceability system",
+    "Ministry of Agriculture, Food and Rural Affairs",
+    "Protection Zone",
+    "quarantine",
+    "standstill order",
+    "Surveillance Zone",
+    # 축종별 용어
+    "beef cattle",
+    "broiler",
+    "dairy cattle",
+    "dairy farming",
+    "egg supply",
+    "Korean native cattle",
+    "laying hens",
+    "livestock industry",
+    "pig farming",
+    "poultry industry",
     "swine industry",
+    # 사료업계 특화 용어
+    "animal feed",
+    "feed manufacturer",
     "feed mill",
+    "feed producer",
+    "grain elevator",
+    "livestock feed",
+    "nutrition company",
+    "premix",
+    "roughage",
+    "Total Mixed Ration",
+    # 사료첨가제/항생제 규제
+    "AMR",
+    "antibiotic growth promoter",
+    "antibiotic-free feed",
+    "antimicrobial resistance",
+    "Control of Livestock and Fish Feed Act",
     "feed additive",
+    "feed enzyme",
+    "feed supplement",
+    "methionine",
+    "phytase",
+    "reduction of antibiotic use",
+    "veterinary drugs",
+    # 무역/관세 이슈
     "livestock import tariff",
+    # 가금 계열화/수직계열화
+    "contract farmer",
+    "contract grower",
+    "guarantee of production cost",
     "poultry vertical integration",
+    "vertical integrator",
+    # 스마트팜/축산 기술
+    "livestock automation",
+    "livestock big data",
+    "precision livestock farming",
     "smart farming",
     "smart livestock barn",
 ]

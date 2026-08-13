@@ -1,10 +1,9 @@
 """
-storage.py - 저장 레이어. data/YYYY-WW/ 아래 raw.json/scored.json/summary.md
-저장(main.py가 save_week() 호출). git commit/push는 run-pipline.yml 책임,
-이 모듈은 파일 생성까지만.
+storage.py - 저장 레이어.
+data/YYYY-WW/ 아래 raw.json/scored.json/summary.md 저장(main.py가 save_week() 호출).
+git commit/push는 run-pipline.yml 책임, 이 모듈은 파일 생성까지만.
 
-raw.json은 body 필드 제외(WATT 본문 저작권), scored.json은 articles 필드 제외
-(raw.json과 중복 방지).
+raw.json은 body 필드 제외(WATT 본문 저작권), scored.json은 articles 필드 제외(raw.json과 중복 방지).
 """
 
 import json

@@ -1,11 +1,8 @@
 """
 relevance_filter.py
-관련성 필터 - 정규화 직후, 이슈 그룹핑 전에 실행. 키워드 매칭만으론 못 거르는
-오매칭(동음이의어, 기관명 일부로만 등장, 각주성 언급 등)을 LLM으로 판단.
-issue_grouper.py의 3차 LLM 보조와 같은 패턴(OpenRouter 모델 체인, 배치, 검증, fallback)
-재사용. 기본값 방향은 반대 - 애매하면 통과(true)가 안전(그룹핑 3차는 안 묶음이 안전).
-WATT는 업계 전문지라 이 필터 없이 자동 통과. 소스별 컨텍스트 양 차이 있음
-(네이버=description, WATT=body, GDELT=제목만).
+관련성 필터 - 정규화 직후, 이슈 그룹핑 전에 실행. 키워드 매칭만으론 못 거르는 오매칭(동음이의어, 기관명 일부로만 등장, 각주성 언급 등)을 LLM으로 판단.
+issue_grouper.py의 3차 LLM 보조와 같은 패턴(OpenRouter 모델 체인, 배치, 검증, fallback) 재사용. 기본값 방향은 반대 - 애매하면 통과(true)가 안전(그룹핑 3차는 안 묶음이 안전).
+WATT는 업계 전문지라 이 필터 없이 자동 통과. 소스별 컨텍스트 양 차이 있음 (네이버=description, WATT=body, GDELT=제목만).
 """
 
 import json
@@ -48,11 +45,7 @@ SNIPPET_MAX_CHARS = 150
 
 
 _SYSTEM_PROMPT = (
-    # 영어로 작성 - 특히 작은 무료 모델일수록 학습 데이터가 영어 위주라
-    # 형식 지시(JSON만 출력 등) 준수율이 더 안정적인 경향이 있고, 판단
-    # 대상(기사 제목) 자체도 다국어라 지시문을 영어로 통일하는 게 더
-    # 자연스럽다는 판단. 요약 생성 프롬프트(llm_summarizer.py)는 결과물이
-    # 한국어여야 하므로 한국어로 유지.
+    # 영어로 작성 - 특히 작은 무료 모델일수록 학습 데이터가 영어 위주라 형식 지시(JSON만 출력 등) 준수율이 더 안정적인 경향이 있고, 판단 대상(기사 제목) 자체도 다국어라 지시문을 영어로 통일하는 게 더 자연스럽다는 판단.
     "You are a relevance classifier for a feed and livestock industry news "
     "curation system. For each article, decide whether it substantively "
     "covers the \"feed industry\" or \"livestock industry\" (animal "
@@ -154,8 +147,7 @@ def _snippet_for_log(text: str, limit: int = 200) -> str:
 
 
 # --- OpenRouter 무료 티어 분당 상한 대응 ---
-# issue_grouper.py와 동일(분당 20회 상한 대응). 모듈별 별도 카운터 - 순서대로만
-# 실행돼서 문제없음.
+# issue_grouper.py와 동일(분당 20회 상한 대응). 모듈별 별도 카운터 - 순서대로만 실행돼서 문제없음.
 _OPENROUTER_MIN_INTERVAL_SECONDS = 1.5  # 분당 20회 상한(3.0초 간격) 기준보다 빠름 - 담당자 요청으로 하향
 _openrouter_last_request_at = 0.0
 
@@ -181,8 +173,7 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
     body = {
         "model": model_name,
         "temperature": 0,
-        "reasoning": {"exclude": True},  # 추론형 모델의 "생각 과정"이 content에 섞여
-                                          # JSON 파싱을 깨는 것 방지(OpenRouter 공식 옵션, 전 모델 지원)
+        "reasoning": {"exclude": True},  # 추론형 모델의 "생각 과정"이 content에 섞여 JSON 파싱을 깨는 것 방지(OpenRouter 공식 옵션, 전 모델 지원)
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -267,10 +258,8 @@ def _call_llm(batch: list[dict], api_key: str, session: requests.Session) -> lis
 # ---------------------------------------------------------------------------
 # 카테고리 재분류
 # ---------------------------------------------------------------------------
-# keyword_tagger(사전 매칭)와 relevance_filter(LLM 관련성 판단)는 기준이 달라,
-# 사전엔 안 걸려 category="기타"인데 관련성은 확정된 기사가 생길 수 있음(카테고리별
-# Top N에 영원히 못 들어감). 그 공백을 여기서 메움. 관련성 필터 스키마는 안 건드리고,
-# category="기타"인 관련 기사만 별도 배치로 다시 LLM에 물음.
+# keyword_tagger(사전 매칭)와 relevance_filter(LLM 관련성 판단)는 기준이 달라, 사전엔 안 걸려 category="기타"인데 관련성은 확정된 기사가 생길 수 있음(카테고리별 Top N에 영원히 못 들어감). 그 공백을 여기서 메움.
+# 관련성 필터 스키마는 안 건드리고, category="기타"인 관련 기사만 별도 배치로 다시 LLM에 물음.
 
 CATEGORY_RECLASSIFY_SYSTEM_PROMPT_TEMPLATE = (
     "You are a categorization assistant for a feed and livestock industry "
@@ -357,9 +346,8 @@ def _call_category_llm(batch: list[dict], api_key: str, session: requests.Sessio
 
 
 # ---------------------------------------------------------------------------
-# 그룹 단위 - 그룹 대표 기사(group[0]) 1건만 LLM 판단, 그룹 전체를 유닛으로
-# 통과/제외·재분류. LLM 호출량이 원본 기사 수가 아니라 고유 이슈(그룹) 수
-# 기준으로 줄어듦.
+# 그룹 단위 - 그룹 대표 기사(group[0]) 1건만 LLM 판단, 그룹 전체를 유닛으로 통과/제외·재분류.
+# LLM 호출량이 원본 기사 수가 아니라 고유 이슈(그룹) 수 기준으로 줄어듦.
 # ---------------------------------------------------------------------------
 
 def filter_groups(groups: list[list[dict]], deadline: float | None = None) -> list[list[dict]]:
@@ -433,10 +421,9 @@ def filter_groups(groups: list[list[dict]], deadline: float | None = None) -> li
 
 def recategorize_uncategorized_groups(groups: list[list[dict]], deadline: float | None = None) -> list[list[dict]]:
     """
-    filter_groups() 통과했지만 대표 기사 category가 "기타"인 그룹만 골라
-    대표 기사로 LLM 재분류. 재분류되면(기타가 아닌 카테고리로 확정되면) 그
-    그룹 안에서 category가 "기타"인 멤버 전원에게 같은 카테고리를 적용한다 -
-    이미 사전 매칭으로 다른 카테고리가 붙은 멤버는 그 신호를 존중해 안 건드림.
+    filter_groups() 통과했지만 대표 기사 category가 "기타"인 그룹만 골라 대표 기사로 LLM 재분류.
+    재분류되면(기타가 아닌 카테고리로 확정되면) 그 그룹 안에서 category가 "기타"인 멤버 전원에게 같은 카테고리를 적용한다.
+     - 이미 사전 매칭으로 다른 카테고리가 붙은 멤버는 그 신호를 존중해 안 건드림.
     API 키 없거나 전부 실패해도 원본 그대로 반환.
 
     deadline: recategorize_uncategorized와 동일한 파이프라인 기준 절대 마감.

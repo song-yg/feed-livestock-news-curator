@@ -118,8 +118,7 @@ def _build_user_prompt(item: dict) -> str:
 def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
                          session: requests.Session, model_name: str) -> tuple[str, dict]:
     """반환: (응답 텍스트, 원본 응답 dict).
-    OpenRouter 무료 티어 분당 상한 대응 - issue_grouper의 스로틀 함수를
-    재사용(그룹핑/요약이 같은 카운터를 공유해 더 정확)."""
+    OpenRouter 무료 티어 분당 상한 대응 - issue_grouper의 스로틀 함수를 재사용(그룹핑/요약이 같은 카운터를 공유해 더 정확)."""
     _ig._throttle_openrouter_free_tier()
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -129,8 +128,7 @@ def _request_openrouter(system_prompt: str, user_prompt: str, api_key: str,
     body = {
         "model": model_name,
         "temperature": 0.3,
-        "reasoning": {"exclude": True},  # 추론형 모델의 "생각 과정"이 content에 섞여
-                                          # 요약 대신 혼잣말이 나오는 것 방지(OpenRouter 공식 옵션)
+        "reasoning": {"exclude": True},  # 추론형 모델의 "생각 과정"이 content에 섞여 요약 대신 혼잣말이 나오는 것 방지(OpenRouter 공식 옵션)
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -239,8 +237,7 @@ def _summarize_large_group(item_for_prompt: dict, api_key: str, session: request
 
 
 # --- 요약 생략 시에도 제목만은 최소 번역 ---
-# 단독 기사가 재료 부족으로 요약 자체가 생략돼도, 네이버 외 소스(원문이
-# 외국어일 수 있음)면 제목만 한국어로 번역 시도. 실패해도 원문 제목 fallback.
+# 단독 기사가 재료 부족으로 요약 자체가 생략돼도, 네이버 외 소스(원문이 외국어일 수 있음)면 제목만 한국어로 번역 시도. 실패해도 원문 제목 fallback.
 _TRANSLATE_ONLY_SYSTEM_PROMPT = (
     "너는 뉴스 기사 제목을 한국어로 번역하는 역할이다. 주어진 원문 제목을 "
     "자연스러운 한국어 뉴스 헤드라인 한 줄로 번역하라. 이미 한국어 제목이면 "
@@ -266,9 +263,8 @@ _REASONING_LEAK_MARKERS = (
 
 def _is_suspicious_summary(text: str) -> bool:
     """
-    요약이 아니라 안전성 판정 텍스트나 추론형 모델의 "생각 과정"이 온 것으로
-    의심되는 경우 감지. reasoning: exclude=true로 대부분 막히지만, 일부
-    모델은 이 옵션을 완벽히 안 지킬 수 있어 최소한의 안전장치로 둠.
+    요약이 아니라 안전성 판정 텍스트나 추론형 모델의 "생각 과정"이 온 것으로 의심되는 경우 감지.
+    reasoning: exclude=true로 대부분 막히지만, 일부 모델은 이 옵션을 완벽히 안 지킬 수 있어 최소한의 안전장치로 둠.
     """
     lower = text.lower()
     if any(marker in lower for marker in _REASONING_LEAK_MARKERS):
@@ -304,9 +300,7 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     반환값 추가 필드:
       summary: LLM 생성 요약, 또는 None(생략 시)
       summary_skipped_reason: 생략 사유(정상 요약 시 None)
-      generated_title: 요약 성공 시 새 헤드라인, 실패/생략 시 None(deploy.py가
-        titles[0]로 fallback). 재료 부족으로 요약이 생략돼도 제목만은
-        _translate_title_only로 번역돼 채워지는 경우가 있음.
+      generated_title: 요약 성공 시 새 헤드라인, 실패/생략 시 None(deploy.py가 titles[0]로 fallback). 재료 부족으로 요약이 생략돼도 제목만은 _translate_title_only로 번역돼 채워지는 경우가 있음.
     """
     result = dict(item)
     result["generated_title"] = None
@@ -314,9 +308,9 @@ def summarize_issue(item: dict, session: requests.Session | None = None) -> dict
     articles = item.get("articles", [])
     item_for_prompt = item
 
-    # (A-1) 단독 기사(그룹 크기 1)면서 재료가 얇으면 요약 생략. 그룹은 있는
-    # 재료로 요약 시도(스킵 안 함). 네이버는 body만 재료로 인정(description은
-    # 짧아도 기준을 넘기기 쉬워 제외).
+    # (A-1) 단독 기사(그룹 크기 1)면서 재료가 얇으면 요약 생략.
+    # 그룹은 있는 재료로 요약 시도(스킵 안 함).
+    # 네이버는 body만 재료로 인정(description은 짧아도 기준을 넘기기 쉬워 제외).
     def _article_has_substantial_material(article: dict) -> bool:
         if len(article.get("body") or "") >= _BODY_FETCH_MIN_LENGTH:
             return True
@@ -433,8 +427,7 @@ def summarize_top_issues(ranked_items: list[dict], label: str = "",
                           deadline: float | None = None) -> list[dict]:
     """
     ranked_items 전체에 summarize_issue 적용. 항목마다 즉시 로그 출력.
-    deadline 넘으면 남은 항목은 "시간 예산 초과" 사유로 채워서 반환(기존
-    summary_skipped_reason 경로로 그대로 흡수).
+    deadline 넘으면 남은 항목은 "시간 예산 초과" 사유로 채워서 반환(기존 summary_skipped_reason 경로로 그대로 흡수).
     """
     results = []
     total = len(ranked_items)

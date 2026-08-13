@@ -1,8 +1,7 @@
 """
 keyword_tagger.py
-키워드 태깅 모듈(정규화 단계). 기사 제목을 CATEGORY_KEYWORDS 사전과 매칭해
-카테고리 라벨링(질병명/시장가격/정부제도 등). 이슈 그룹핑(issue_grouper.py)과
-별개 기능 - 임베딩/LLM 없이 순수 문자열 매칭만 사용.
+키워드 태깅 모듈(정규화 단계). 기사 제목을 CATEGORY_KEYWORDS 사전과 매칭해 카테고리 라벨링(질병명/시장가격/정부제도 등).
+이슈 그룹핑(issue_grouper.py)과 별개 기능 - 임베딩/LLM 없이 순수 문자열 매칭만 사용.
 """
 
 import re
@@ -47,8 +46,7 @@ CATEGORY_KEYWORDS = {
     },
 }
 
-# 매칭 제외 토큰 - 짧은 약어라 다른 의미로 오매칭될 위험이 있는 키워드용
-# 안전장치(현재 목록엔 해당 사례 없어서 비어있음, 필요 시 추가).
+# 매칭 제외 토큰 - 짧은 약어라 다른 의미로 오매칭될 위험이 있는 키워드용 안전장치(현재 목록엔 해당 사례 없어서 비어있음, 필요 시 추가).
 EXCLUDED_TERMS = set()
 
 
@@ -70,8 +68,7 @@ _FLAT_INDEX = _build_flat_index(_active_category_keywords)
 
 
 def set_category_keywords(category_keywords: dict[str, dict[str, list[str]]]) -> None:
-    """카테고리 판정 사전을 교체(구글 시트에서 불러온 것으로). main.py가 [2]
-    정규화 시작 전에 1회 호출."""
+    """카테고리 판정 사전을 교체(구글 시트에서 불러온 것으로). main.py가 [2] 정규화 시작 전에 1회 호출."""
     global _active_category_keywords, _FLAT_INDEX
     _active_category_keywords = category_keywords
     _FLAT_INDEX = _build_flat_index(_active_category_keywords)
@@ -90,9 +87,9 @@ def _dedupe_contained(terms: list[str]) -> list[str]:
 
 def tag_title(title: str) -> tuple[str, list[str]]:
     """
-    제목 하나를 카테고리에 매칭(대소문자 무시 부분 문자열). 카테고리별 매칭
-    개수가 가장 많은 쪽 채택, 동점이면 CATEGORY_KEYWORDS 사전 순서상 먼저
-    나오는 쪽. _dedupe_contained로 포함 관계 매칭 중복 집계 방지.
+    제목 하나를 카테고리에 매칭(대소문자 무시 부분 문자열).
+    카테고리별 매칭 개수가 가장 많은 쪽 채택, 동점이면 CATEGORY_KEYWORDS 사전 순서상 먼저 나오는 쪽.
+    _dedupe_contained로 포함 관계 매칭 중복 집계 방지.
     반환: (category, matched_terms). 안 걸리면 ("기타", []).
     """
     if not title:

@@ -155,9 +155,8 @@ def score_by_category(groups: list[list[dict]], top_n: int,
                        dedupe_fn=None) -> dict[str, list[dict]]:
     """
     카테고리별 Top N. 국내/해외 축과 독립적, "기타"는 기본 제외.
-    dedupe_fn 넘기면 카테고리별 전체 풀을 dedupe_fn(풀, top_n, category)에
-    태워 결과를 씀(issue_grouper.stage4_dedupe_and_promote 용도) - scorer.py는
-    순환참조 방지로 issue_grouper를 직접 import 안 해서 콜백 방식.
+    dedupe_fn 넘기면 카테고리별 전체 풀을 dedupe_fn(풀, top_n, category)에 태워 결과를 씀(issue_grouper.stage4_dedupe_and_promote 용도)
+      - scorer.py는 순환참조 방지로 issue_grouper를 직접 import 안 해서 콜백 방식.
     """
     by_category: dict[str, list[list[dict]]] = defaultdict(list)
     for group in groups:
