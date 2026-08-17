@@ -1,7 +1,7 @@
 """
 gdelt_collector.py
-GDELT DOC 2.0 API(gdeltdoc)로 해외 언급 데이터 수집.
-tuple(articles, timeline)반환 - timeline은 시계열 수집 제거로 항상 빈 dict.
+GDELT DOC 2.0 API(gdeltdoc)로 해외 언급 데이터 수집. tuple(articles, timeline)
+반환 - timeline은 시계열 수집 제거로 항상 빈 dict.
 GDELT 429 대응: 전역 쿨다운, 키워드 단위 외부 재시도, UA 헤더 주입, OR 결합 요청.
 """
 
@@ -41,108 +41,15 @@ if not getattr(requests.utils, "_gdelt_ua_patched", False):
 
 
 # fallback 키워드(영문). 구글 시트 우선.
-# keyword_tagger.py의 CATEGORY_KEYWORDS "en" 항목 전체를 카테고리별로 반영.
 KEYWORDS_EN = [
-    # 질병명
-    "African swine fever",
-    "ASF",
-    "avian influenza",
-    "bird flu",
-    "bovine spongiform encephalopathy",
-    "bovine tuberculosis",
-    "brucellosis",
-    "BSE",
-    "classical swine fever",
-    "FMD",
     "foot-and-mouth disease",
-    "lumpy skin disease",
-    "Newcastle disease",
-    "PED",
-    "porcine epidemic diarrhea",
-    "porcine reproductive and respiratory syndrome",
-    # 시장/가격 용어
-    "compound feed",
-    "corn futures",
-    "farm-gate price",
-    "feed cost",
-    "feed ingredients",
     "feed price",
-    "feed self-sufficiency rate",
-    "formula feed",
-    "global grain market",
-    "grain price",
-    "grain self-sufficiency rate",
-    "livestock exports",
-    "livestock imports",
-    "livestock supply and demand",
-    "mixed feed",
-    "SBM",
-    "soybean futures",
-    "soybean meal",
-    "wheat futures",
-    # 정부·제도 용어
-    "Animal and Plant Quarantine Agency",
-    "animal welfare certification",
-    "antibiotic-free livestock products",
-    "biosecurity",
-    "disease control",
-    "disease surveillance",
-    "livestock manure",
     "livestock movement restriction",
-    "livestock traceability system",
-    "Ministry of Agriculture, Food and Rural Affairs",
-    "Protection Zone",
-    "quarantine",
-    "standstill order",
-    "Surveillance Zone",
-    # 축종별 용어
-    "beef cattle",
-    "broiler",
-    "dairy cattle",
-    "dairy farming",
-    "egg supply",
-    "Korean native cattle",
-    "laying hens",
-    "livestock industry",
-    "pig farming",
-    "poultry industry",
     "swine industry",
-    # 사료업계 특화 용어
-    "animal feed",
-    "feed manufacturer",
     "feed mill",
-    "feed producer",
-    "grain elevator",
-    "livestock feed",
-    "nutrition company",
-    "premix",
-    "roughage",
-    "Total Mixed Ration",
-    # 사료첨가제/항생제 규제
-    "AMR",
-    "antibiotic growth promoter",
-    "antibiotic-free feed",
-    "antimicrobial resistance",
-    "Control of Livestock and Fish Feed Act",
     "feed additive",
-    "feed enzyme",
-    "feed supplement",
-    "methionine",
-    "phytase",
-    "reduction of antibiotic use",
-    "veterinary drugs",
-    # 무역/관세 이슈
     "livestock import tariff",
-    # 가금 계열화/수직계열화
-    "contract farmer",
-    "contract grower",
-    "guarantee of production cost",
     "poultry vertical integration",
-    "vertical integrator",
-    # 스마트팜/축산 기술
-    "livestock automation",
-    "livestock big data",
-    "precision livestock farming",
     "smart farming",
     "smart livestock barn",
 ]
@@ -364,15 +271,24 @@ def _parse_retry_after(response) -> float | None:
         return None
 
 
-def _call_with_retry(func, *args, label: str = "", **kwargs):
+def _call_with_retry(func, *args, label: str = "", deadline: float | None = None, **kwargs):
     """
     RateLimitError(길게)와 네트워크 에러(짧게)를 다른 정책으로 재시도.
-    429는 전역 쿨다운을 걸어 이후 모든 호출이 공유. Retry-After 헤더 있으면 그 값 우선, 없으면 지수 백오프.
+    429는 전역 쿨다운을 걸어 이후 모든 호출이 공유. Retry-After 헤더 있으면
+    그 값 우선, 없으면 지수 백오프.
+
+    deadline: 파이프라인 기준 절대 마감. 재시도 루프 도중에도 매번 체크해서,
+    넘겼으면(또는 다음 백오프 대기가 마감을 넘기면) 그 자리에서 바로 포기하고
+    TimeoutError를 던진다 - 예전엔 이 체크가 없어서 키워드 하나가 최대
+    15분(4회 재시도)을 무조건 다 써버려, 상위 collect()의 deadline 체크가
+    "다음 키워드 시작 전"에만 걸려서 이미 늦은 경우가 있었음.
     """
     rate_limit_attempt = 0
     network_attempt = 0
 
     while True:
+        if deadline is not None and time.monotonic() >= deadline:
+            raise TimeoutError(f"파이프라인 시간 예산 소진 - {label} 재시도 중단")
         _wait_for_cooldown()
         try:
             return func(*args, **kwargs)
@@ -381,6 +297,11 @@ def _call_with_retry(func, *args, label: str = "", **kwargs):
                 raise
             server_wait = _parse_retry_after(getattr(e, "response", None))
             wait = server_wait if server_wait is not None else BACKOFF_BASE_SECONDS * (2 ** rate_limit_attempt)
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError(f"파이프라인 시간 예산 소진 - {label} 재시도 중단")
+                wait = min(wait, remaining)
             rate_limit_attempt += 1
             now_str = datetime.now(timezone.utc).isoformat(timespec="seconds")
             print(f"[gdelt] {now_str} - {label} - 429 rate limit - {wait:.0f}초 전역 쿨다운 설정 "
@@ -428,7 +349,8 @@ def _extract_domain(url: str) -> str:
     return domain.replace("www.", "")
 
 
-def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, list[dict], str | None]:
+def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str,
+                                   deadline: float | None = None) -> tuple[bool, list[dict], str | None]:
     """
     키워드 1개 article_search. 반환: (성공 여부, 기사 리스트, 실패 사유).
     정식 실행 경로에서는 _collect_articles_for_keywords(OR 결합)로 대체됨 -
@@ -439,7 +361,8 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
     false_positive_count = 0
 
     try:
-        articles_df = _call_with_retry(gd.article_search, f, label=f"{keyword} / article_search")
+        articles_df = _call_with_retry(gd.article_search, f, label=f"{keyword} / article_search",
+                                        deadline=deadline)
 
         if articles_df is not None and not articles_df.empty:
             for _, row in articles_df.iterrows():
@@ -485,7 +408,8 @@ def _collect_articles_for_keyword(gd: "GdeltDoc", keyword: str) -> tuple[bool, l
         return False, [], f"{type(e).__name__}: {e}"
 
 
-def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple[bool, list[dict]]:
+def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str],
+                                    deadline: float | None = None) -> tuple[bool, list[dict]]:
     """
     여러 키워드를 OR 쿼리 하나로 묶어 article_search 1회 호출(요청 횟수 절약).
     MAX_RECORDS 상한이 "키워드 조합 전체"에 적용됨에 주의(개별 요청과 다름).
@@ -498,7 +422,8 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
     false_positive_count = 0
 
     try:
-        articles_df = _call_with_retry(gd.article_search, f, label=f"{label} / article_search")
+        articles_df = _call_with_retry(gd.article_search, f, label=f"{label} / article_search",
+                                        deadline=deadline)
 
         if articles_df is not None and not articles_df.empty:
             for _, row in articles_df.iterrows():
@@ -547,14 +472,15 @@ def _collect_articles_for_keywords(gd: "GdeltDoc", keywords: list[str]) -> tuple
         # 키워드가 섞여있는 한) - 재시도 대신 즉시 키워드별 개별 요청으로 전환.
         print(f"[gdelt] 🟡 주의 [GD-08] - '{label}' article_search 실패(쿼리 자체 거부로 추정 - "
               f"{type(e).__name__}: {e}) - 재시도 대신 키워드별 개별 요청으로 즉시 전환")
-        return _collect_articles_individually(gd, keywords)
+        return _collect_articles_individually(gd, keywords, deadline=deadline)
 
     except Exception as e:
         print(f"[gdelt] 🟡 주의 [GD-09] - '{label}' article_search 실패: {type(e).__name__} - {e!r}")
         return False, []
 
 
-def _collect_articles_individually(gd: "GdeltDoc", keywords: list[str]) -> tuple[bool, list[dict]]:
+def _collect_articles_individually(gd: "GdeltDoc", keywords: list[str],
+                                    deadline: float | None = None) -> tuple[bool, list[dict]]:
     """
     결합 쿼리가 확정적 실패(재시도로 안 풀림)로 끝났을 때의 격리 폴백.
     키워드를 하나씩 따로 요청해 문제 키워드만 실패로 남기고 나머지는 살림.
@@ -562,7 +488,7 @@ def _collect_articles_individually(gd: "GdeltDoc", keywords: list[str]) -> tuple
     all_articles = []
     any_success = False
     for keyword in keywords:
-        success, keyword_articles, _reason = _collect_articles_for_keyword(gd, keyword)
+        success, keyword_articles, _reason = _collect_articles_for_keyword(gd, keyword, deadline=deadline)
         if success:
             any_success = True
             all_articles.extend(keyword_articles)
@@ -702,7 +628,7 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
             pending_individual.append(batch[0])
             continue
 
-        success, batch_articles = _collect_articles_for_keywords(gd, batch)
+        success, batch_articles = _collect_articles_for_keywords(gd, batch, deadline=deadline)
         if not success:
             # 실패했다고 개별 전환(요청 5배)하면 429를 악화시키므로 같은 배치로 재시도
             print(f"[gdelt] 배치 {batch} 요청 실패 - 같은 배치로 재시도 예정 "
@@ -745,7 +671,7 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
                       f"(키워드 {len(remaining)}개는 이번 실행에서 건너뜀)")
                 still_failed_batches = []
                 break
-            success, batch_articles = _collect_articles_for_keywords(gd, batch)
+            success, batch_articles = _collect_articles_for_keywords(gd, batch, deadline=deadline)
             if success:
                 all_articles.extend(batch_articles)
                 pending_individual.extend(_handle_batch_crowding(batch, batch_articles))
@@ -794,7 +720,7 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
                 round_keywords = []
                 break
 
-            success, keyword_articles, reason = _collect_articles_for_keyword(gd, keyword)
+            success, keyword_articles, reason = _collect_articles_for_keyword(gd, keyword, deadline=deadline)
             if success:
                 all_articles.extend(keyword_articles)
                 failure_reasons.pop(keyword, None)
