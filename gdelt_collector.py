@@ -658,8 +658,13 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
             break
         print(f"[gdelt] --- 배치 재시도 라운드 {round_num}/{OUTER_RETRY_PASSES} - "
               f"이전 라운드 실패 배치 {len(batch_round)}개 ---")
-        print(f"[gdelt] 라운드 간 안전 대기 {OUTER_RETRY_WAIT_SECONDS}초")
-        time.sleep(OUTER_RETRY_WAIT_SECONDS)
+        # 남은 시간예산보다 길게 재우지 않도록 캡 - 예전엔 90초를 무조건 다 채워서,
+        # 대기 시작 시점엔 예산이 남아있었어도 자는 도중 넘겨버리면 그만큼 그대로
+        # 초과됐음(다음 배치 처리 전 _over_budget() 체크에서야 뒤늦게 잡힘).
+        wait_seconds = min(OUTER_RETRY_WAIT_SECONDS, max(deadline - time.monotonic(), 0))
+        print(f"[gdelt] 라운드 간 안전 대기 {wait_seconds:.0f}초"
+              f"{' (시간예산 임박으로 단축됨)' if wait_seconds < OUTER_RETRY_WAIT_SECONDS else ''}")
+        time.sleep(wait_seconds)
 
         still_failed_batches = []
         for batch_idx2, batch in enumerate(batch_round):
@@ -701,8 +706,11 @@ def collect(keywords: list[str] | None = None, deadline: float | None = None) ->
                 break
             print(f"[gdelt] --- 기사 수집 외부 재시도 라운드 {round_num}/{OUTER_RETRY_PASSES} - "
                   f"이전 라운드 실패 키워드 {len(failed_keywords)}개: {failed_keywords} ---")
-            print(f"[gdelt] 라운드 간 안전 대기 {OUTER_RETRY_WAIT_SECONDS}초")
-            time.sleep(OUTER_RETRY_WAIT_SECONDS)
+            # 배치 재시도 라운드와 동일하게 남은 시간예산 캡 적용.
+            wait_seconds = min(OUTER_RETRY_WAIT_SECONDS, max(deadline - time.monotonic(), 0))
+            print(f"[gdelt] 라운드 간 안전 대기 {wait_seconds:.0f}초"
+                  f"{' (시간예산 임박으로 단축됨)' if wait_seconds < OUTER_RETRY_WAIT_SECONDS else ''}")
+            time.sleep(wait_seconds)
             round_keywords = failed_keywords
 
         if not round_keywords:
