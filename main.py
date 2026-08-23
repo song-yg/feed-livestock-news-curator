@@ -19,6 +19,7 @@ job1(수집)과 job2(정규화~배포)로 나눠 각자 360분(job 하드캡)을
 import json
 import os
 import re
+import signal
 import sys
 import time
 from collections import defaultdict
@@ -49,12 +50,35 @@ COLLECTED_ARTIFACT_PATH = "collected_articles.json"
 # --- 파이프라인 시간 예산 체크포인트 (각 진입점 자기 시작 기준 절대 분) ---
 # run_collect()는 GDELT_DEADLINE_MINUTES만, run_process()는 나머지 넷을 씀 -
 # 둘 다 자기 진입점의 pipeline_start 기준. 값은 실측 보고 조정할 것.
-GDELT_DEADLINE_MINUTES = 350          # 5:50 - job1: GDELT 수집(WATT/네이버 포함, 남은 10분은 정리+artifact 저장용)
+GDELT_DEADLINE_MINUTES = 335          # 5:35 - job1: GDELT 수집(WATT/네이버 포함). 소프트 체크포인트라
+                                       # 재시도 대기 도중엔 못 끊고 그 대기가 끝나야 확인됨(아래 COLLECT_WATCHDOG_MINUTES 참고).
 GROUPING_DEADLINE_MINUTES = 120      # 2:00 - job2: 임베딩 로드 + 이슈 그룹핑(1~3차, 필터링 전 원본 전체 대상)
 RELEVANCE_DEADLINE_MINUTES = 220      # 3:40 - job2: [5] 관련성 필터 (그룹 대표 1건씩만 판단)
 RECATEGORIZE_DEADLINE_MINUTES = 240   # 4:00 - job2: [6] 카테고리 재분류 (별도 체크포인트 - [5]가 늦어도 20분은 보장됨)
 STAGE4_DEADLINE_MINUTES = 250         # 4:10 - job2: 4차 Top N 사후 재검토
 SUMMARY_DEADLINE_MINUTES = 350        # 5:50 - job2: LLM 요약 (남은 10분은 저장+PDF변환+이메일발송+git커밋용)
+
+# job1(수집) 전용 하드 워치독 - GDELT_DEADLINE_MINUTES(소프트)보다 뒤에 잡아 최후 안전망 역할만 하게 함.
+# GDELT_DEADLINE_MINUTES는 매 루프 진입 "직전"에만 확인하는 소프트 체크라 재시도 대기
+# (라운드 간 90초, 429 쿨다운 등) 도중엔 그 순간 못 끊는다 - 정상적인 경우엔 그 대기가
+# 끝나자마자 다음 체크에서 바로 걸리지만, 어떤 이유로든(버그, 예상 못 한 API 응답 지연 등)
+# 계속 못 끝나면 job 자체가 GitHub Actions 타임아웃(360분)에 걸려 강제 종료되고
+# collected_articles.json 저장/artifact 업로드까지 통째로 스킵된다(실제 발생 사례 있음).
+# COLLECT_WATCHDOG_MINUTES는 signal.alarm으로 "무슨 작업 중이든" 이 시각에 강제 인터럽트해서
+# 최소한 그때까지 모은 결과만이라도 반드시 저장하고 정상 종료하게 만드는 하드 백스톱.
+COLLECT_WATCHDOG_MINUTES = 345         # 5:45 - GDELT_DEADLINE_MINUTES(335)+10분 여유 후 최후 강제 회수.
+                                       # 나머지 15분(360-345)은 job 시작~main.py 실행 전 셋업(체크아웃/pip install/
+                                       # playwright install 등, 실측상 3~6분)과 artifact 업로드용 여유.
+
+
+class _CollectWatchdogTimeout(BaseException):
+    """job1 워치독 강제 종료 신호.
+
+    Exception이 아니라 BaseException을 직접 상속 - 코드 전역(run_collectors 내부의
+    소스별 try/except, gdelt_collector.py의 재시도 로직 등)에 깔린 `except Exception`
+    블록에 걸려 조용히 삼켜지지 않고, 이 신호가 발생한 지점에서 곧바로 위로 전파되게
+    하기 위함(KeyboardInterrupt/SystemExit과 같은 이유).
+    """
 
 
 def _deadline(pipeline_start: float, minutes: int) -> float:
@@ -88,6 +112,11 @@ def run_collectors(pipeline_start: float) -> tuple[list[dict], dict, list[str]]:
     """watt/naver/gdelt collector 순차 실행. 소스별 독립 실행(하나 실패해도 나머지 계속).
     GDELT에는 pipeline_start 기준 GDELT_DEADLINE_MINUTES 절대 마감을 넘김(WATT/네이버가 먼저 쓴 시간이 자동으로 반영됨).
 
+    _CollectWatchdogTimeout(run_collect()의 워치독)이 세 소스 중 어느 것을 하던 도중
+    발생하면, 그 소스는 실패로 기록하고 남은 소스는 더 시도하지 않은 채 그때까지 모은
+    결과를 즉시 반환한다(각 except가 재시도 없이 곧바로 return) - 워치독 발동 후에도
+    다음 소스가 또 오래 걸려버리면 워치독 취지 자체가 무의미해지기 때문.
+
     반환: all_articles(합친 기사 리스트), gdelt_timeline, failed_sources
     """
     all_articles: list[dict] = []
@@ -98,6 +127,10 @@ def run_collectors(pipeline_start: float) -> tuple[list[dict], dict, list[str]]:
         watt_articles = watt_collect()
         all_articles.extend(watt_articles)
         print(f"[main] WATT 수집 완료 - {len(watt_articles)}건")
+    except _CollectWatchdogTimeout as e:
+        print(f"[main] 🔴 조치필요 [MN-04] - {e} (WATT 진행 중 발동)")
+        failed_sources.append("워치독-강제종료(WATT 진행 중)")
+        return all_articles, gdelt_timeline, failed_sources
     except Exception as e:
         print(f"[main] 🔴 조치필요 [MN-01] - WATT 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
         failed_sources.append("WATT")
@@ -106,6 +139,10 @@ def run_collectors(pipeline_start: float) -> tuple[list[dict], dict, list[str]]:
         naver_articles = naver_collector.collect()
         all_articles.extend(naver_articles)
         print(f"[main] 네이버 수집 완료 - {len(naver_articles)}건")
+    except _CollectWatchdogTimeout as e:
+        print(f"[main] 🔴 조치필요 [MN-04] - {e} (네이버 진행 중 발동)")
+        failed_sources.append("워치독-강제종료(네이버 진행 중)")
+        return all_articles, gdelt_timeline, failed_sources
     except Exception as e:
         print(f"[main] 🔴 조치필요 [MN-02] - 네이버 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
         failed_sources.append("네이버")
@@ -115,6 +152,10 @@ def run_collectors(pipeline_start: float) -> tuple[list[dict], dict, list[str]]:
         gdelt_articles, gdelt_timeline = gdelt_collector.collect(deadline=gdelt_deadline)
         all_articles.extend(gdelt_articles)
         print(f"[main] GDELT 수집 완료 - {len(gdelt_articles)}건")
+    except _CollectWatchdogTimeout as e:
+        print(f"[main] 🔴 조치필요 [MN-04] - {e} (GDELT 진행 중 발동)")
+        failed_sources.append("워치독-강제종료(GDELT 진행 중)")
+        return all_articles, gdelt_timeline, failed_sources
     except Exception as e:
         print(f"[main] 🔴 조치필요 [MN-03] - GDELT 수집 실패 (소스 전체): {type(e).__name__} - {e!r}")
         failed_sources.append("GDELT")
@@ -508,10 +549,41 @@ def _run_process_and_deploy_body(articles: list[dict], gdelt_timeline: dict, fai
 # ---------------------------------------------------------------------------
 
 def run_collect() -> None:
-    """job1(수집) 진입점. [1] 수집만 하고 결과를 COLLECTED_ARTIFACT_PATH에 저장."""
+    """job1(수집) 진입점. [1] 수집만 하고 결과를 COLLECTED_ARTIFACT_PATH에 저장.
+
+    COLLECT_WATCHDOG_MINUTES 워치독으로 run_collectors() 전체를 감싼다 - signal.alarm은
+    time.sleep()이나 네트워크 요청 대기 도중이라도 그 자리에서 강제로 인터럽트할 수 있어서,
+    소프트 데드라인 체크(각 루프 진입 직전에만 확인)가 놓치는 사각지대(재시도 대기 도중
+    예산 초과)를 마지막에 한 번 더 막아준다. 이게 없으면 최악의 경우 job 자체가 GitHub
+    Actions 타임아웃에 걸려 강제 종료되고, _save_collected()조차 못 불러 이번 회차 수집
+    결과가 통째로 유실된다(실제 발생 사례 있음) - 워치독이 발동해도 최소한 그 시점까지
+    모은 결과는 저장하고 정상 종료하므로, 다음 job(process/요약)은 예정대로 이어서 돈다.
+    """
     pipeline_start = time.monotonic()
     print("=== [1] 수집 시작 ===")
-    articles, gdelt_timeline, failed_sources = run_collectors(pipeline_start)
+
+    watchdog_active = hasattr(signal, "alarm")
+    previous_handler = None
+    if watchdog_active:
+        def _watchdog_handler(signum, frame):
+            raise _CollectWatchdogTimeout(
+                f"워치독 발동 - 파이프라인 시작 후 {COLLECT_WATCHDOG_MINUTES}분 경과 - "
+                "소프트 데드라인 체크가 재시도 대기 등에 걸려 못 끊고 있었던 것으로 추정, "
+                "지금까지 모은 결과만 저장하고 강제 종료"
+            )
+        previous_handler = signal.signal(signal.SIGALRM, _watchdog_handler)
+        signal.alarm(COLLECT_WATCHDOG_MINUTES * 60)
+    else:
+        print("[main] 🟡 주의 [MN-04] - 이 플랫폼은 signal.alarm 미지원(Windows 등) - "
+              "워치독 비활성화, 소프트 데드라인 체크에만 의존")
+
+    try:
+        articles, gdelt_timeline, failed_sources = run_collectors(pipeline_start)
+    finally:
+        if watchdog_active:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, previous_handler)
+
     _save_collected(articles, gdelt_timeline, failed_sources)
 
 
